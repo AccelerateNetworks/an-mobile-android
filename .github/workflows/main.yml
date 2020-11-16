@@ -15,6 +15,6 @@ jobs:
           echo "${{ secrets.GITLAB_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           echo "git.callpipe.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKXliciUmCHDtSdQHDyv91LOQV3YNQkvHQK8OekGwKS1" >> ~/.ssh/known_hosts
-          git remote add gitlab git@git.callpipe.com:linphone/linphone-android.git
+          git remote set-url origin git@git.callpipe.com:linphone/linphone-android.git
       - name: Upload to git.callpipe.com
-        run: git push gitlab master
+        run: git push

@@ -11,3 +11,20 @@ build:apk:
     paths:
       - "*.apk"
     expire_in: 1 week
+  except:
+    - triggers
+
+git sync:
+  image: debian:latest
+  before_script:
+    - apt-get update && apt-get install -y git
+  script:
+    - git remote set-url origin "https://${GITLAB_PUSH_CREDENTIALS}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git remote add github https://github.com/AccelerateNetworks/linphone-android
+    - git checkout "${BRANCH}" || git checkout -b "${BRANCH}"
+    - git pull github "${BRANCH}"
+    - git push origin "${BRANCH}"
+  only:
+    - triggers
+    - schedules
+    - web

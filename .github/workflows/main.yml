@@ -7,14 +7,5 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the repo
-        uses: actions/checkout@v2
-      - name: Configure environment
-        run: |
-          mkdir ~/.ssh
-          echo "${{ secrets.GITLAB_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          echo "git.callpipe.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKXliciUmCHDtSdQHDyv91LOQV3YNQkvHQK8OekGwKS1" >> ~/.ssh/known_hosts
-          git remote set-url origin git@git.callpipe.com:linphone/linphone-android.git
-      - name: Upload to git.callpipe.com
-        run: git push
+      - name: tell gitlab to pull
+        run: curl -sd "TOKEN=${{ secrets.GITLAB_TOKEN }}" -d "variables[BRANCH]=${GITHUB_REF#refs/heads/}" https://git.callpipe.com/api/v4/projects/371/trigger/pipeline

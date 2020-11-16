@@ -1,19 +1,13 @@
-#################################################
-# Base configuration
-#################################################
-
-
-
-#################################################
-# Platforms to test
-#################################################
-
-
-include:
-  - '.gitlab-ci-files/job-android.yml'
-  - '.gitlab-ci-files/job-upload.yml'
-
-
-stages:
- - build
- - deploy
+build:apk:
+  image: registry.git.callpipe.com/linphone/build-infrastructure/android-builder:latest
+  before_script:
+    - echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
+    - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
+    - echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
+  script:
+    - gradle assembleRelease
+    - cp app/build/outputs/apk/release/*.apk .
+  artifacts:
+    paths:
+      - "*.apk"
+    expire_in: 1 week

@@ -19,7 +19,7 @@
     <string name="temp_photo_name" translatable="false">linphone-android-photo-temp</string>
     <string name="temp_photo_name_with_date" translatable="false">linphone-android-photo-%s</string>
     <string name="about_text" translatable="false">GNU General Public License V3\n © 2010–2020 Belledonne Communications</string>
-    <string name="about_bugreport_email" translatable="false">linphone-android@belledonne-communications.com</string>
+    <string name="about_bugreport_email" translatable="false">feedback@acceleratenetworks.com</string>
     <string name="notification_service_channel_id" translatable="false">linphone_notification_service_id</string>
     <string name="notification_channel_id" translatable="false">linphone_notification_id</string>
     <string name="notification_missed_call_channel_id" translatable="false">linphone_notification_missed_call_id</string>
@@ -47,7 +47,7 @@
     <string name="today_date_format" translatable="false">HH:mm</string>
 
     <!-- Phone numbers -->
-    <bool name="use_phone_number_validation">true</bool><!-- Use phone number for validation -->
+    <bool name="use_phone_number_validation">false</bool><!-- Use phone number for validation -->
     <!-- Time between two link your account with phone number dialog in milliseconds -->
     <integer name="phone_number_linking_popup_time_interval">86400000</integer>
     <integer name="phone_number_validation_code_length">4</integer>
@@ -62,8 +62,8 @@
     <bool name="assistant_use_create_linphone_account_as_first_fragment">false</bool>
     <bool name="assistant_hide_status_bar">true</bool>
     <bool name="assistant_hide_top_bar">false</bool>
-    <bool name="hide_linphone_accounts_in_assistant">false</bool>
-    <bool name="hide_generic_accounts_in_assistant">false</bool>
+    <bool name="hide_linphone_accounts_in_assistant">true</bool>
+    <bool name="hide_generic_accounts_in_assistant">true</bool>
     <bool name="hide_remote_provisioning_in_assistant">false</bool>
     <!-- Set the email field of the wizard with one of the gmail account registered on the device -->
     <bool name="pre_fill_email_in_assistant">true</bool>
@@ -86,7 +86,7 @@
     <bool name="hide_accounts">false</bool>
 
     <!-- Chat -->
-    <bool name="disable_chat">false</bool>
+    <bool name="disable_chat">true</bool>
     <bool name="disable_chat_message_notification">false</bool>
     <bool name="disable_chat_send_file">false</bool>
     <bool name="lower_space_between_chat_bubbles_if_same_person">true</bool>

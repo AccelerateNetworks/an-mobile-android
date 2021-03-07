@@ -82,6 +82,7 @@ public class MenuAssistantActivity extends AssistantActivity {
                 });
         if (getResources().getBoolean(R.bool.hide_linphone_accounts_in_assistant)) {
             accountConnection.setVisibility(View.GONE);
+            accountCreation.setVisibility(View.GONE);
         }
 
         TextView genericConnection = findViewById(R.id.generic_connection);

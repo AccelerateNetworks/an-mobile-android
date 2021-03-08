@@ -104,7 +104,7 @@
 
     <!-- Contacts -->
     <bool name="hide_contact_phone_numbers">false</bool>
-    <bool name="hide_contact_sip_addresses">false</bool>
+    <bool name="hide_contact_sip_addresses">true</bool>
     <bool name="hide_phone_numbers_in_editor">false</bool>
     <bool name="hide_sip_addresses_in_editor">false</bool>
     <bool name="allow_only_one_phone_number">false</bool>
@@ -117,13 +117,13 @@
     <bool name="generate_text_avatar">true</bool>
     <bool name="only_show_address_username_if_matches_default_domain">true</bool>
     <bool name="fetch_contacts_from_default_directory">true</bool> <!-- Recommended -->
-    <bool name="forbid_pure_linphone_contacts_edition">true</bool>
+    <bool name="forbid_pure_linphone_contacts_edition">false</bool>
 
     <!-- Side Menu -->
     <bool name="hide_assistant_from_side_menu">false</bool>
     <bool name="hide_settings_from_side_menu">false</bool>
     <bool name="hide_recordings_from_side_menu">false</bool>
-    <bool name="disable_accounts_settings_from_side_menu">false</bool>
+    <bool name="disable_accounts_settings_from_side_menu">true</bool>
     <bool name="show_log_out_in_side_menu">false</bool>
 
     <!-- Notifications -->

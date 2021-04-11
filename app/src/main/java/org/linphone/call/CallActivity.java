@@ -407,6 +407,14 @@ public class CallActivity extends LinphoneGenericActivity
                         } else if (state == Call.State.StreamsRunning) {
                             mCallPausedByRemote.setVisibility(View.GONE);
 
+                            if (call.getCurrentParams().videoEnabled()) {
+                                AndroidAudioManager manager = LinphoneManager.getAudioManager();
+                                if (!manager.isUsingBluetoothAudioRoute()
+                                        && !manager.isWiredHeadsetAvailable()) {
+                                    LinphoneManager.getAudioManager().routeAudioToSpeaker();
+                                }
+                            }
+
                             setCurrentCallContactInformation();
                             updateInterfaceDependingOnVideo();
                         } else if (state == Call.State.UpdatedByRemote) {
@@ -457,8 +465,11 @@ public class CallActivity extends LinphoneGenericActivity
 
             if (videoEnabled) {
                 mAudioManager = LinphoneManager.getAudioManager();
-                mAudioManager.routeAudioToSpeaker();
-                mSpeaker.setSelected(true);
+                if (!mAudioManager.isWiredHeadsetAvailable()
+                        && !mAudioManager.isUsingBluetoothAudioRoute()) {
+                    mAudioManager.routeAudioToSpeaker();
+                    mSpeaker.setSelected(true);
+                }
             }
         }
     }
@@ -1115,7 +1126,8 @@ public class CallActivity extends LinphoneGenericActivity
                 if (mCore.isInConference()) {
                     displayConferenceCall(call);
                     conferenceDisplayed = true;
-                } else if (!pausedConferenceDisplayed) {
+                } else if (!pausedConferenceDisplayed
+                        && mCore.getCallsNb() > 1) { // Workaround for temporary SDK issue
                     displayPausedConference();
                     pausedConferenceDisplayed = true;
                 }

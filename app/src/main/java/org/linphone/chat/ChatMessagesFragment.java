@@ -375,6 +375,9 @@ public class ChatMessagesFragment extends Fragment
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
 
+        outState.putString("LocalSipUri", mChatRoom.getLocalAddress().asStringUriOnly());
+        outState.putString("RemoteSipUri", mChatRoom.getPeerAddress().asStringUriOnly());
+
         ArrayList<String> files = new ArrayList<>();
         for (int i = 0; i < mFilesUploadLayout.getChildCount(); i++) {
             View child = mFilesUploadLayout.getChildAt(i);
@@ -665,10 +668,15 @@ public class ChatMessagesFragment extends Fragment
     }
 
     /** View initialization */
-    private void setReadOnly() {
-        mMessageTextToSend.setEnabled(false);
-        mAttachImageButton.setEnabled(false);
-        mSendMessageButton.setEnabled(false);
+    private void setReadOnly(boolean readOnly) {
+        if (readOnly) {
+            mMessageTextToSend.setText("");
+            mFilesUploadLayout.removeAllViews();
+        }
+
+        mMessageTextToSend.setEnabled(!readOnly);
+        mAttachImageButton.setEnabled(!readOnly);
+        mSendMessageButton.setEnabled(!readOnly);
         mSendEphemeralIcon.setEnabled(mSendMessageButton.isEnabled());
     }
 
@@ -715,6 +723,7 @@ public class ChatMessagesFragment extends Fragment
                 || mRemoteSipUri == null
                 || mRemoteSipUri.isEmpty()
                 || core == null) {
+            Log.e("[Chat Messages Fragment] No local/remote SIP URI found!");
             // TODO error
             return;
         }
@@ -797,7 +806,7 @@ public class ChatMessagesFragment extends Fragment
 
         mSendEphemeralIcon.setVisibility(mChatRoom.ephemeralEnabled() ? View.VISIBLE : View.GONE);
         if (mChatRoom.hasBeenLeft()) {
-            setReadOnly();
+            setReadOnly(true);
         }
 
         updateSecurityLevelIcon();
@@ -911,6 +920,12 @@ public class ChatMessagesFragment extends Fragment
     }
 
     private void onRestoreInstanceState(Bundle savedInstanceState) {
+
+        String localSipUri = savedInstanceState.getString("LocalSipUri");
+        mRemoteSipUri = savedInstanceState.getString("RemoteSipUri");
+        mLocalSipAddress = Factory.instance().createAddress(localSipUri);
+        mRemoteSipAddress = Factory.instance().createAddress(mRemoteSipUri);
+
         ArrayList<String> files = savedInstanceState.getStringArrayList("Files");
         if (files != null && !files.isEmpty()) {
             for (String file : files) {
@@ -1074,15 +1089,18 @@ public class ChatMessagesFragment extends Fragment
 
             boolean split =
                     isBasicChatRoom; // Always split contents in basic chat rooms for compatibility
-            if (hasText && sendImageAndTextAsDifferentMessages) {
-                split = true;
-            } else if (mFilesUploadLayout.getChildCount() > 1
-                    && sendMultipleImagesAsDifferentMessages) {
-                split = true;
+            if (!split) {
+                if (hasText && sendImageAndTextAsDifferentMessages) {
+                    split = true;
+                } else if (mFilesUploadLayout.getChildCount() > 1
+                        && sendMultipleImagesAsDifferentMessages) {
+                    split = true;
 
-                // Allow the last image to be sent with text if image and text at the same time OK
-                if (hasText && i == filesCount - 1) {
-                    split = false;
+                    // Allow the last image to be sent with text if image and text at the same time
+                    // OK
+                    if (hasText && i == filesCount - 1) {
+                        split = false;
+                    }
                 }
             }
 
@@ -1197,12 +1215,16 @@ public class ChatMessagesFragment extends Fragment
         boolean encrypted = mChatRoom.hasCapability(ChatRoomCapabilities.Encrypted.toInt());
         ((ChatActivity) getActivity())
                 .showChatRoomGroupInfo(
-                        mRemoteSipAddress, participants, mChatRoom.getSubject(), encrypted);
+                        mRemoteSipAddress,
+                        mLocalSipAddress,
+                        participants,
+                        mChatRoom.getSubject(),
+                        encrypted);
     }
 
     private void goToEphemeral() {
         if (mChatRoom == null) return;
-        ((ChatActivity) getActivity()).showChatRoomEphemeral(mRemoteSipAddress);
+        ((ChatActivity) getActivity()).showChatRoomEphemeral(mRemoteSipAddress, mLocalSipAddress);
     }
 
     /*
@@ -1440,9 +1462,7 @@ public class ChatMessagesFragment extends Fragment
 
     @Override
     public void onStateChanged(ChatRoom cr, ChatRoom.State newState) {
-        if (mChatRoom.hasBeenLeft()) {
-            setReadOnly();
-        }
+        setReadOnly(mChatRoom.hasBeenLeft());
     }
 
     @Override

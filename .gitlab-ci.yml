@@ -1,5 +1,5 @@
 build:apk:
-  image: registry.git.callpipe.com/linphone/build-infrastructure/android-builder:latest
+  image: gitlab.linphone.org:4567/bc/public/linphone-android/bc-dev-android:29
   before_script:
     - echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
     - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties

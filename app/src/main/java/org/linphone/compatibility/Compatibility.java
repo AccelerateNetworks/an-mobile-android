@@ -30,7 +30,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Build;
-import android.os.Vibrator;
 import android.provider.Settings;
 import android.service.notification.StatusBarNotification;
 import org.linphone.core.Address;
@@ -45,6 +44,7 @@ public class Compatibility {
     public static final String INTENT_HANGUP_CALL_NOTIF_ACTION = "org.linphone.HANGUP_CALL_ACTION";
     public static final String INTENT_ANSWER_CALL_NOTIF_ACTION = "org.linphone.ANSWER_CALL_ACTION";
     public static final String INTENT_LOCAL_IDENTITY = "LOCAL_IDENTITY";
+    public static final String INTENT_REMOTE_IDENTITY = "REMOTE_IDENTITY";
     public static final String INTENT_MARK_AS_READ_ACTION = "org.linphone.MARK_AS_READ_ACTION";
 
     public static String getDeviceName(Context context) {
@@ -71,6 +71,7 @@ public class Compatibility {
         if (Version.sdkAboveOrEqual(Version.API26_O_80)) {
             ApiTwentySixPlus.createServiceChannel(context);
             ApiTwentySixPlus.createMessageChannel(context);
+            ApiTwentySixPlus.createMissedCallChannel(context);
         }
     }
 
@@ -324,13 +325,5 @@ public class Compatibility {
         }
 
         return new StatusBarNotification[0];
-    }
-
-    public static void vibrate(Vibrator vibrator) {
-        if (Version.sdkAboveOrEqual(Version.API26_O_80)) {
-            ApiTwentySixPlus.vibrate(vibrator);
-        } else {
-            ApiTwentyOnePlus.vibrate(vibrator);
-        }
     }
 }

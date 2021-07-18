@@ -53,8 +53,8 @@ import org.linphone.utils.LinphoneUtils;
 
 public class LinphonePreferences {
     private static final int LINPHONE_CORE_RANDOM_PORT = -1;
-    private static final String LINPHONE_DEFAULT_RC = "/.linphonerc";
-    private static final String LINPHONE_FACTORY_RC = "/linphonerc";
+    public static final String LINPHONE_DEFAULT_RC = "/.linphonerc";
+    public static final String LINPHONE_FACTORY_RC = "/linphonerc";
     private static final String LINPHONE_LPCONFIG_XSD = "/lpconfig.xsd";
     private static final String DEFAULT_ASSISTANT_RC = "/default_assistant_create.rc";
     private static final String LINPHONE_ASSISTANT_RC = "/linphone_assistant_create.rc";
@@ -201,6 +201,15 @@ public class LinphonePreferences {
         String ringtone = getConfig().getString("app", "ringtone", defaultRingtone);
         if (ringtone == null || ringtone.isEmpty()) ringtone = defaultRingtone;
         return ringtone;
+    }
+
+    public boolean getReadAndAgreeTermsAndPrivacy() {
+        if (getConfig() == null) return false;
+        return getConfig().getBool("app", "read_and_agree_terms_and_privacy", false);
+    }
+
+    public void setReadAndAgreeTermsAndPrivacy(boolean value) {
+        getConfig().setBool("app", "read_and_agree_terms_and_privacy", value);
     }
 
     // Accounts settings
@@ -1147,13 +1156,12 @@ public class LinphonePreferences {
     }
 
     public boolean isIncomingCallVibrationEnabled() {
-        if (getConfig() == null) return true;
-        return getConfig().getBool("app", "incoming_call_vibration", true);
+        if (getLc() == null) return false;
+        return getLc().isVibrationOnIncomingCallEnabled();
     }
 
     public void enableIncomingCallVibration(boolean enable) {
-        if (getConfig() == null) return;
-        getConfig().setBool("app", "incoming_call_vibration", enable);
+        getLc().setVibrationOnIncomingCallEnabled(enable);
     }
 
     public boolean isBisFeatureEnabled() {

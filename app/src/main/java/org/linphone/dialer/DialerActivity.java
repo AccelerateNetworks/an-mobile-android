@@ -38,6 +38,7 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import org.linphone.BuildConfig;
+import org.linphone.LinphoneContext;
 import org.linphone.LinphoneManager;
 import org.linphone.R;
 import org.linphone.activities.MainActivity;
@@ -106,6 +107,9 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
                     @Override
                     public void onCallStateChanged(
                             Core core, Call call, Call.State state, String message) {
+                        if (state == Call.State.OutgoingInit) {
+                            if (mAddress != null) mAddress.setText("");
+                        }
                         updateLayout();
                     }
 
@@ -166,10 +170,6 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
                 };
 
         mIsTransfer = false;
-        if (getIntent() != null) {
-            mIsTransfer = getIntent().getBooleanExtra("isTransfer", false);
-        }
-
         handleIntentParams(getIntent());
     }
 
@@ -178,13 +178,6 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
         super.onNewIntent(intent);
 
         handleIntentParams(intent);
-
-        if (intent != null) {
-            mIsTransfer = intent.getBooleanExtra("isTransfer", mIsTransfer);
-            if (mAddress != null && intent.getStringExtra("SipUri") != null) {
-                mAddress.setText(intent.getStringExtra("SipUri"));
-            }
-        }
     }
 
     @Override
@@ -219,6 +212,7 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
     @Override
     protected void onDestroy() {
         if (mInterfaceLoaded) {
+            if (mAddress != null) mAddress.setText("");
             mAddress = null;
             mStartCall = null;
             mAddCall = null;
@@ -247,8 +241,10 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
             int currentTimeStamp = (int) System.currentTimeMillis();
             int interval = getResources().getInteger(R.integer.time_between_update_check); // 24h
             if (lastTimestamp == 0 || currentTimeStamp - lastTimestamp >= interval) {
-                LinphoneManager.getCore().checkForUpdate(BuildConfig.VERSION_NAME);
-                LinphonePreferences.instance().setLastCheckReleaseTimestamp(currentTimeStamp);
+                if (LinphoneContext.isReady()) {
+                    LinphoneManager.getCore().checkForUpdate(BuildConfig.VERSION_NAME);
+                    LinphonePreferences.instance().setLastCheckReleaseTimestamp(currentTimeStamp);
+                }
             }
         }
     }
@@ -280,6 +276,7 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
                         intent.putExtra("EditOnClick", true);
                         intent.putExtra("SipAddress", mAddress.getText().toString());
                         startActivity(intent);
+                        if (mAddress != null) mAddress.setText("");
                     }
                 });
 
@@ -289,6 +286,7 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
                     @Override
                     public void onClick(View v) {
                         goBackToCall();
+                        if (mAddress != null) mAddress.setText("");
                     }
                 });
 
@@ -334,6 +332,7 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+        if (mAddress != null) outState.putSerializable("address", mAddress.getText().toString());
         outState.putSerializable("isTransfer", mIsTransfer);
     }
 
@@ -341,6 +340,7 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
         mIsTransfer = savedInstanceState.getBoolean("isTransfer");
+        if (mAddress != null) mAddress.setText(savedInstanceState.getString("address"));
     }
 
     @Override
@@ -374,6 +374,8 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
 
     private void handleIntentParams(Intent intent) {
         if (intent == null) return;
+
+        mIsTransfer = intent.getBooleanExtra("isTransfer", mIsTransfer);
 
         String action = intent.getAction();
         String addressToCall = null;
@@ -409,7 +411,13 @@ public class DialerActivity extends MainActivity implements AddressText.AddressC
                     Log.i("[Dialer] " + action + " with number: " + addressToCall);
                 }
             } else {
-                Log.w("[Dialer] Intent data is null for action " + action);
+                String sipUri = intent.getStringExtra("SipUri");
+                if (sipUri != null) {
+                    Log.i("[Dialer] Found extra SIP URI: " + sipUri);
+                    addressToCall = sipUri;
+                } else {
+                    Log.w("[Dialer] Intent data is null for action " + action);
+                }
             }
         }
 

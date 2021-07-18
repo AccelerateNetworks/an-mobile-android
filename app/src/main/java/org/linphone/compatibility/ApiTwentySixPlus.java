@@ -33,10 +33,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.media.AudioAttributes;
 import android.os.Build;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.provider.Settings;
 import android.widget.RemoteViews;
 import org.linphone.R;
@@ -99,6 +96,23 @@ class ApiTwentySixPlus {
         String description = context.getString(R.string.content_title_notification);
         NotificationChannel channel =
                 new NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription(description);
+        channel.setLightColor(context.getColor(R.color.notification_led_color));
+        channel.enableLights(true);
+        channel.enableVibration(true);
+        channel.setShowBadge(true);
+        notificationManager.createNotificationChannel(channel);
+    }
+
+    public static void createMissedCallChannel(Context context) {
+        NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        // Create missed call notification channel
+        String id = context.getString(R.string.notification_missed_call_channel_id);
+        String name = context.getString(R.string.content_title_notification_missed_call);
+        String description = context.getString(R.string.content_title_notification_missed_call);
+        NotificationChannel channel =
+                new NotificationChannel(id, name, NotificationManager.IMPORTANCE_LOW);
         channel.setDescription(description);
         channel.setLightColor(context.getColor(R.color.notification_led_color));
         channel.enableLights(true);
@@ -262,14 +276,14 @@ class ApiTwentySixPlus {
     public static Notification createMissedCallNotification(
             Context context, String title, String text, PendingIntent intent, int count) {
         return new Notification.Builder(
-                        context, context.getString(R.string.notification_channel_id))
+                        context, context.getString(R.string.notification_missed_call_channel_id))
                 .setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(R.drawable.call_status_missed)
                 .setAutoCancel(true)
                 .setContentIntent(intent)
                 .setDefaults(Notification.DEFAULT_SOUND | Notification.DEFAULT_VIBRATE)
-                .setCategory(Notification.CATEGORY_EVENT)
+                // .setCategory(Notification.CATEGORY_EVENT) No one really matches "missed call"
                 .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setWhen(System.currentTimeMillis())
@@ -316,16 +330,5 @@ class ApiTwentySixPlus {
         if (supportsPip) {
             activity.enterPictureInPictureMode();
         }
-    }
-
-    public static void vibrate(Vibrator vibrator) {
-        long[] timings = {0, 1000, 1000};
-        int[] amplitudes = {0, VibrationEffect.DEFAULT_AMPLITUDE, 0};
-        VibrationEffect effect = VibrationEffect.createWaveform(timings, amplitudes, 1);
-        AudioAttributes audioAttrs =
-                new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .build();
-        vibrator.vibrate(effect, audioAttrs);
     }
 }

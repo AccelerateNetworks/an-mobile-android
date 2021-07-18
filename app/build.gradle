@@ -308,8 +308,4 @@ if (crashlyticsEnabled()) {
         packageReleaseAppBundleBundle.finalizedBy(uploadCrashlyticsSymbolFileReleaseAppBundle)
     }
 }
-<<<<<<< HEAD
 project.tasks['preBuild'].dependsOn 'spotlessApply'
-
-=======
->>>>>>> 3452e641bdc5b17eb8f3f40a340100d79e53a594

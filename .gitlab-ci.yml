@@ -6,7 +6,6 @@ build:apk:
     - echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
   script:
     - ./gradlew app:dependencies | grep org.linphone
-    - ./gradlew assemble
     - ./gradlew assembleRelease
     - cp app/build/outputs/apk/release/*.apk .
   artifacts:

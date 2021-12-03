@@ -1,5 +1,5 @@
+This app is a fork of the Linphone app for Android.
 
-[![pipeline status](https://gitlab.linphone.org/BC/public/linphone-android/badges/master/pipeline.svg)](https://gitlab.linphone.org/BC/public/linphone-android/commits/master)
 
 
 Linphone is an open source softphone for voice and video over IP calling and instant messaging.

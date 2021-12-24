@@ -6,9 +6,11 @@ apply plugin: 'kotlin-kapt'
 
 apply plugin: "org.jlleitschuh.gradle.ktlint"
 
+apply plugin: 'com.google.gms.google-services'
+
 
 static def getPackageName() {
-    return "com.acceleratenetwork.mobile"
+    return "com.acceleratenetworks.mobile"
 }
 
 static def firebaseEnabled() {
@@ -24,7 +26,7 @@ def crashlyticsEnabled() {
 }
 
 if (crashlyticsEnabled()) {
-    apply plugin: 'com.google.firebase.crashlytics'
+   // apply plugin: 'com.google.firebase.crashlytics'
 }
 
 def gitBranch = new ByteArrayOutputStream()
@@ -259,7 +261,9 @@ dependencies {
 
     implementation 'com.github.chrisbanes:PhotoView:2.3.0'
 
-    implementation platform('com.google.firebase:firebase-bom:26.4.0')
+    implementation platform('com.google.firebase:firebase-bom:29.0.2')
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+
     if (crashlyticsEnabled()) {
         implementation 'com.google.firebase:firebase-crashlytics-ndk'
     } else {
@@ -273,10 +277,6 @@ dependencies {
 
     // Only enable leak canary prior to release
     //debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.4'
-}
-
-if (firebaseEnabled()) {
-    apply plugin: 'com.google.gms.google-services'
 }
 
 task generateContactsXml(type: Copy) {

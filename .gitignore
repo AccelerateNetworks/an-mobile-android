@@ -6,6 +6,7 @@
 .settings
 adb.pid
 bc-android.keystore
+an-android.keystore
 build
 *.iml
 lint.xml

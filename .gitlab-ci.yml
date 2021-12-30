@@ -10,7 +10,7 @@ build:apk:
     - ./gradlew assembleRelease
     - ./gradlew bundleRelease
     - cp app/build/outputs/apk/release/*.apk .
-    - cp app/build/outputs/aab/release/*.aab .
+    - cp app/build/outputs/bundle/release/*.aab .
   artifacts:
     paths:
       - "*.apk"

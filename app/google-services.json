@@ -63,6 +63,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:20853924048:android:eff9dbeb145ce2768afed5",
+        "android_client_info": {
+          "package_name": "com.acceleratenetworks.mobile.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "20853924048-a1i7bpvj9h7uuvd797kfa6mvmh2blu6p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPLbJ-J5M6vCjg2_4axIbTOpqf_QPvjSw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "20853924048-a1i7bpvj9h7uuvd797kfa6mvmh2blu6p.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

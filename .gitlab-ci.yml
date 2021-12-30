@@ -1,5 +1,6 @@
 build:apk:
   image: gitlab.linphone.org:4567/bc/public/linphone-android/bc-dev-android:30
+  tags: ["high-memory"]
   before_script:
     - echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
     - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties

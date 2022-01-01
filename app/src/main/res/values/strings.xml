@@ -5,27 +5,27 @@
 ]>
 
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name" translatable="false">&appName;</string>
-    <string name="app_name_debug" translatable="false">&appName; (debug)</string>
-    <string name="service_name">&appName; Service</string>
-    <string name="service_auto_start_description">&appName; has been started automatically</string>
+    <string name="app_name" translatable="false">AN Mobile</string>
+    <string name="app_name_debug" translatable="false">AN Mobile (debug)</string>
+    <string name="service_name">AN Mobile Service</string>
+    <string name="service_auto_start_description">AN Mobile has been started automatically</string>
     <string name="service_description">This is required to receive calls while in background</string>
-    <string name="sync_account_name">&appName; contacts</string>
+    <string name="sync_account_name">AN Mobile contacts</string>
 
     <!-- About screen -->
-    <string name="about_link" translatable="false">https://linphone.org</string>
-    <string name="about_privacy_policy_link" translatable="false">https://www.linphone.org/privacy-policy</string>
+    <string name="about_link" translatable="false">https://acceleratenetworks.com/</string>
+    <string name="about_privacy_policy_link" translatable="false">https://acceleratenetworks.com/privacy</string>
     <string name="about_license_link" translatable="false">https://www.gnu.org/licenses/gpl-3.0.html</string>
-    <string name="about_version" translatable="false">&appName; Android %s</string>
-    <string name="about_liblinphone_sdk_version" translatable="false">&appName; SDK %s</string>
+    <string name="about_version" translatable="false">AN Mobile Android %s</string>
+    <string name="about_liblinphone_sdk_version" translatable="false">Linphone SDK %s</string>
     <string name="about_privacy_policy">Visit our privacy policy</string>
-    <string name="about_text" translatable="false">GNU General Public License v3.0\n © 2010–2021 Belledonne Communications</string>
+    <string name="about_text" translatable="false">GNU General Public License v3.0\n © 2020-2022 Accelerate Networks</string>
 
     <!-- Logs -->
     <string name="logs_upload_failure">Failed to upload logs!</string>
     <string name="logs_reset_complete">Logs have been cleared</string>
     <string name="logs_url_copied_to_clipboard">Logs URL copied into clipboard</string>
-    <string name="about_bugreport_email" translatable="false">linphone-android@belledonne-communications.com</string>
+    <string name="about_bugreport_email" translatable="false">feedback@acceleratenetworks.com</string>
 
     <!-- Common -->
     <string name="error">Error</string>
@@ -96,7 +96,7 @@
     <string name="no_contact">No contact in your address book.</string>
     <string name="no_sip_contact">No SIP contact in your address book.</string>
     <string name="contact_filter_hint">Search contacts</string>
-    <string name="contact_send_sms_invite_text">Hello, join me on &appName;! You can download it for free at %s</string>
+    <string name="contact_send_sms_invite_text">Hello, join me on AN Mobile! You can download it for free at %s</string>
     <string name="contact_send_sms_invite_download_link" translatable="false">https://linphone.org/download</string>
     <string name="contact_last_name">Last name</string>
     <string name="contact_first_name">First name</string>
@@ -263,19 +263,19 @@
     <string name="assistant_welcome_title">Welcome</string>
     <string name="assistant_welcome_desc">This assistant will help you configure and use your SIP account.</string>
     <string name="assistant_create_account">Create account</string>
-    <string name="assistant_login_linphone">Use &appName; account</string>
-    <string name="assistant_login_generic">Use SIP account</string>
-    <string name="assistant_remote_provisioning">Fetch remote configuration</string>
+    <string name="assistant_login_linphone">Use AN Mobile account</string>
+    <string name="assistant_login_generic">Type in SIP credentials manually</string>
+    <string name="assistant_remote_provisioning">Grab auto config</string>
     <string name="assistant_ec_calibration">Echo canceler calibration in progress</string>
     <string name="assistant_phone_number_info_title">What will my phone number be used for?</string>
-    <string name="assistant_phone_number_info_content">\nThanks to your phone number, your friends will find you more easily.\n\n You will see in your address book who is using &appName; and your friends will know that they can reach you on &appName; as well.\n</string>
-    <string name="assistant_phone_number_link_info_content">\nYour friends will find you more easily if you link your account to your phone number\n\nYou will see in your address book who is using &appName; and your friends will know that they can reach you on &appName; as well.\n</string>
-    <string name="assistant_phone_number_link_info_content_already_account">You can only use your phone number with one &appName; account.\n\nIf you had already linked your number to an other account but you prefer to use this one, simply link it now and your number will automatically be moved to this account.</string>
-    <string name="assistant_general_terms_link" translatable="false">https://www.linphone.org/general-terms</string>
-    <string name="assistant_privacy_policy_link" translatable="false">https://www.linphone.org/privacy-policy</string>
+    <string name="assistant_phone_number_info_content">\nThanks to your phone number, your friends will find you more easily.\n\n You will see in your address book who is using AN Mobile and your friends will know that they can reach you on AN Mobile as well.\n</string>
+    <string name="assistant_phone_number_link_info_content">\nYour friends will find you more easily if you link your account to your phone number\n\nYou will see in your address book who is using AN Mobile and your friends will know that they can reach you on AN Mobile as well.\n</string>
+    <string name="assistant_phone_number_link_info_content_already_account">You can only use your phone number with one AN Mobile account.\n\nIf you had already linked your number to an other account but you prefer to use this one, simply link it now and your number will automatically be moved to this account.</string>
+    <string name="assistant_general_terms_link" translatable="false"></string>
+    <string name="assistant_privacy_policy_link" translatable="false">https://acceleratenetworks.com/privacy</string>
     <string name="assistant_general_terms">terms of use</string>
     <string name="assistant_privacy_policy">privacy policy</string>
-    <string name="assistant_read_and_agree_terms">I accept Belledonne Communications\' %1$s and %2$s</string>
+    <string name="assistant_read_and_agree_terms">I accept Accelerate Networks %1$s</string>
 
     <!-- Assistant errors -->
     <string name="assistant_error_phone_number_invalid_characters">Only digits are expected here</string>
@@ -289,9 +289,9 @@
     <string name="assistant_error_invalid_credentials">Account does not exist or password does not match</string>
 
     <!-- Assistant login -->
-    <string name="assistant_linphone_account">Use your &appName; account</string>
+    <string name="assistant_linphone_account">Use your AN Mobile account</string>
     <string name="assistant_create_account_part_1">Please confirm your country code and enter your phone number</string>
-    <string name="assistant_linphone_login_desc">Please enter your username and password of &appName; account</string>
+    <string name="assistant_linphone_login_desc">Please enter your username and password of AN Mobile account</string>
     <string name="assistant_login_with_username">Use your username and password instead of your phone number</string>
     <string name="assistant_login_forgotten_password">Forgot your password?</string>
     <string name="assistant_forgotten_password_link" translatable="false">https://subscribe.linphone.org/</string>
@@ -307,7 +307,7 @@
     <string name="assistant_password_hash_algorithm">Hash algorithm</string>
 
     <!-- Assistant create -->
-    <string name="assistant_create_account_part_email">Please enter a username, email and password for your &appName; account</string>
+    <string name="assistant_create_account_part_email">Please enter a username, email and password for your AN Mobile account</string>
     <string name="assistant_confirm_password">Password confirmation</string>
     <string name="assistant_validate_account_1">Your account is created. Please check your emails to validate your account:</string>
     <string name="assistant_validate_account_2">Once it is done, come back here and click on the button.</string>
@@ -452,7 +452,7 @@
     <!-- Contacts settings -->
     <string name="contacts_settings_friendlist_subscribe_title">Friendlist subscribe</string>
     <string name="contacts_settings_native_presence_title">Presence information in native contact</string>
-    <string name="contacts_settings_native_presence_summary">Inserting information shortcuts from the &appName; contact into native Android contacts</string>
+    <string name="contacts_settings_native_presence_summary">Inserting information shortcuts from the AN Mobile contact into native Android contacts</string>
     <string name="contacts_settings_show_organization_title">Display contact organization</string>
     <string name="contacts_settings_launcher_shortcuts_title">Create shortcuts to contacts in launcher</string>
     <string name="contacts_settings_launcher_shortcuts_summary">Will replace chat room shortcuts if any</string>
@@ -543,10 +543,10 @@
     <string name="notification_channel_missed_call_id" translatable="false">linphone_notification_missed_call_id</string>
     <string name="notification_channel_incoming_call_id" translatable="false">linphone_notification_call_id</string>
     <string name="notification_channel_chat_id" translatable="false">linphone_notification_chat_id</string>
-    <string name="notification_channel_service_name">&appName; service notification</string>
-    <string name="notification_channel_missed_call_name">&appName; missed calls notifications</string>
-    <string name="notification_channel_incoming_call_name">&appName; incoming calls notifications</string>
-    <string name="notification_channel_chat_name">&appName; instant messages notifications</string>
+    <string name="notification_channel_service_name">AN Mobile service notification</string>
+    <string name="notification_channel_missed_call_name">AN Mobile missed calls notifications</string>
+    <string name="notification_channel_incoming_call_name">AN Mobile incoming calls notifications</string>
+    <string name="notification_channel_chat_name">AN Mobile instant messages notifications</string>
     <string name="incoming_call_notification_title">Call incoming</string>
     <string name="incoming_call_notification_hangup_action_label">Hangup</string>
     <string name="incoming_call_notification_answer_action_label">Answer</string>
@@ -624,7 +624,7 @@
     <string name="content_description_forwarded_message">Message has been forwarded</string>
     <string name="content_description_forward_message">Forward message in this conversation</string>
     <string name="content_description_ephemeral_message">Message is ephemeral</string>
-    <string name="content_description_linphone_user">Contact is a &appName; user</string>
+    <string name="content_description_linphone_user">Contact is a AN Mobile user</string>
     <string name="content_description_contact_selected">Contact is selected</string>
     <string name="content_description_e2e_encryption_disabled">End to end encryption disabled</string>
     <string name="content_description_e2e_encryption_enabled">End to end encryption enabled</string>

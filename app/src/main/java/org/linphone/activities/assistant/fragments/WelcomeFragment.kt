@@ -64,12 +64,12 @@ class WelcomeFragment : GenericFragment<AssistantWelcomeFragmentBinding>() {
             navigateToAccountLogin()
         }
 
-        binding.setGenericAccountLoginClickListener {
-            navigateToGenericLogin()
-        }
-
         binding.setRemoteProvisioningClickListener {
             navigateToRemoteProvisioning()
+        }
+
+        binding.setGenericAccountLoginClickListener {
+            navigateToGenericLogin()
         }
 
         viewModel.termsAndPrivacyAccepted.observe(viewLifecycleOwner, {
@@ -85,7 +85,6 @@ class WelcomeFragment : GenericFragment<AssistantWelcomeFragmentBinding>() {
 
         val label = getString(
             R.string.assistant_read_and_agree_terms,
-            terms,
             privacy
         )
         val spannable = SpannableString(label)

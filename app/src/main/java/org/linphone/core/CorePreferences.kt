@@ -381,7 +381,7 @@ class CorePreferences constructor(private val context: Context) {
 
     // Will disable chat feature completely
     val disableChat: Boolean
-        get() = config.getBool("app", "disable_chat_feature", false)
+        get() = config.getBool("app", "disable_chat_feature", true)
 
     // If enabled, this will cause the video to "freeze" on your correspondent screen
     // as you won't send video packets anymore

@@ -29,7 +29,6 @@ import org.linphone.activities.assistant.AssistantActivity
 import org.linphone.activities.assistant.viewmodels.RemoteProvisioningViewModel
 import org.linphone.activities.assistant.viewmodels.SharedAssistantViewModel
 import org.linphone.activities.navigateToEchoCancellerCalibration
-import org.linphone.activities.navigateToQrCode
 import org.linphone.databinding.AssistantRemoteProvisioningFragmentBinding
 
 class RemoteProvisioningFragment : GenericFragment<AssistantRemoteProvisioningFragmentBinding>() {
@@ -50,9 +49,9 @@ class RemoteProvisioningFragment : GenericFragment<AssistantRemoteProvisioningFr
         viewModel = ViewModelProvider(this).get(RemoteProvisioningViewModel::class.java)
         binding.viewModel = viewModel
 
-        binding.setQrCodeClickListener {
-            navigateToQrCode()
-        }
+//        binding.setQrCodeClickListener {
+//            navigateToQrCode()
+//        }
 
         viewModel.fetchSuccessfulEvent.observe(viewLifecycleOwner, {
             it.consume { success ->

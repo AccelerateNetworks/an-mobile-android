@@ -82,22 +82,11 @@
                 android:padding="10dp"
                 android:layout_marginTop="20dp"/>
 
-            <TextView
-                android:onClick="@{qrCodeClickListener}"
-                android:text="@string/assistant_launch_qrcode"
-                android:background="@drawable/assistant_button"
-                android:textColor="@drawable/assistant_button_text_color"
-                style="@style/button_font"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:padding="10dp"
-                android:layout_marginTop="20dp"/>
-
         </LinearLayout>
 
         <include
             layout="@layout/wait_layout"
-            bind:visibility="@{viewModel.fetchInProgress}"/>
+            bind:visibility="@{viewModel.fetchInProgress}" />
 
     </RelativeLayout>
 

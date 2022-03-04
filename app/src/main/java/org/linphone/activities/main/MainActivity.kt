@@ -284,11 +284,28 @@ class MainActivity : GenericActivity(), SnackBarActivity, NavController.OnDestin
     }
 
     private fun handleTelOrSipUri(uri: Uri) {
-        Log.i("[Main Activity] Found uri: $uri to call")
+
+        Log.i("[Main Activity] uri: $uri was call")
         val stringUri = uri.toString()
         var addressToCall: String = stringUri
 
         when {
+            // TODO Report to the users about the status.
+            addressToCall.startsWith("acceleratenetworks-mobile-config") -> {
+                 val d = addressToCall.substring("acceleratenetworks-mobile-config://".length)
+                if (d.startsWith("v0/")) {
+                    var url: String =
+                        "https://acceleratenetworks.sip.callpipe.com/" + d.substring(3)
+                    coreContext.core.provisioningUri = url
+                    Log.w("[Remote Provisioning] Url set to [$url], restarting Core")
+                    coreContext.core.stop()
+                    coreContext.core.start()
+                    return
+                } else {
+                    Log.w("[Remote Provisioning] link provided is an unknown version. not sure what to do about it, maybe this app is out of date?")
+                    return
+                }
+            }
             addressToCall.startsWith("tel:") -> {
                 Log.i("[Main Activity] Removing tel: prefix")
                 addressToCall = addressToCall.substring("tel:".length)

@@ -265,7 +265,7 @@
     <string name="assistant_create_account">Create account</string>
     <string name="assistant_login_linphone">Use AN Mobile account</string>
     <string name="assistant_login_generic">Type in SIP credentials manually</string>
-    <string name="assistant_remote_provisioning">Grab auto config</string>
+    <string name="assistant_remote_provisioning">Automatic Configuration</string>
     <string name="assistant_ec_calibration">Echo canceler calibration in progress</string>
     <string name="assistant_phone_number_info_title">What will my phone number be used for?</string>
     <string name="assistant_phone_number_info_content">\nThanks to your phone number, your friends will find you more easily.\n\n You will see in your address book who is using AN Mobile and your friends will know that they can reach you on AN Mobile as well.\n</string>
@@ -321,8 +321,9 @@
     <string name="assistant_link_account">Link account</string>
 
     <!-- Assistant remote provisioning -->
-    <string name="assistant_remote_provisioning_title">Fetch remote configuration</string>
-    <string name="assistant_remote_provisioning_desc">Please provide your configuration URL</string>
+    <string name="assistant_remote_provisioning_title">Fetch Configuration</string>
+    <string name="assistant_remote_provisioning_desc">Scan a QR Code or enter the URL from your setup email to configure. If you need any help, email support@acceleratenetworks.com and mention your business name and cellphone number</string>
+    <string name="assistant_remote_provisioning_email" translatable="false">support@acceleratenetworks.com</string>
     <string name="assistant_remote_provisioning_url">URL</string>
     <string name="assistant_remote_provisioning_wrong_format">Unknown URL format, can\'t download provisioning…</string>
     <string name="assistant_remote_provisioning_failure">Failed to download or apply remote provisioning profile…</string>

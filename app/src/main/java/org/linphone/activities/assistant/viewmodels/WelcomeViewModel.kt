@@ -26,8 +26,8 @@ import org.linphone.LinphoneApplication.Companion.corePreferences
 class WelcomeViewModel : ViewModel() {
     val showCreateAccount: Boolean = false
     val showLinphoneLogin: Boolean = false
-    val showRemoteProvisioning: Boolean = corePreferences.showRemoteProvisioning
-    val showGenericLogin: Boolean = corePreferences.showGenericLogin
+    val showRemoteProvisioning: Boolean = true
+    val showGenericLogin: Boolean = true
 
     val termsAndPrivacyAccepted = MutableLiveData<Boolean>()
 

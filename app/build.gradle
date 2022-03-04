@@ -29,7 +29,7 @@ if (crashlyticsEnabled()) {
 
 def gitBranch = new ByteArrayOutputStream()
 task getGitVersion() {
-    def gitVersion = "4.5.6"
+    def gitVersion = "4.5.6.1"
     def gitVersionStream = new ByteArrayOutputStream()
     def gitCommitsCount = new ByteArrayOutputStream()
     def gitCommitHash = new ByteArrayOutputStream()

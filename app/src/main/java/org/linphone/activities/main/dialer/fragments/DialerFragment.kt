@@ -208,7 +208,7 @@ class DialerFragment : SecureFragment<DialerFragmentBinding>() {
             val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
             startActivity(browserIntent)
             dialog.dismiss()
-        }, getString(R.string.dialog_ok))
+        }, "Check Play Store")
 
         dialog.show()
     }

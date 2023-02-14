@@ -1,10 +1,8 @@
-FROM debian:stretch
+FROM debian:bullseye
 
-MAINTAINER Sylvain BERFINI <sylvain.berfini@belledonne-communications.com>
-
-# Configure locale
+# Configure locale and install packages
 RUN apt-get update && \
-    apt-get install -y locales && \
+    apt-get install -y locales wget git openjdk-17-jdk-headless unzip python3-pip && \
     apt-get clean && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
@@ -12,28 +10,22 @@ ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en' LC_ALL='en_US.UTF-8'
 
 ENV SHELL=/bin/bash
 
+# install python libraries for APK publishing
+RUN pip3 install google-api-python-client google-auth
+
 # Define environment
 ENV ANDROID_SDK 25.2.5
 ENV ANDROID_HOME /opt/android-sdk-linux
 ENV ANDROID_NDK_HOME /opt/android-sdk-linux/ndk
 
-# Backports required for JDK 11
-RUN echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list
-
-# Install common general tools
-RUN apt-get update && \
-    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-8-jdk-headless && \
-    apt-get -t stretch-backports install -y openjdk-11-jdk-headless && \
-    apt-get clean
-
 # Get the Android tools
-RUN wget https://dl.google.com/android/repository/tools_r$ANDROID_SDK-linux.zip && \
+RUN wget --quiet https://dl.google.com/android/repository/tools_r$ANDROID_SDK-linux.zip && \
     unzip tools_r$ANDROID_SDK-linux.zip -d $ANDROID_HOME && \
     rm -f tools_r$ANDROID_SDK-linux.zip
 
 # Get latest Android command line tools, otherwise won't work with JDK 11
 RUN mkdir -p $ANDROID_HOME/cmdline-tools/latest
-RUN wget https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip && \
+RUN wget --quiet https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip && \
     unzip commandlinetools-linux-7583922_latest.zip && \
     cp -R ./cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest/ && \
     rm -rf ./cmdline-tools && \
@@ -43,20 +35,16 @@ RUN wget https://dl.google.com/android/repository/commandlinetools-linux-7583922
 ENV PATH $ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:ANDROID_NDK_HOME:$PATH
 
 # Test
-RUN $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list --verbose --sdk_root=$ANDROID_HOME
+RUN $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list --verbose --sdk_root=$ANDROID_HOME --verbose
 
 # Get the Android SDK
-RUN echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.0" "extras;android;m2repository" "extras;google;m2repository" "platform-tools" "tools" "ndk;21.3.6528147" --sdk_root=$ANDROID_HOME
+RUN echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.0" "extras;android;m2repository" "extras;google;m2repository" "platform-tools" "tools" "ndk;21.3.6528147" --sdk_root=$ANDROID_HOME --verbose || echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.0" "extras;android;m2repository" "extras;google;m2repository" "platform-tools" "tools" "ndk;21.3.6528147" --sdk_root=$ANDROID_HOME --verbose
+
 
 # Accept Android SDK licenses
 RUN yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses --sdk_root=$ANDROID_HOME
 
-# Configure user bc
-RUN useradd -ms /bin/bash bc && \
-    echo 'bc:cotcot' | chpasswd && \
-    echo 'bc ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
+RUN useradd bc && mkdir /home/bc && chown bc /home/bc
 USER bc
 WORKDIR /home/bc
-ENV PS1='\[\e[34m\]\u@bc-dev-android>\[\e[0m\] '
 CMD bash

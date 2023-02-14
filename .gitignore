@@ -27,3 +27,5 @@ app/releaseAppBundle
 app/releaseWithCrashlytics
 keystore.properties
 app/src/main/res/xml/contacts.xml
+app-release.aab
+*.apk

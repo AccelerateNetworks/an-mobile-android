@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- To be able to display contacts list & match calling/called numbers -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
@@ -54,6 +55,9 @@
     <!-- Needed for foreground service
     (https://developer.android.com/guide/components/foreground-services) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <!-- declare that this app does not use Google advertising -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
 
     <application
         android:name=".LinphoneApplication"

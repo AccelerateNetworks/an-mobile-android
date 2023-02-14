@@ -28,36 +28,39 @@ def gitBranch = new ByteArrayOutputStream()
 task getGitVersion() {
     def gitVersion = appVersionName
     def gitVersionStream = new ByteArrayOutputStream()
-    def gitCommitsCount = new ByteArrayOutputStream()
-    def gitCommitHash = new ByteArrayOutputStream()
+    def gitTagStream = new ByteArrayOutputStream()
+    def gitCommitsCountStream = new ByteArrayOutputStream()
 
-    try {
-        exec {
-            executable "git" args "describe", "--abbrev=0"
-            standardOutput = gitVersionStream
-        }
-        exec {
-            executable "git" args "rev-list", gitVersionStream.toString().trim() + "..HEAD", "--count"
-            standardOutput = gitCommitsCount
-        }
-        exec {
-            executable "git" args "rev-parse", "--short", "HEAD"
-            standardOutput = gitCommitHash
-        }
-        exec {
-            executable "git" args "name-rev", "--name-only", "HEAD"
-            standardOutput = gitBranch
-        }
-
-        if (gitCommitsCount.toString().toInteger() == 0) {
-            gitVersion = gitVersionStream.toString().trim()
-        } else {
-            gitVersion = gitVersionStream.toString().trim() + "." + gitCommitsCount.toString().trim() + "+" + gitCommitHash.toString().trim()
-        }
-        println("Git version: " + gitVersion + " (" + appVersionCode + ")")
-    } catch (ignored) {
-        println("Git not found, using " + gitVersion + " (" + appVersionCode + ")")
+    exec {
+        executable "git" args "name-rev", "--name-only", "HEAD"
+        standardOutput = gitBranch
     }
+
+    exec {
+        commandLine "../version.sh"
+        standardOutput = gitVersionStream
+    }
+
+    exec {
+        executable "git" args "describe", "--abbrev=0"
+        standardOutput = gitTagStream
+    }
+
+    def gitTag = gitTagStream.toString().trim()
+
+    exec {
+        executable "git" args "rev-list", gitTag + "..HEAD", "--count"
+        standardOutput = gitCommitsCountStream
+    }
+
+    def gitCommitsCount = gitCommitsCountStream.toString().toInteger()
+
+    // remove all non-numeric characters in the latest tag name, parse the resulting value as an integer, multiply by 1000, and add the number of commits since that tag
+    // For example, if the latest tag is v5.0.5 and there have been 3 commits since that tag, this will produce 505003
+    appVersionCode = (gitTag.replaceAll("\\D", "").toInteger() * 1000) + gitCommitsCount;
+    gitVersion = gitVersionStream.toString().trim()
+    println("Git version: " + gitVersion + " (" + appVersionCode + ") " + gitCommitsCount + " commits after " + gitTag)
+
     project.version = gitVersion
 }
 

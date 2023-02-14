@@ -7,7 +7,10 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: push to gitlab
         run: |
           git remote add gitlab https://finn:${{ secrets.GITLAB_TOKEN }}@git.callpipe.com/AccelerateNetworks/an-mobile-android.git
           git push gitlab "${GITHUB_REF}"
+          git push --tags gitlab

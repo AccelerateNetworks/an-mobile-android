@@ -1,7 +1,5 @@
 name: sync to gitlab
-on:
-  push:
-    branches: [ master ]
+on: [push]
 
 jobs:
   sync:

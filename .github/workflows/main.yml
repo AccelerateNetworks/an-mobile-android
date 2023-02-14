@@ -9,5 +9,5 @@ jobs:
         uses: actions/checkout@v2
       - name: push to gitlab
         run: |
-          git remote add gitlab https://finn:${GITLAB_TOKEN}@git.callpipe.com/AccelerateNetworks/an-mobile-android.git
+          git remote add gitlab https://finn:${{ secrets.GITLAB_TOKEN }}@git.callpipe.com/AccelerateNetworks/an-mobile-android.git
           git push gitlab "${GITHUB_REF}"

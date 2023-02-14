@@ -1,19 +1,18 @@
-#################################################
-# Base configuration
-#################################################
-
-
-
-#################################################
-# Platforms to test
-#################################################
-
-
-include:
-  - '.gitlab-ci-files/job-android.yml'
-  - '.gitlab-ci-files/job-upload.yml'
-
-
-stages:
- - build
- - deploy
+build:apk:
+  image: gitlab.linphone.org:4567/bc/public/linphone-android/bc-dev-android:30
+  tags: ["high-memory"]
+  before_script:
+    - echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
+    - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
+    - echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
+  script:
+    - ./gradlew app:dependencies | grep org.linphone
+    - ./gradlew assembleRelease
+    - ./gradlew bundleRelease
+    - cp app/build/outputs/apk/release/*.apk .
+    - cp app/build/outputs/bundle/release/*.aab .
+  artifacts:
+    paths:
+      - "*.apk"
+      - "*.aab"
+    expire_in: 1 week

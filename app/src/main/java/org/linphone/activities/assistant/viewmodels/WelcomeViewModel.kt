@@ -24,9 +24,9 @@ import androidx.lifecycle.ViewModel
 import org.linphone.LinphoneApplication.Companion.corePreferences
 
 class WelcomeViewModel : ViewModel() {
-    val showCreateAccount: Boolean = corePreferences.showCreateAccount
-    val showLinphoneLogin: Boolean = corePreferences.showLinphoneLogin
-    val showGenericLogin: Boolean = corePreferences.showGenericLogin
+    val showCreateAccount: Boolean = false
+    val showLinphoneLogin: Boolean = false
+    val showGenericLogin: Boolean = false
     val showRemoteProvisioning: Boolean = corePreferences.showRemoteProvisioning
 
     val termsAndPrivacyAccepted = MutableLiveData<Boolean>()

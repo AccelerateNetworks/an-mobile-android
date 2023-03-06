@@ -382,7 +382,7 @@
 
     <!-- Assistant -->
     <string name="assistant_welcome_title">Welcome</string>
-    <string name="assistant_welcome_desc">This assistant will help you configure and use your SIP account.</string>
+    <string name="assistant_welcome_desc">Before we can get you setup to place and receive calls, you will need to accept our privacy policy.</string>
     <string name="assistant_create_account">Create account</string>
     <string name="assistant_login_linphone">Use &appName; account</string>
     <string name="assistant_login_generic">Use SIP account</string>
@@ -395,7 +395,7 @@
     <string name="assistant_privacy_policy_link" translatable="false">https://acceleratenetworks.com/privacy</string>
     <string name="assistant_general_terms">terms of use</string>
     <string name="assistant_privacy_policy">privacy policy</string>
-    <string name="assistant_read_and_agree_terms">I accept Belledonne Communications\' %1$s and %2$s</string>
+    <string name="assistant_read_and_agree_terms">I accept Accelerate Network\'s %2$s</string>
     <string name="assistant_generic_account_warning">Some features require a &appName; account, such as group messaging or ephemeral messaging.\n\nThese features are hidden when you register with a third party SIP account.\n\nTo enable it in a commercial project, please contact us.</string>
     <string name="assistant_generic_account_warning_contact_link" translatable="false">https://www.linphone.org/contact</string>
     <string name="assistant_generic_account_warning_continue_button_text">I understand</string>

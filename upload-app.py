@@ -23,6 +23,7 @@ import argparse
 import os
 
 from apiclient.discovery import build
+from apiclient import errors
 import google.auth
 
 # Declare command-line flags.
@@ -76,7 +77,7 @@ def main():
 
     try:
         commit_request = service.edits().commit(editId=edit_id, packageName=package_name).execute()
-    except googleapiclient.errors.HttpError as e:
+    except errors.HttpError as e:
         if e.status_code == 400:
             print("error submitting to google play: %s", e._get_reason())
             commit_request = service.edits(editId=edit_id, packageName=package_name, changesNotSentForReview="true").execute()

@@ -80,7 +80,7 @@ def main():
     except errors.HttpError as e:
         if e.status_code == 400:
             print("error submitting to google play: %s", e._get_reason())
-            commit_request = service.edits(editId=edit_id, packageName=package_name, changesNotSentForReview="true").execute()
+            commit_request = service.edits().commit(editId=edit_id, packageName=package_name, changesNotSentForReview="true").execute()
 
     print('Edit "%s" has been committed' % (commit_request['id']))
 

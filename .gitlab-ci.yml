@@ -17,6 +17,7 @@ build:apk:
   variables:
     GIT_STRATEGY: clone
   artifacts:
+    when: always
     paths:
       - "*.apk"
       - "*.aab"

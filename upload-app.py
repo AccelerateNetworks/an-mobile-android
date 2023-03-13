@@ -81,6 +81,8 @@ def main():
         if e.status_code == 400:
             print("error submitting to google play: %s", e._get_reason())
             commit_request = service.edits().commit(editId=edit_id, packageName=package_name, changesNotSentForReview="true").execute()
+        else:
+            raise e
 
     print('Edit "%s" has been committed' % (commit_request['id']))
 

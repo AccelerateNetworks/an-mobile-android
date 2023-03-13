@@ -59,11 +59,9 @@ task getGitVersion() {
 
     // convert last release semver + number of commits since release into a version code. Pads each of the semver parts out to 2 digits, and the commit count out to 3.
     // for example, release 5.0.5 should produce version code 50005000
-    var semver = gitTag.split(".")
     var appVersionCodeStr = ""
-    for(part in semver) {
-        var partInt = Integer.parseInt(part);
-        if (partInt < 10) {
+    for(part in gitTag.split("\\.")) {
+        if (Integer.parseInt(part) < 10) {
             appVersionCodeStr += "0"
         }
         appVersionCodeStr += part

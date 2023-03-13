@@ -55,9 +55,28 @@ task getGitVersion() {
 
     def gitCommitsCount = gitCommitsCountStream.toString().toInteger()
 
-    // remove all non-numeric characters in the latest tag name, parse the resulting value as an integer, multiply by 1000, and add the number of commits since that tag
-    // For example, if the latest tag is v5.0.5 and there have been 3 commits since that tag, this will produce 505003
-    appVersionCode = (gitTag.replaceAll("\\D", "").toInteger() * 1000) + gitCommitsCount;
+
+
+    // convert last release semver + number of commits since release into a version code. Pads each of the semver parts out to 2 digits, and the commit count out to 3.
+    // for example, release 5.0.5 should produce version code 50005000
+    var semver = gitTag.split(".")
+    var appVersionCodeStr = ""
+    for(part in semver) {
+        var partInt = Integer.parseInt(part);
+        if (partInt < 10) {
+            appVersionCodeStr += "0"
+        }
+        appVersionCodeStr += part
+    }
+    if(gitCommitsCount < 100) {
+        appVersionCodeStr += "0"
+    }
+    if(gitCommitsCount < 10) {
+        appVersionCodeStr += "0"
+    }
+    appVersionCodeStr += gitCommitsCount.toString();
+    appVersionCode = Integer.parseInt(appVersionCodeStr);
+
     gitVersion = gitVersionStream.toString().trim()
     println("Git version: " + gitVersion + " (" + appVersionCode + ") " + gitCommitsCount + " commits after " + gitTag)
 

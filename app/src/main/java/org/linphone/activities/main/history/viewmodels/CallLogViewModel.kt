@@ -37,7 +37,7 @@ import org.linphone.utils.TimestampUtils
 
 class CallLogViewModel(val callLog: CallLog, private val isRelated: Boolean = false) : GenericContactViewModel(callLog.remoteAddress) {
     val peerSipUri: String by lazy {
-        LinphoneUtils.getDisplayableAddress(callLog.remoteAddress)
+        callLog.remoteAddress.username.toString()
     }
 
     val statusIconResource: Int by lazy {

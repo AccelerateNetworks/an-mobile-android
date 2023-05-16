@@ -664,7 +664,6 @@ class CoreContext(
                 stringAddress = alias
             }
         }
-
         val address: Address? = core.interpretUrl(stringAddress, LinphoneUtils.applyInternationalPrefix())
         if (address == null) {
             Log.e("[Context] Failed to parse $stringAddress, abort outgoing call")
@@ -718,9 +717,16 @@ class CoreContext(
         if (corePreferences.sendEarlyMedia) {
             params.isEarlyMediaSendingEnabled = true
         }
-
-        val call = core.inviteAddressWithParams(address, params)
-        Log.i("[Context] Starting call $call")
+        val stringAddress: String = address.asString().replace("sip:", "sips:")
+        val newAddress: Address? = core.interpretUrl(stringAddress, LinphoneUtils.applyInternationalPrefix())
+        if (newAddress == null) {
+            Log.e("[Context] Failed to parse $stringAddress, abort outgoing call")
+            callErrorMessageResourceId.value = Event(context.getString(R.string.call_error_network_unreachable))
+            return
+        } else {
+            val call = core.inviteAddressWithParams(newAddress, params)
+            Log.i("[Context] Starting call $call")
+        }
     }
 
     fun switchCamera() {

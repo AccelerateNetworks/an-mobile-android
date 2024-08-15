@@ -180,6 +180,7 @@
 
             <include
                 android:id="@+id/call_media_encryption_info"
+                android:visibility="@{View.GONE}"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 layout="@layout/call_media_encryption_info"

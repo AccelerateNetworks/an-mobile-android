@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
 <!DOCTYPE resources [
-    <!ENTITY appName "Linphone">
+    <!ENTITY appName "Accelerate Networks">
 ]>
 
 <resources>
@@ -112,12 +112,11 @@
 
     <!-- First screens user see when app is installed and started -->
     <string name="welcome_page_title">Welcome</string>
-    <string name="welcome_page_subtitle">in &appName;</string>
-    <string name="welcome_page_1_message">A <b>secured</b>, <b>open source</b> and <b>French</b> communication app.</string>
-    <string name="welcome_page_2_title">Secured</string>
+    <string name="welcome_page_1_message">A <b>secure</b>, <b>open source</b> communication app.</string>
+    <string name="welcome_page_2_title">Secure</string>
     <string name="welcome_page_2_message">Your communications are safe thanks to our <b>end-to-end encryption</b>.</string>
     <string name="welcome_page_3_title">Open source</string>
-    <string name="welcome_page_3_message">A <b>free</b> and open source application since <b>2001</b>.</string>
+    <string name="welcome_page_3_message">A <b>free</b> and open source application since <b>2014</b>.</string>
 
     <!-- Generic toasts -->
     <string name="sip_address_copied_to_clipboard_toast">SIP address copied into clipboard</string>
@@ -169,10 +168,10 @@
     <string name="assistant_permissions_grant_all_of_them">OK</string>
     <string name="assistant_permissions_skip_permissions">Do it later</string>
     <string name="assistant_permissions_subtitle">To fully enjoy &appName; we need you to grant us the following permissions :</string>
-    <string name="assistant_permissions_read_contacts_title"><b>Read contacts:</b> To display your contacts and find whom is using &appName;.</string>
-    <string name="assistant_permissions_post_notifications_title"><b>Post notifications:</b> To be informed when you receive a message or a call.</string>
-    <string name="assistant_permissions_record_audio_title"><b>Record audio:</b> So your correspondent can hear you and to record voice messages.</string>
-    <string name="assistant_permissions_access_camera_title"><b>Access camera:</b> To capture video during video calls and conferences.</string>
+    <string name="assistant_permissions_read_contacts_title"><b>Read contacts:</b> To display your contacts and find who is using &appName;.</string>
+    <string name="assistant_permissions_post_notifications_title"><b>Push notifications:</b> Allows you to receive a message or call.</string>
+    <string name="assistant_permissions_record_audio_title"><b>Record audio:</b> So you can be heard when making and receiving calls.</string>
+    <string name="assistant_permissions_access_camera_title"><b>Access camera:</b> So you can scan the QR Code to connect your app.</string>
     <string name="assistant_forgotten_password_title">Password forgotten</string>
     <string name="assistant_forgotten_password_subtitle">Choose how to recover your account.</string>
     <string name="assistant_forgotten_password_message">You created your account using:</string>
@@ -442,7 +441,7 @@
     <string name="contact_editor_dialog_abort_confirmation_message">All changes will be lost</string>
     <string name="contact_editor_mandatory_field_not_filled_toast">Please fill either first name, last name or company name</string>
 
-    <string name="contact_details_numbers_and_addresses_title">Phone numbers &amp; SIP addresses</string>
+    <string name="contact_details_numbers_and_addresses_title">Phone numbers</string>
     <string name="contact_details_company_name">Company:</string>
     <string name="contact_details_job_title">Job title:</string>
     <string name="contact_details_trust_title">Trust</string>

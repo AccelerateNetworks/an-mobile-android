@@ -42,7 +42,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:text="@{model.sipUri, default=`john.doe@sip.linphone.org`}"
+            android:text="@{model.name, default=`john.doe`}"
             android:textSize="14sp"
             android:maxLines="1"
             android:ellipsize="end"

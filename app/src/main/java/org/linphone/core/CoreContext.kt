@@ -478,17 +478,20 @@ class CoreContext
                 "$TAG New account configured: [${account.params.identityAddress?.asStringUriOnly()}]"
             )
             if (!core.isPushNotificationAvailable || !account.params.isPushNotificationAvailable) {
-                if (!corePreferences.keepServiceAlive) {
-                    Log.w(
-                        "$TAG Newly added account (or the whole Core) doesn't support push notifications, enabling keep-alive foreground service..."
-                    )
-                    corePreferences.keepServiceAlive = true
-                    startKeepAliveService()
-                } else {
-                    Log.i(
-                        "$TAG Newly added account (or the whole Core) doesn't support push notifications but keep-alive foreground service is already enabled, nothing to do"
-                    )
-                }
+//                if (!corePreferences.keepServiceAlive) {
+//                    Log.w(
+//                        "$TAG Newly added account (or the whole Core) doesn't support push notifications, enabling keep-alive foreground service..."
+//                    )
+//                    corePreferences.keepServiceAlive = true
+//                    startKeepAliveService()
+//                } else {
+//                    Log.i(
+//                        "$TAG Newly added account (or the whole Core) doesn't support push notifications but keep-alive foreground service is already enabled, nothing to do"
+//                    )
+//                }
+                Log.i(
+                    "$TAG Newly added account (or the whole Core) doesn't support push notifications. account.params.isPushNotificationAvailable=${account.params.isPushNotificationAvailable}, core.isPushNotificationAvailable=${core.isPushNotificationAvailable}"
+                )
             }
         }
 

@@ -142,6 +142,7 @@
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/address"
+                    android:visibility="@{View.GONE}"
                     style="@style/default_text_style"
                     android:onClick="@{copySipUriClickListener}"
                     android:layout_width="wrap_content"
@@ -155,7 +156,6 @@
                     android:textSize="14sp"
                     android:drawableEnd="@drawable/copy"
                     android:drawablePadding="5dp"
-                    android:visibility="@{viewModel.isGroup ? View.GONE : View.VISIBLE, default=gone}"
                     app:drawableTint="?attr/color_main2_600"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"

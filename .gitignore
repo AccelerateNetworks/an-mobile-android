@@ -12,3 +12,5 @@ app/release/
 .idea/
 app/bc-android.keystore
 .kotlin/
+app/keystore.jks
+keystore.properties

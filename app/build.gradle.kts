@@ -14,7 +14,7 @@ plugins {
     alias(libs.plugins.crashlytics)
 }
 
-val packageName = "com.acceleratenetwork.mobile"
+val packageName = "com.acceleratenetworks.mobile"
 val useDifferentPackageNameForDebugBuild = false
 
 val sdkPath = providers.gradleProperty("LinphoneSdkBuildDir").get()

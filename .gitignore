@@ -17,3 +17,5 @@
 local.properties
 app/debug/
 app/release/
+app/keystore.jks
+keystore.properties

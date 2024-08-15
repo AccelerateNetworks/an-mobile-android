@@ -20,44 +20,34 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="@id/title_second_line"
+            app:layout_constraintBottom_toBottomOf="@id/title_first_line"
             app:tint="@color/main1_500"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/default_text_style_800"
             android:id="@+id/title_first_line"
+            style="@style/default_text_style_800"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="65dp"
             android:text="@string/welcome_page_title"
             android:textColor="?attr/color_on_main"
             android:textSize="36sp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"/>
-
-        <androidx.appcompat.widget.AppCompatTextView
-            style="@style/default_text_style_800"
-            android:id="@+id/title_second_line"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:text="@string/welcome_page_subtitle"
-            android:textColor="?attr/color_on_main"
-            android:textSize="26sp"
-            app:layout_constraintBottom_toBottomOf="@id/title_first_line"
-            app:layout_constraintStart_toEndOf="@id/title_first_line"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <ImageView
             android:id="@+id/image"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/welcome_icon_size"
-            android:layout_marginStart="32dp"
             android:src="@drawable/welcome_linphone_logo"
             android:contentDescription="@null"
             app:layout_constraintDimensionRatio="1:1"
-            app:layout_constraintTop_toBottomOf="@id/title_second_line"
+            app:layout_constraintTop_toBottomOf="@id/title_first_line"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.33"/>
 
         <androidx.appcompat.widget.AppCompatTextView
             style="@style/default_text_style_800"
@@ -70,7 +60,7 @@
             android:textColor="@color/gray_main2_600"
             android:textSize="20sp"
             android:gravity="center"
-            app:layout_constraintTop_toBottomOf="@id/title_second_line"
+            app:layout_constraintTop_toBottomOf="@id/title_first_line"
             app:layout_constraintStart_toEndOf="@id/image"/>
 
         <androidx.appcompat.widget.AppCompatTextView

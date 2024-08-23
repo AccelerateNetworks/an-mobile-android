@@ -56,10 +56,10 @@
         android:appCategory="social"
         tools:targetApi="35">
 
-        <!-- Required for chat message & call notifications to be displayed in Android auto -->
-        <meta-data
-            android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc"/>
+        <!-- Required for chat message notifications to be displayed in Android auto -->
+<!--        <meta-data-->
+<!--            android:name="com.google.android.gms.car.application"-->
+<!--            android:resource="@xml/automotive_app_desc"/>-->
 
         <!--<meta-data
             android:name="androidx.car.app.minCarApiLevel"

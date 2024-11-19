@@ -21,6 +21,7 @@ package org.linphone.ui.main.chat.viewmodel
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.text.Spannable
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
@@ -42,6 +43,7 @@ import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
 import org.linphone.core.EventLog
 import org.linphone.core.Factory
+import org.linphone.core.MediaFileFormat
 import org.linphone.core.Player
 import org.linphone.core.PlayerListener
 import org.linphone.core.Recorder
@@ -82,11 +84,11 @@ class SendMessageInConversationViewModel @UiThread constructor() : GenericViewMo
 
     val isReplyingTo = MutableLiveData<String>()
 
-    val isReplyingToMessage = MutableLiveData<String>()
+    val isReplyingToMessage = MutableLiveData<Spannable>()
 
     val isKeyboardOpen = MutableLiveData<Boolean>()
 
-    val isInCallConversation = MutableLiveData<Boolean>()
+    val isCallConversation = MutableLiveData<Boolean>()
 
     val isVoiceRecording = MutableLiveData<Boolean>()
 
@@ -150,7 +152,7 @@ class SendMessageInConversationViewModel @UiThread constructor() : GenericViewMo
 
         isEmojiPickerOpen.value = false
         isPlayingVoiceRecord.value = false
-        isInCallConversation.value = false
+        isCallConversation.value = false
         maxNumberOfAttachmentsReached.value = false
     }
 
@@ -210,8 +212,8 @@ class SendMessageInConversationViewModel @UiThread constructor() : GenericViewMo
             val message = model.chatMessage
             Log.i("$TAG Pending reply to message [${message.messageId}]")
             chatMessageToReplyTo = message
-            isReplyingTo.postValue(model.avatarModel.friend.name)
-            isReplyingToMessage.postValue(LinphoneUtils.getTextDescribingMessage(message))
+            isReplyingTo.postValue(model.avatarModel.value?.friend?.name)
+            isReplyingToMessage.postValue(LinphoneUtils.getFormattedTextDescribingMessage(message))
             isReplying.postValue(true)
         }
     }
@@ -486,7 +488,7 @@ class SendMessageInConversationViewModel @UiThread constructor() : GenericViewMo
         val core = coreContext.core
         Log.i("$TAG Creating voice message recorder")
         val recorderParams = core.createRecorderParams()
-        recorderParams.fileFormat = Recorder.FileFormat.Mkv
+        recorderParams.fileFormat = MediaFileFormat.Mkv
 
         val recordingAudioDevice = AudioUtils.getAudioRecordingDeviceIdForVoiceMessage()
         recorderParams.audioDevice = recordingAudioDevice
@@ -515,7 +517,8 @@ class SendMessageInConversationViewModel @UiThread constructor() : GenericViewMo
             }
             Recorder.State.Closed -> {
                 val extension = when (voiceMessageRecorder.params.fileFormat) {
-                    Recorder.FileFormat.Mkv -> "mkv"
+                    MediaFileFormat.Smff -> "smff"
+                    MediaFileFormat.Mkv -> "mka"
                     else -> "wav"
                 }
                 val tempFileName = "voice-recording-${System.currentTimeMillis()}.$extension"
@@ -702,7 +705,7 @@ class SendMessageInConversationViewModel @UiThread constructor() : GenericViewMo
     private fun playerTickerFlow() = flow {
         while (isPlayingVoiceRecord.value == true) {
             emit(Unit)
-            delay(50)
+            delay(10)
         }
     }
 }

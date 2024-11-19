@@ -63,7 +63,7 @@
                 <androidx.constraintlayout.widget.Group
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:constraint_referenced_ids="cancel_search, search, clear_field"
+                    app:constraint_referenced_ids="cancel_search, search, search_up, search_down"
                     android:visibility="@{viewModel.searchBarVisible ? View.VISIBLE : View.GONE, default=gone}" />
 
                 <ImageView
@@ -73,7 +73,7 @@
                     android:padding="15dp"
                     android:adjustViewBounds="true"
                     android:onClick="@{backClickListener}"
-                    android:visibility="@{viewModel.isInCallConversation || viewModel.showBackButton &amp;&amp; !viewModel.searchBarVisible ? View.VISIBLE : View.GONE}"
+                    android:visibility="@{viewModel.isCallConversation || viewModel.showBackButton &amp;&amp; !viewModel.searchBarVisible ? View.VISIBLE : View.GONE}"
                     android:src="@drawable/caret_left"
                     android:contentDescription="@string/content_description_go_back_icon"
                     app:tint="?attr/color_main1_500"
@@ -87,7 +87,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
                     android:layout_marginBottom="5dp"
-                    android:layout_marginStart="@{viewModel.isInCallConversation || viewModel.showBackButton ? @dimen/chat_conversation_header_avatar_start_margin_if_back_button : @dimen/chat_conversation_header_avatar_start_margin_if_no_back_button, default=@dimen/chat_conversation_header_avatar_start_margin_if_back_button}"
+                    android:layout_marginStart="@{viewModel.isCallConversation || viewModel.showBackButton ? @dimen/chat_conversation_header_avatar_start_margin_if_back_button : @dimen/chat_conversation_header_avatar_start_margin_if_no_back_button, default=@dimen/chat_conversation_header_avatar_start_margin_if_back_button}"
                     layout="@layout/contact_avatar"
                     bind:model="@{viewModel.avatarModel}"
                     app:layout_constraintStart_toEndOf="@id/back"
@@ -131,12 +131,13 @@
                     app:layout_constraintEnd_toStartOf="@id/ephemeral_enabled"
                     app:layout_constraintTop_toBottomOf="@id/title"
                     app:layout_constraintBottom_toBottomOf="@id/avatar"
-                    app:tint="@color/main1_500"/>
+                    app:tint="?attr/color_main1_500"/>
 
                 <ImageView
                     android:id="@+id/ephemeral_enabled"
                     android:layout_width="@dimen/small_icon_size"
                     android:layout_height="@dimen/small_icon_size"
+                    android:layout_marginStart="@{viewModel.isMuted ? @dimen/five : @dimen/zero}"
                     android:layout_marginEnd="5dp"
                     android:src="@drawable/clock_countdown"
                     android:contentDescription="@string/content_description_chat_ephemeral_enabled"
@@ -144,7 +145,22 @@
                     app:layout_constraintStart_toEndOf="@id/muted"
                     app:layout_constraintTop_toBottomOf="@id/title"
                     app:layout_constraintBottom_toBottomOf="@id/avatar"
-                    app:tint="@color/main1_500"/>
+                    app:tint="?attr/color_main1_500"/>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/default_text_style"
+                    android:id="@+id/ephemeral_duration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginEnd="5dp"
+                    android:paddingBottom="2dp"
+                    android:text="@{viewModel.ephemeralLifeTimeLabel, default=`1 day`}"
+                    android:textSize="12sp"
+                    android:visibility="@{viewModel.ephemeralLifetime > 0L ? View.VISIBLE : View.GONE, default=gone}"
+                    app:layout_constraintStart_toEndOf="@id/ephemeral_enabled"
+                    app:layout_constraintTop_toTopOf="@id/ephemeral_enabled"
+                    app:layout_constraintBottom_toBottomOf="@id/ephemeral_enabled"/>
 
                 <ImageView
                     android:id="@+id/show_menu"
@@ -155,7 +171,7 @@
                     android:adjustViewBounds="true"
                     android:src="@drawable/dots_three_vertical"
                     android:contentDescription="@string/content_description_show_popup_menu"
-                    android:visibility="@{viewModel.isInCallConversation ? View.GONE : View.VISIBLE}"
+                    android:visibility="@{viewModel.isCallConversation ? View.GONE : View.VISIBLE}"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:tint="?attr/color_main2_500"/>
@@ -168,7 +184,7 @@
                     android:padding="15dp"
                     android:src="@drawable/phone"
                     android:contentDescription="@string/content_description_call_start"
-                    android:visibility="@{viewModel.isInCallConversation || viewModel.isReadOnly || viewModel.searchBarVisible ? View.GONE : View.VISIBLE}"
+                    android:visibility="@{viewModel.isCallConversation || viewModel.isReadOnly || viewModel.searchBarVisible ? View.GONE : View.VISIBLE}"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintEnd_toStartOf="@id/show_menu"
                     app:tint="?attr/color_main2_500" />
@@ -198,36 +214,51 @@
                     app:hintTextColor="?attr/color_main2_400"
                     app:boxStrokeWidth="0dp"
                     app:boxStrokeWidthFocused="0dp"
-                    app:layout_constraintEnd_toStartOf="@id/clear_field"
+                    app:layout_constraintEnd_toStartOf="@id/search_up"
                     app:layout_constraintStart_toEndOf="@id/cancel_search"
                     app:layout_constraintTop_toTopOf="parent">
 
                     <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/search_field"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:textCursorDrawable="@null"
                         android:textSize="16sp"
                         android:inputType="text"
                         android:paddingVertical="1dp"
+                        android:imeOptions="actionSearch"
                         android:text="@={viewModel.searchFilter}"
                         android:background="@android:color/transparent" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <ImageView
-                    android:id="@+id/clear_field"
-                    android:onClick="@{() -> viewModel.clearFilter()}"
+                    android:id="@+id/search_up"
+                    android:onClick="@{() -> viewModel.searchUp()}"
                     android:enabled="@{viewModel.searchFilter.length() > 0}"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:padding="6dp"
-                    android:layout_marginEnd="9dp"
-                    android:src="@drawable/x"
-                    android:contentDescription="@string/content_description_clear_filter"
+                    android:layout_height="0dp"
+                    android:padding="15dp"
+                    android:src="@drawable/caret_up"
+                    android:contentDescription="@string/content_description_chat_search_message_up"
+                    app:layout_constraintBottom_toBottomOf="@id/search"
+                    app:layout_constraintEnd_toStartOf="@id/search_down"
+                    app:layout_constraintTop_toTopOf="@id/search"
+                    app:tint="@color/icon_color_selector" />
+
+                <ImageView
+                    android:id="@+id/search_down"
+                    android:onClick="@{() -> viewModel.searchDown()}"
+                    android:enabled="@{viewModel.searchFilter.length() > 0 &amp;&amp; viewModel.canSearchDown}"
+                    android:layout_width="wrap_content"
+                    android:layout_height="0dp"
+                    android:padding="15dp"
+                    android:src="@drawable/caret_down"
+                    android:contentDescription="@string/content_description_chat_search_message_down"
                     app:layout_constraintBottom_toBottomOf="@id/search"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/search"
-                    app:tint="?attr/color_main2_500" />
+                    app:tint="@color/icon_color_selector" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/events_list"
@@ -248,20 +279,6 @@
                     app:layout_constraintTop_toTopOf="@id/events_list"
                     app:layout_constraintStart_toStartOf="@id/events_list"
                     app:layout_constraintEnd_toEndOf="@id/events_list" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    style="@style/default_text_style_800"
-                    android:id="@+id/no_result"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/list_filter_no_result_found"
-                    android:textColor="?attr/color_main2_600"
-                    android:textSize="16sp"
-                    android:visibility="@{viewModel.noMatchingResultForFilter ? View.VISIBLE : View.GONE}"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/search"
-                    app:layout_constraintBottom_toTopOf="@id/send_area"
-                    app:layout_constraintEnd_toEndOf="parent"/>
 
                 <androidx.appcompat.widget.AppCompatTextView
                     style="@style/default_text_style_300"
@@ -293,7 +310,7 @@
                     android:id="@+id/send_area"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:visibility="@{viewModel.isReadOnly || viewModel.isDisabledBecauseNotSecured ? View.GONE : View.VISIBLE}"
+                    android:visibility="@{viewModel.isReadOnly || viewModel.isDisabledBecauseNotSecured || viewModel.searchBarVisible ? View.GONE : View.VISIBLE}"
                     layout="@layout/chat_conversation_send_area"
                     app:layout_constraintBottom_toBottomOf="parent"
                     bind:openFilePickerClickListener="@{openFilePickerClickListener}"
@@ -339,6 +356,10 @@
                 layout="@layout/chat_message_bottom_sheet" />
 
         </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+        <include
+            layout="@layout/operation_in_progress"
+            bind:visibility="@{viewModel.searchInProgress}" />
 
         <include
             android:id="@+id/long_press_menu"

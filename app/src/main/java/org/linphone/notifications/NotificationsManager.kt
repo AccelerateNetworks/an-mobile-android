@@ -105,6 +105,17 @@ class NotificationsManager @MainThread constructor(private val context: Context)
         NotificationManagerCompat.from(context)
     }
 
+    private var inCallService: CoreInCallService? = null
+    private var keepAliveService: CoreKeepAliveThirdPartyAccountsService? = null
+
+    private val callNotificationsMap: HashMap<String, Notifiable> = HashMap()
+    private val chatNotificationsMap: HashMap<String, Notifiable> = HashMap()
+    private val previousChatNotifications: ArrayList<Int> = arrayListOf()
+
+    private val notificationsMap = HashMap<Int, Notification>()
+
+    private var currentlyDisplayedChatRoomId: String = ""
+
     private val coreListener = object : CoreListenerStub() {
         @WorkerThread
         override fun onCallStateChanged(
@@ -121,18 +132,27 @@ class NotificationsManager @MainThread constructor(private val context: Context)
                     )
                     showCallNotification(call, true)
                 }
-                Call.State.Connected -> {
-                    if (call.dir == Call.Dir.Incoming) {
+                Call.State.OutgoingInit -> {
+                    Log.i(
+                        "$TAG Showing outgoing call notification for [${call.remoteAddress.asStringUriOnly()}]"
+                    )
+                    showCallNotification(call, false)
+                }
+                Call.State.Connected,
+                Call.State.StreamsRunning -> {
+                    if (call.state == Call.State.Connected && call.dir == Call.Dir.Incoming) {
                         Log.i(
                             "$TAG Connected call was incoming (so it was answered), removing incoming call notification"
                         )
                         removeIncomingCallNotification()
                     }
 
-                    Log.i(
-                        "$TAG Showing connected call notification for [${call.remoteAddress.asStringUriOnly()}]"
-                    )
-                    showCallNotification(call, false)
+                    if (call.state == Call.State.Connected || call.dir == Call.Dir.Incoming) {
+                        Log.i(
+                            "$TAG Showing connected call notification for [${call.remoteAddress.asStringUriOnly()}]"
+                        )
+                        showCallNotification(call, false)
+                    }
                 }
                 Call.State.Updating -> {
                     val notifiable = getNotifiableForCall(call)
@@ -348,15 +368,6 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             }
         }
     }
-
-    private var inCallService: CoreInCallService? = null
-    private var keepAliveService: CoreKeepAliveThirdPartyAccountsService? = null
-
-    private val callNotificationsMap: HashMap<String, Notifiable> = HashMap()
-    private val chatNotificationsMap: HashMap<String, Notifiable> = HashMap()
-    private val previousChatNotifications: ArrayList<Int> = arrayListOf()
-
-    private var currentlyDisplayedChatRoomId: String = ""
 
     init {
         for (notification in notificationManager.activeNotifications) {
@@ -592,26 +603,39 @@ class NotificationsManager @MainThread constructor(private val context: Context)
     private fun startInCallForegroundService(call: Call) {
         Log.i("$TAG Trying to start/update foreground Service using call notification")
 
+        val service = inCallService
+        if (service == null) {
+            Log.w("$TAG Core Foreground Service hasn't started yet...")
+            return
+        }
+
         val channelId = context.getString(R.string.notification_channel_call_id)
         val channel = notificationManager.getNotificationChannel(channelId)
         val importance = channel?.importance ?: NotificationManagerCompat.IMPORTANCE_NONE
         if (importance == NotificationManagerCompat.IMPORTANCE_NONE) {
             Log.e("$TAG Calls channel has been disabled, can't start foreground service!")
+            stopInCallCallForegroundService()
             return
         }
 
-        val notifiable = getNotifiableForCall(
-            coreContext.core.currentCall ?: coreContext.core.calls.first()
-        )
-        val notification = notificationManager.activeNotifications.find {
-            it.id == notifiable.notificationId
+        val notifiable = getNotifiableForCall(call)
+        val notificationId = notifiable.notificationId
+        val notification = if (notificationsMap.containsKey(notificationId)) {
+            notificationsMap[notificationId]
+        } else if (notificationsMap.containsKey(INCOMING_CALL_ID)) {
+            notificationsMap[INCOMING_CALL_ID]
+        } else {
+            null
         }
 
         if (notification == null) {
-            Log.w("$TAG No existing notification found for current Call, aborting")
+            Log.w(
+                "$TAG No existing notification (ID [$notificationId]) found for current call [${call.remoteAddress.asStringUriOnly()}], aborting"
+            )
+            stopInCallCallForegroundService()
             return
         }
-        Log.i("$TAG Found notification [${notification.id}] for current Call")
+        Log.i("$TAG Found notification [$notificationId] for current Call")
 
         var mask = Compatibility.FOREGROUND_SERVICE_TYPE_PHONE_CALL
         val callState = call.state
@@ -647,21 +671,16 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             }
         }
 
-        val service = inCallService
-        if (service != null) {
-            Log.i(
-                "$TAG Service found, starting it as foreground using notification ID [${notifiable.notificationId}] with type(s) [$mask]"
-            )
-            Compatibility.startServiceForeground(
-                service,
-                notifiable.notificationId,
-                notification.notification,
-                mask
-            )
-            currentInCallServiceNotificationId = notifiable.notificationId
-        } else {
-            Log.w("$TAG Core Foreground Service hasn't started yet...")
-        }
+        Log.i(
+            "$TAG Service found, starting it as foreground using notification ID [${notifiable.notificationId}] with type(s) [$mask]"
+        )
+        Compatibility.startServiceForeground(
+            service,
+            notifiable.notificationId,
+            notification,
+            mask
+        )
+        currentInCallServiceNotificationId = notifiable.notificationId
     }
 
     @WorkerThread
@@ -772,7 +791,7 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             coreContext.contactsManager.findContactByAddress(address)
         val displayName = contact?.name ?: LinphoneUtils.getDisplayName(address)
 
-        val originalMessage = LinphoneUtils.getTextDescribingMessage(message)
+        val originalMessage = LinphoneUtils.getPlainTextDescribingMessage(message)
         val text = AppUtils.getString(R.string.notification_chat_message_reaction_received).format(
             reaction,
             originalMessage
@@ -819,6 +838,7 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             )
             try {
                 notificationManager.notify(tag, id, notification)
+                notificationsMap[id] = notification
             } catch (iae: IllegalArgumentException) {
                 if (inCallService == null && tag == null) {
                     // We can't notify using CallStyle if there isn't a foreground service running
@@ -842,6 +862,7 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             "$TAG Canceling notification with ID [$id] and ${if (tag == null) "without tag" else "with tag [$tag]"}"
         )
         notificationManager.cancel(tag, id)
+        notificationsMap.remove(id)
     }
 
     @WorkerThread
@@ -868,7 +889,7 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             coreContext.contactsManager.findContactByAddress(message.fromAddress)
         val displayName = contact?.name ?: LinphoneUtils.getDisplayName(message.fromAddress)
 
-        val text = LinphoneUtils.getTextDescribingMessage(message)
+        val text = LinphoneUtils.getPlainTextDescribingMessage(message)
         val notifiableMessage = NotifiableMessage(
             text,
             contact,
@@ -980,7 +1001,7 @@ class NotificationsManager @MainThread constructor(private val context: Context)
         }
 
         Log.i(
-            "Creating notification for ${if (isIncoming) "incoming" else "outgoing"} ${if (isConference) "conference" else "call"} with video ${if (isVideo) "enabled" else "disabled"} on channel [$channel]"
+            "Creating notification for [${if (isIncoming) "incoming" else "outgoing"}] [${if (isConference) "conference" else "call"}] with video [${if (isVideo) "enabled" else "disabled"}] on channel [$channel]"
         )
 
         val builder = NotificationCompat.Builder(
@@ -988,7 +1009,7 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             channel
         ).apply {
             try {
-                style.setIsVideo(false)
+                style.setIsVideo(isVideo)
                 setStyle(style)
             } catch (iae: IllegalArgumentException) {
                 Log.e(
@@ -1000,6 +1021,11 @@ class NotificationsManager @MainThread constructor(private val context: Context)
             setSmallIcon(smallIcon)
             setCategory(NotificationCompat.CATEGORY_CALL)
             setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            if (isIncoming) {
+                setPriority(NotificationCompat.PRIORITY_MAX)
+            } else {
+                setPriority(NotificationCompat.PRIORITY_HIGH)
+            }
             setWhen(System.currentTimeMillis())
             setAutoCancel(false)
             setOngoing(true)
@@ -1076,6 +1102,12 @@ class NotificationsManager @MainThread constructor(private val context: Context)
 
         for (person in allPersons) {
             notificationBuilder.addPerson(person)
+        }
+
+        if (corePreferences.markConversationAsReadWhenDismissingMessageNotification) {
+            Log.i("$TAG Conversation will be marked as read upon notification dismissal")
+            notificationBuilder
+                .setDeleteIntent(getMarkMessageAsReadPendingIntent(notifiable))
         }
 
         return notificationBuilder.build()
@@ -1270,14 +1302,27 @@ class NotificationsManager @MainThread constructor(private val context: Context)
 
         val service = keepAliveService
         if (service != null) {
+            val pendingIntent = TaskStackBuilder.create(context).run {
+                addNextIntentWithParentStack(
+                    Intent(context, MainActivity::class.java).apply {
+                        setAction(Intent.ACTION_MAIN) // Needed as well
+                    }
+                )
+                getPendingIntent(
+                    KEEP_ALIVE_FOR_THIRD_PARTY_ACCOUNTS_ID,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )!!
+            }
+
             val builder = NotificationCompat.Builder(context, channelId)
-                .setContentTitle(context.getString(R.string.app_name))
                 .setSmallIcon(R.drawable.linphone_notification)
                 .setAutoCancel(false)
                 .setOngoing(true)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setShowWhen(false)
+                .setContentIntent(pendingIntent)
             val notification = builder.build()
 
             Log.i(

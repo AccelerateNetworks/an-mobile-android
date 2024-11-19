@@ -106,10 +106,6 @@ class HistoryFragment : SlidingPaneChildFragment() {
         binding.callHistory.setHasFixedSize(true)
         binding.callHistory.layoutManager = LinearLayoutManager(requireContext())
 
-        if (binding.callHistory.adapter != adapter) {
-            binding.callHistory.adapter = adapter
-        }
-
         viewModel.callLogFoundEvent.observe(viewLifecycleOwner) {
             it.consume { found ->
                 if (found) {
@@ -136,6 +132,12 @@ class HistoryFragment : SlidingPaneChildFragment() {
         viewModel.historyCallLogs.observe(viewLifecycleOwner) {
             Log.i("$TAG Call history list ready with [${it.size}] items")
             adapter.submitList(it)
+
+            // Wait for adapter to have items before setting it in the RecyclerView,
+            // otherwise scroll position isn't retained
+            if (binding.callHistory.adapter != adapter) {
+                binding.callHistory.adapter = adapter
+            }
         }
 
         viewModel.historyDeletedEvent.observe(viewLifecycleOwner) {
@@ -155,6 +157,22 @@ class HistoryFragment : SlidingPaneChildFragment() {
                 Log.i("$TAG Going to conversation [${pair.first}][${pair.second}]")
                 sharedViewModel.showConversationEvent.value = Event(pair)
                 sharedViewModel.navigateToConversationsEvent.value = Event(true)
+            }
+        }
+
+        viewModel.goToMeetingConversationEvent.observe(viewLifecycleOwner) {
+            it.consume { pair ->
+                val localAddress = pair.first
+                val remoteAddress = pair.second
+                if (findNavController().currentDestination?.id == R.id.historyFragment) {
+                    Log.i("$TAG Going to meeting conversation [$localAddress][$remoteAddress]")
+                    val action =
+                        HistoryFragmentDirections.actionHistoryFragmentToConferenceConversationFragment(
+                            localAddress,
+                            remoteAddress
+                        )
+                    findNavController().navigate(action)
+                }
             }
         }
 

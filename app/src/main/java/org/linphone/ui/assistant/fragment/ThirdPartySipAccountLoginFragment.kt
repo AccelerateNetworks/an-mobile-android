@@ -19,7 +19,9 @@
  */
 package org.linphone.ui.assistant.fragment
 
+import android.content.Context
 import android.os.Bundle
+import android.telephony.TelephonyManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -88,7 +90,6 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
         adapter.setDropDownViewResource(R.layout.generic_dropdown_cell)
         binding.transport.adapter = adapter
         binding.transport.onItemSelectedListener = dropdownListener
-        binding.transport.setSelection(viewModel.availableTransports.size - 1)
 
         binding.viewModel = viewModel
         observeToastEvents(viewModel)
@@ -120,6 +121,12 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
             }
         }
 
+        viewModel.defaultTransportIndexEvent.observe(viewLifecycleOwner) {
+            it.consume { index ->
+                binding.transport.setSelection(index)
+            }
+        }
+
         coreContext.bearerAuthenticationRequestedEvent.observe(viewLifecycleOwner) {
             it.consume { pair ->
                 val serverUrl = pair.first
@@ -136,8 +143,10 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
             }
         }
 
+        val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        val countryIso = telephonyManager.networkCountryIso
         coreContext.postOnCoreThread {
-            val dialPlan = PhoneNumberUtils.getDeviceDialPlan(requireContext())
+            val dialPlan = PhoneNumberUtils.getDeviceDialPlan(countryIso)
             if (dialPlan != null) {
                 viewModel.internationalPrefix.postValue(dialPlan.countryCallingCode)
                 viewModel.internationalPrefixIsoCountryCode.postValue(dialPlan.isoCountryCode)

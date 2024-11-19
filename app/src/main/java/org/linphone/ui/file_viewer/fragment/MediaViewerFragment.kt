@@ -45,8 +45,6 @@ class MediaViewerFragment : GenericMainFragment() {
 
     private lateinit var viewModel: MediaViewModel
 
-    var fullScreenChanged: ((fullScreen: Boolean) -> Unit)? = null
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -64,7 +62,7 @@ class MediaViewerFragment : GenericMainFragment() {
         }
 
         viewModel = ViewModelProvider(this)[MediaViewModel::class.java]
-        viewModel.fullScreenMode.value = arguments?.getBoolean("fullScreen", true) ?: true
+        viewModel.fullScreenMode.value = sharedViewModel.mediaViewerFullScreenMode.value == true
 
         binding.lifecycleOwner = viewLifecycleOwner
         binding.viewModel = viewModel
@@ -85,8 +83,23 @@ class MediaViewerFragment : GenericMainFragment() {
         viewModel.loadFile(path)
 
         binding.setToggleFullScreenModeClickListener {
-            viewModel.toggleFullScreen()
-            fullScreenChanged?.invoke(viewModel.fullScreenMode.value == true)
+            val fullScreenMode = viewModel.toggleFullScreen()
+            sharedViewModel.mediaViewerFullScreenMode.value = fullScreenMode
+        }
+
+        viewModel.videoSizeChangedEvent.observe(viewLifecycleOwner) {
+            it.consume { pair ->
+                val width = pair.first
+                val height = pair.second
+                Log.i("$TAG Updating video texture ration to ${width}x$height")
+                binding.videoPlayer.setAspectRatio(width, height)
+            }
+        }
+
+        viewModel.changeFullScreenModeEvent.observe(viewLifecycleOwner) {
+            it.consume { fullScreenMode ->
+                sharedViewModel.mediaViewerFullScreenMode.value = fullScreenMode
+            }
         }
     }
 

@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_marginEnd="10dp"
-                android:text="@{viewModel.title, default=@string/history_call_start_title}"
+                android:text="@string/call_action_start_new_call"
                 app:layout_constraintBottom_toBottomOf="@id/back"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/back"

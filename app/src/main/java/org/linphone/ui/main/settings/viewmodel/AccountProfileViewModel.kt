@@ -22,7 +22,10 @@ package org.linphone.ui.main.settings.viewmodel
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewModelScope
+import java.io.File
 import java.util.Locale
+import kotlinx.coroutines.launch
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
@@ -31,6 +34,7 @@ import org.linphone.core.AccountDevice
 import org.linphone.core.AccountManagerServices
 import org.linphone.core.AccountManagerServicesRequest
 import org.linphone.core.AccountManagerServicesRequestListenerStub
+import org.linphone.core.Address
 import org.linphone.core.DialPlan
 import org.linphone.core.Dictionary
 import org.linphone.core.Factory
@@ -40,6 +44,7 @@ import org.linphone.ui.main.model.AccountModel
 import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 import org.linphone.ui.main.settings.model.AccountDeviceModel
 import org.linphone.utils.Event
+import org.linphone.utils.FileUtils
 
 class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
     companion object {
@@ -70,9 +75,15 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
 
     val expandDevices = MutableLiveData<Boolean>()
 
-    val devicesAvailable = MutableLiveData<Boolean>()
+    val isOnDefaultDomain = MutableLiveData<Boolean>()
+
+    val devicesFetchInProgress = MutableLiveData<Boolean>()
 
     val hideAccountSettings = MutableLiveData<Boolean>()
+
+    val deviceId = MutableLiveData<String>()
+
+    val showDeviceId = MutableLiveData<Boolean>()
 
     val accountRemovedEvent: MutableLiveData<Event<Boolean>> by lazy {
         MutableLiveData<Event<Boolean>>()
@@ -92,7 +103,7 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
             val devicesList = arrayListOf<AccountDeviceModel>()
             for (accountDevice in accountDevices) {
                 devicesList.add(
-                    AccountDeviceModel(accountDevice) { device ->
+                    AccountDeviceModel(accountDevice) { model, device ->
                         if (::accountManagerServices.isInitialized) {
                             val identityAddress = account.params.identityAddress
                             if (identityAddress != null) {
@@ -105,6 +116,11 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                                 )
                                 deleteRequest.addListener(this)
                                 deleteRequest.submit()
+
+                                val newList = arrayListOf<AccountDeviceModel>()
+                                newList.addAll(devices.value.orEmpty())
+                                newList.remove(model)
+                                devices.postValue(newList)
                             } else {
                                 Log.e("$TAG Account identity address is null, can't delete device!")
                             }
@@ -113,6 +129,13 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                 )
             }
             devices.postValue(devicesList)
+            devicesFetchInProgress.postValue(false)
+        }
+
+        override fun onRequestSuccessful(request: AccountManagerServicesRequest, data: String?) {
+            if (request.type == AccountManagerServicesRequest.Type.DeleteDevice) {
+                Log.i("$TAG Device successfully deleted: $data")
+            }
         }
 
         @WorkerThread
@@ -136,6 +159,7 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                                 )
                             )
                         )
+                        devicesFetchInProgress.postValue(false)
                     }
                     else -> {}
                 }
@@ -146,8 +170,11 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
     init {
         expandDetails.value = true
         expandDevices.value = false
+        showDeviceId.value = false
+        devicesFetchInProgress.value = true
+        isOnDefaultDomain.value = false
 
-        coreContext.postOnCoreThread { core ->
+        coreContext.postOnCoreThread {
             hideAccountSettings.postValue(corePreferences.hideAccountSettings)
             dialPlansLabelList.add("") // To allow removing selected dial plan
 
@@ -185,23 +212,15 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
 
                 sipAddress.postValue(account.params.identityAddress?.asStringUriOnly())
                 displayName.postValue(account.params.identityAddress?.displayName)
+                showDeviceId.postValue(false)
 
                 val identityAddress = account.params.identityAddress
                 if (identityAddress != null) {
                     val domain = identityAddress.domain
                     val defaultDomain = corePreferences.defaultDomain
-                    devicesAvailable.postValue(domain == defaultDomain)
+                    isOnDefaultDomain.postValue(domain == defaultDomain)
                     if (domain == defaultDomain) {
-                        Log.i(
-                            "$TAG Request list of known devices for account [${identityAddress.asStringUriOnly()}]"
-                        )
-                        accountManagerServices = core.createAccountManagerServices()
-                        accountManagerServices.language = Locale.getDefault().language // Returns en, fr, etc...
-                        val request = accountManagerServices.createGetDevicesListRequest(
-                            identityAddress
-                        )
-                        request.addListener(accountManagerServicesListener)
-                        request.submit()
+                        requestDevicesList(identityAddress)
                     } else {
                         Log.i(
                             "$TAG Account with domain [$domain] can't get devices list, only works with [$defaultDomain] domain"
@@ -230,6 +249,7 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                         selectedDialPlan.postValue(index)
                     }
                 }
+                deviceId.postValue(account.contactAddress?.getUriParam("gr"))
 
                 accountFoundEvent.postValue(Event(true))
             } else {
@@ -245,6 +265,16 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                 val authInfo = account.findAuthInfo()
                 if (authInfo != null) {
                     Log.i("$TAG Found auth info for account, removing it")
+                    if (authInfo.password.isNullOrEmpty() && authInfo.ha1.isNullOrEmpty() && authInfo.accessToken != null) {
+                        Log.i("$TAG Auth info was using bearer token instead of password")
+                        val ssoCache = File(corePreferences.ssoCacheFile)
+                        if (ssoCache.exists()) {
+                            Log.i("$TAG Found auth_state.json file, deleting it")
+                            viewModelScope.launch {
+                                FileUtils.deleteFile(ssoCache.absolutePath)
+                            }
+                        }
+                    }
                     core.removeAuthInfo(authInfo)
                 } else {
                     Log.w("$TAG Failed to find matching auth info for account")
@@ -276,6 +306,13 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                 val newModel = AccountModel(account)
                 newModel.picturePath.postValue(path)
                 accountModel.postValue(newModel)
+
+                // Also update friend & contact avatar model for ourselves
+                val model = coreContext.contactsManager.getContactAvatarModelForAddress(
+                    params.identityAddress
+                )
+                model.friend.photo = path
+                model.picturePath.postValue(path)
 
                 account.params = copy
                 account.refreshRegister()
@@ -358,5 +395,25 @@ class AccountProfileViewModel @UiThread constructor() : GenericViewModel() {
                 "$TAG Removed international prefix for account [${account.params.identityAddress?.asStringUriOnly()}]"
             )
         }
+    }
+
+    @UiThread
+    fun showDebugInfo(): Boolean {
+        showDeviceId.value = true
+        return true
+    }
+
+    @WorkerThread
+    private fun requestDevicesList(identityAddress: Address) {
+        Log.i(
+            "$TAG Request devices list for identity address [${identityAddress.asStringUriOnly()}]"
+        )
+        accountManagerServices = coreContext.core.createAccountManagerServices()
+        accountManagerServices.language = Locale.getDefault().language // Returns en, fr, etc...
+        val request = accountManagerServices.createGetDevicesListRequest(
+            identityAddress
+        )
+        request.addListener(accountManagerServicesListener)
+        request.submit()
     }
 }

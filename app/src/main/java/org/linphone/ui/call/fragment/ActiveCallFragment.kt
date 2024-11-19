@@ -29,6 +29,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import androidx.activity.OnBackPressedCallback
 import androidx.annotation.UiThread
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.lifecycle.ViewModelProvider
@@ -114,6 +115,46 @@ class ActiveCallFragment : GenericCallFragment() {
         override fun onSlide(bottomSheet: View, slideOffset: Float) { }
     }
 
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            val actionsBottomSheetBehavior = BottomSheetBehavior.from(binding.bottomBar.root)
+            if (actionsBottomSheetBehavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
+                actionsBottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                return
+            }
+
+            val numpadBottomSheetBehavior = BottomSheetBehavior.from(binding.callNumpad.root)
+            if (numpadBottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                numpadBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                return
+            }
+
+            val callStatsBottomSheetBehavior = BottomSheetBehavior.from(binding.callStats.root)
+            if (callStatsBottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                callStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                return
+            }
+
+            val callMediaEncryptionStatsBottomSheetBehavior = BottomSheetBehavior.from(
+                binding.callMediaEncryptionStats.root
+            )
+            if (callMediaEncryptionStatsBottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                callMediaEncryptionStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                return
+            }
+
+            Log.i("$TAG Back gesture/click detected, no bottom sheet is expanded, going back")
+            isEnabled = false
+            try {
+                requireActivity().onBackPressedDispatcher.onBackPressed()
+            } catch (ise: IllegalStateException) {
+                Log.w(
+                    "$TAG Can't go back: $ise"
+                )
+            }
+        }
+    }
+
     override fun onCreateAnimation(transit: Int, enter: Boolean, nextAnim: Int): Animation? {
         return when (findNavController().currentDestination?.id) {
             R.id.newCallFragment, R.id.callsListFragment, R.id.transferCallFragment, R.id.inCallConversationFragment -> {
@@ -173,6 +214,11 @@ class ActiveCallFragment : GenericCallFragment() {
             requireActivity().finish()
         }
 
+        binding.setTransferCallClickListener {
+            val action = ActiveCallFragmentDirections.actionActiveCallFragmentToTransferCallFragment()
+            findNavController().navigate(action)
+        }
+
         binding.setNewCallClickListener {
             val action = ActiveCallFragmentDirections.actionActiveCallFragmentToNewCallFragment()
             findNavController().navigate(action)
@@ -199,13 +245,6 @@ class ActiveCallFragment : GenericCallFragment() {
 
         sharedViewModel.foldingState.observe(viewLifecycleOwner) { feature ->
             updateHingeRelatedConstraints(feature)
-        }
-
-        callViewModel.goToInitiateBlindTransferEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                val action = ActiveCallFragmentDirections.actionActiveCallFragmentToTransferCallFragment()
-                findNavController().navigate(action)
-            }
         }
 
         callViewModel.fullScreenMode.observe(viewLifecycleOwner) { hide ->
@@ -240,7 +279,7 @@ class ActiveCallFragment : GenericCallFragment() {
                     )
                 } else {
                     // Only allow "trying again" once
-                    showZrtpAlertDialog(callViewModel.zrtpSasValidationAttempts == 1)
+                    showZrtpAlertDialog(false)
                 }
             }
         }
@@ -369,6 +408,11 @@ class ActiveCallFragment : GenericCallFragment() {
                 }
             }
         }
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -386,7 +430,7 @@ class ActiveCallFragment : GenericCallFragment() {
 
         if (callViewModel.isZrtpAlertDialogVisible) {
             Log.i("$TAG Fragment resuming, showing ZRTP alert dialog")
-            showZrtpAlertDialog(callViewModel.zrtpSasValidationAttempts == 1)
+            showZrtpAlertDialog(false)
         } else if (callViewModel.isZrtpDialogVisible) {
             Log.i("$TAG Fragment resuming, showing ZRTP SAS validation dialog")
             callViewModel.showZrtpSasDialogIfPossible()

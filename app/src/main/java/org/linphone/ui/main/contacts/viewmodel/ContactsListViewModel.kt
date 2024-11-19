@@ -94,7 +94,7 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
 
     init {
         fetchInProgress.value = true
-        showFavourites.value = true
+        showFavourites.value = corePreferences.showFavoriteContacts
 
         coreContext.postOnCoreThread { core ->
             updateDomainFilter()
@@ -103,9 +103,11 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
             magicSearch = core.createMagicSearch()
             magicSearch.limitedSearch = false
             magicSearch.addListener(magicSearchListener)
-        }
 
-        applyFilter(currentFilter)
+            coreContext.postOnMainThread {
+                applyFilter(currentFilter)
+            }
+        }
     }
 
     @UiThread
@@ -139,14 +141,21 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
 
     @UiThread
     fun changeContactsFilter(onlyLinphoneContacts: Boolean, onlySipContacts: Boolean) {
-        domainFilter = if (onlyLinphoneContacts) {
-            corePreferences.defaultDomain
-        } else if (onlySipContacts) {
-            "*"
-        } else {
-            ""
+        coreContext.postOnCoreThread {
+            domainFilter = if (onlyLinphoneContacts) {
+                corePreferences.defaultDomain
+            } else if (onlySipContacts) {
+                "*"
+            } else {
+                ""
+            }
+            corePreferences.contactsFilter = domainFilter
+            Log.i("$TAG Newly set filter is [${corePreferences.contactsFilter}]")
+
+            coreContext.postOnMainThread {
+                applyFilter(currentFilter)
+            }
         }
-        applyFilter(currentFilter)
     }
 
     fun areAllContactsDisplayed(): Boolean {
@@ -155,7 +164,9 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
 
     @UiThread
     fun toggleFavouritesVisibility() {
-        showFavourites.value = showFavourites.value == false
+        val show = showFavourites.value == false
+        showFavourites.value = show
+        corePreferences.showFavoriteContacts = show
     }
 
     @WorkerThread
@@ -163,10 +174,15 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
         val defaultAccount = coreContext.core.defaultAccount
         val defaultDomain = defaultAccount?.params?.domain == corePreferences.defaultDomain
         isDefaultAccountLinphone.postValue(defaultDomain)
-        domainFilter = if (isEndToEndEncryptionMandatory()) {
-            corePreferences.defaultDomain
-        } else {
-            "*"
+
+        Log.i("$TAG Currently selected filter is [${corePreferences.contactsFilter}]")
+        domainFilter = corePreferences.contactsFilter
+        if (isEndToEndEncryptionMandatory() && (domainFilter.isEmpty() || domainFilter == "*")) {
+            domainFilter = corePreferences.defaultDomain
+            corePreferences.contactsFilter = domainFilter
+            Log.i(
+                "$TAG Filter updated to [${corePreferences.contactsFilter}] to match mandatory IM encryption"
+            )
         }
     }
 
@@ -203,7 +219,7 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
             contactModel.friend.edit()
             val starred = !contactModel.friend.starred
             Log.i(
-                "$TAG Friend [${contactModel.name.value}] will be ${if (starred) "added to" else "removed from"} favourites"
+                "$TAG Friend [${contactModel.name.value}] will be [${if (starred) "added to" else "removed from"}] favourites"
             )
             contactModel.friend.starred = starred
             contactModel.friend.done()
@@ -265,9 +281,13 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
 
         for (result in results) {
             val friend = result.friend
-            if (friend != null && result.sourceFlags == MagicSearch.Source.LdapServers.toInt()) {
-                // TODO FIXME: Fix issue in SDK, each LDAP friend should have a proper refKey
-                friend.refKey = friend.name
+            if (friend != null && friend.refKey.orEmpty().isEmpty()) {
+                if (friend.vcard != null) {
+                    friend.vcard?.generateUniqueId()
+                    friend.refKey = friend.vcard?.uid
+                } else {
+                    friend.refKey = friend.name
+                }
             }
 
             val model = if (friend != null) {
@@ -279,7 +299,7 @@ class ContactsListViewModel @UiThread constructor() : AbstractMainViewModel() {
             list.add(model)
             count += 1
 
-            val starred = friend?.starred ?: false
+            val starred = friend?.starred == true
             model.isFavourite.postValue(starred)
             if (starred) {
                 favouritesList.add(model)

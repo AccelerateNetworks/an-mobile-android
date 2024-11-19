@@ -19,6 +19,7 @@
  */
 package org.linphone.ui.main.chat.model
 
+import android.text.Spannable
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
@@ -56,7 +57,7 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
 
     val isEncrypted = chatRoom.hasCapability(Capabilities.Encrypted.toInt())
 
-    val isReadOnly = chatRoom.isReadOnly
+    val isReadOnly = MutableLiveData<Boolean>()
 
     val subject = MutableLiveData<String>()
 
@@ -70,9 +71,13 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
 
     val isEphemeral = MutableLiveData<Boolean>()
 
-    val lastMessageText = MutableLiveData<String>()
+    val lastMessageTextSender = MutableLiveData<String>()
+
+    val lastMessageText = MutableLiveData<Spannable>()
 
     val lastMessageIcon = MutableLiveData<Int>()
+
+    val isLastMessageForwarded = MutableLiveData<Boolean>()
 
     val isLastMessageOutgoing = MutableLiveData<Boolean>()
 
@@ -104,6 +109,12 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
             Log.i("$TAG Conversation has been joined")
             subject.postValue(chatRoom.subject)
             computeParticipants()
+        }
+
+        @WorkerThread
+        override fun onConferenceLeft(chatRoom: ChatRoom, eventLog: EventLog) {
+            Log.w("TAG Conversation has been left")
+            isReadOnly.postValue(true)
         }
 
         @WorkerThread
@@ -169,6 +180,7 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
 
         isMuted.postValue(chatRoom.muted)
         isEphemeral.postValue(chatRoom.isEphemeralEnabled)
+        isReadOnly.postValue(chatRoom.isReadOnly)
         Log.d(
             "$TAG Ephemeral messages are [${if (chatRoom.isEphemeralEnabled) "enabled" else "disabled"}], lifetime is [${chatRoom.ephemeralLifetime}]"
         )
@@ -193,6 +205,20 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
             chatRoom.markAsRead()
             unreadMessageCount.postValue(chatRoom.unreadMessagesCount)
             Log.i("$TAG Conversation [$id] has been marked as read")
+        }
+    }
+
+    @UiThread
+    fun updateUnreadCount() {
+        coreContext.postOnCoreThread {
+            unreadMessageCount.postValue(chatRoom.unreadMessagesCount)
+        }
+    }
+
+    @UiThread
+    fun updateMuteState() {
+        coreContext.postOnCoreThread {
+            isMuted.postValue(chatRoom.muted)
         }
     }
 
@@ -240,6 +266,7 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
         coreContext.postOnCoreThread {
             chatRoom.leave()
             Log.i("$TAG Group conversation [$id] has been leaved")
+            isReadOnly.postValue(true)
         }
     }
 
@@ -247,7 +274,6 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
     private fun updateLastMessageStatus(message: ChatMessage) {
         val isOutgoing = message.isOutgoing
 
-        val text = LinphoneUtils.getTextDescribingMessage(message)
         if (isGroup && !isOutgoing) {
             val fromAddress = message.fromAddress
             val sender = coreContext.contactsManager.findContactByAddress(fromAddress)
@@ -256,15 +282,17 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
                 R.string.conversations_last_message_format,
                 name
             )
-            lastMessageText.postValue("$senderName $text")
+            lastMessageTextSender.postValue(senderName)
         } else {
-            lastMessageText.postValue(text)
+            lastMessageTextSender.postValue("")
         }
+        lastMessageText.postValue(LinphoneUtils.getFormattedTextDescribingMessage(message))
 
         isLastMessageOutgoing.postValue(isOutgoing)
         if (isOutgoing) {
             lastMessageIcon.postValue(LinphoneUtils.getChatIconResId(message.state))
         }
+        isLastMessageForwarded.postValue(message.isForward)
     }
 
     @WorkerThread
@@ -362,7 +390,7 @@ class ConversationModel @WorkerThread constructor(val chatRoom: ChatRoom) {
             composingFriends.add(name)
             label += "$name, "
         }
-        if (composingFriends.size > 0) {
+        if (composingFriends.isNotEmpty()) {
             label = label.dropLast(2)
 
             val format = AppUtils.getStringWithPlural(

@@ -20,15 +20,20 @@
 package org.linphone.ui.main.fragment
 
 import android.content.res.Configuration
+import android.graphics.Outline
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
+import android.view.inputmethod.EditorInfo
+import androidx.activity.OnBackPressedCallback
 import androidx.annotation.IdRes
 import androidx.annotation.UiThread
 import androidx.core.view.doOnPreDraw
 import androidx.navigation.NavDirections
 import androidx.navigation.fragment.findNavController
 import androidx.slidingpanelayout.widget.SlidingPaneLayout
+import androidx.slidingpanelayout.widget.SlidingPaneLayout.PanelSlideListener
 import com.google.android.material.textfield.TextInputLayout
 import org.linphone.R
 import org.linphone.core.tools.Log
@@ -52,14 +57,45 @@ abstract class AbstractMainFragment : GenericMainFragment() {
         private const val TAG = "[Abstract Main Fragment]"
     }
 
+    protected val outlineProvider = object : ViewOutlineProvider() {
+        override fun getOutline(view: View?, outline: Outline?) {
+            val radius = resources.getDimension(R.dimen.top_bar_rounded_corner_radius)
+            view ?: return
+            outline?.setRoundRect(0, 0, view.width, (view.height + radius).toInt(), radius)
+        }
+    }
+
     private var currentFragmentId: Int = 0
 
     private lateinit var viewModel: AbstractMainViewModel
+
+    private val backPressedCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            if (viewModel.searchBarVisible.value == true) {
+                viewModel.closeSearchBar()
+                return
+            }
+
+            Log.i("$TAG Search bar is closed, going back")
+            isEnabled = false
+            try {
+                requireActivity().onBackPressedDispatcher.onBackPressed()
+            } catch (ise: IllegalStateException) {
+                Log.w("$TAG Can't go back: $ise")
+            }
+        }
+    }
 
     abstract fun onDefaultAccountChanged()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         postponeEnterTransition()
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
+
         super.onViewCreated(view, savedInstanceState)
     }
 
@@ -190,6 +226,22 @@ abstract class AbstractMainFragment : GenericMainFragment() {
 
                 if (!slidingPane.isOpen) {
                     Log.d("$TAG Opening sliding pane")
+                    if (slidingPane.isSlideable && viewModel.searchBarVisible.value == true) {
+                        slidingPane.addPanelSlideListener(object : PanelSlideListener {
+                            override fun onPanelSlide(
+                                panel: View,
+                                slideOffset: Float
+                            ) { }
+
+                            override fun onPanelOpened(panel: View) {
+                                Log.d("$TAG Closing search bar")
+                                viewModel.closeSearchBar()
+                                slidingPane.removePanelSlideListener(this)
+                            }
+
+                            override fun onPanelClosed(panel: View) { }
+                        })
+                    }
                     slidingPane.openPane()
                 }
             }
@@ -197,6 +249,18 @@ abstract class AbstractMainFragment : GenericMainFragment() {
     }
 
     private fun initSearchBar(searchBar: TextInputLayout) {
+        searchBar.editText?.setOnEditorActionListener { view, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                view.hideKeyboard()
+                return@setOnEditorActionListener true
+            }
+            false
+        }
+
+        viewModel.searchBarVisible.observe(viewLifecycleOwner) { visible ->
+            backPressedCallback.isEnabled = visible
+        }
+
         viewModel.focusSearchBarEvent.observe(viewLifecycleOwner) {
             it.consume { show ->
                 if (show) {

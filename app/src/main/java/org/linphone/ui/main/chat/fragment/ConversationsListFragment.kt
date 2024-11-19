@@ -119,17 +119,15 @@ class ConversationsListFragment : AbstractMainFragment() {
 
         binding.conversationsList.setHasFixedSize(true)
         binding.conversationsList.layoutManager = LinearLayoutManager(requireContext())
-
-        if (binding.conversationsList.adapter != adapter) {
-            binding.conversationsList.adapter = adapter
-        }
+        binding.conversationsList.outlineProvider = outlineProvider
+        binding.conversationsList.clipToOutline = true
 
         adapter.conversationLongClickedEvent.observe(viewLifecycleOwner) {
             it.consume { model ->
                 val modalBottomSheet = ConversationDialogFragment(
                     model.isMuted.value == true,
                     model.isGroup,
-                    model.isReadOnly,
+                    model.isReadOnly.value == true,
                     (model.unreadMessageCount.value ?: 0) > 0,
                     { // onDismiss
                         adapter.resetSelection()
@@ -181,6 +179,13 @@ class ConversationsListFragment : AbstractMainFragment() {
 
         listViewModel.conversations.observe(viewLifecycleOwner) {
             adapter.submitList(it)
+
+            // Wait for adapter to have items before setting it in the RecyclerView,
+            // otherwise scroll position isn't retained
+            if (binding.conversationsList.adapter != adapter) {
+                binding.conversationsList.adapter = adapter
+            }
+
             Log.i("$TAG Conversations list ready with [${it.size}] items")
             listViewModel.fetchInProgress.value = false
         }
@@ -237,7 +242,7 @@ class ConversationsListFragment : AbstractMainFragment() {
                     }
 
                     Log.i(
-                        "$TAG Navigating to ${if (isMedia) "media" else "file"} viewer fragment with path [$path]"
+                        "$TAG Navigating to [${if (isMedia) "media" else "file"}] viewer fragment with path [$path]"
                     )
                     if (isMedia) {
                         val intent = Intent(requireActivity(), MediaViewerActivity::class.java)
@@ -278,6 +283,33 @@ class ConversationsListFragment : AbstractMainFragment() {
         sharedViewModel.forceRefreshConversations.observe(viewLifecycleOwner) {
             it.consume {
                 listViewModel.filter()
+            }
+        }
+
+        sharedViewModel.forceRefreshDisplayedConversation.observe(viewLifecycleOwner) {
+            it.consume {
+                val displayChatRoom = sharedViewModel.displayedChatRoom
+                if (displayChatRoom != null) {
+                    val found = listViewModel.conversations.value.orEmpty().find { model ->
+                        model.chatRoom == displayChatRoom
+                    }
+                    found?.updateMuteState()
+                }
+            }
+        }
+
+        sharedViewModel.updateUnreadMessageCountForCurrentConversationEvent.observe(
+            viewLifecycleOwner
+        ) {
+            it.consume {
+                val displayChatRoom = sharedViewModel.displayedChatRoom
+                if (displayChatRoom != null) {
+                    val found = listViewModel.conversations.value.orEmpty().find { model ->
+                        model.chatRoom == displayChatRoom
+                    }
+                    found?.updateUnreadCount()
+                }
+                listViewModel.updateUnreadMessagesCount()
             }
         }
 
@@ -322,9 +354,6 @@ class ConversationsListFragment : AbstractMainFragment() {
         } catch (e: IllegalStateException) {
             Log.e("$TAG Failed to unregister data observer to adapter: $e")
         }
-
-        // Scroll to top when fragment is resumed
-        binding.conversationsList.scrollToPosition(0)
     }
 
     override fun onPause() {

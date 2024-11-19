@@ -5,10 +5,9 @@
 
     <data>
         <import type="android.view.View" />
-        <import type="android.graphics.Typeface" />
         <variable
             name="viewModel"
-            type="org.linphone.ui.main.fragment.GroupSetOrEditSubjectDialogModel" />
+            type="org.linphone.ui.main.model.GroupSetOrEditSubjectDialogModel" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -114,7 +113,7 @@
             android:layout_marginStart="15dp"
             android:layout_marginEnd="15dp"
             android:enabled="@{!viewModel.emptySubject}"
-            android:text="@string/conversation_dialog_edit_subject_confirm_button"
+            android:text="@string/dialog_confirm"
             app:layout_constraintStart_toStartOf="@id/dialog_background"
             app:layout_constraintEnd_toEndOf="@id/dialog_background"
             app:layout_constraintTop_toBottomOf="@id/cancel"

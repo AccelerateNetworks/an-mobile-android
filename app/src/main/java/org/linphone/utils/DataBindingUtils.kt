@@ -41,6 +41,7 @@ import androidx.appcompat.widget.AppCompatEditText
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
@@ -63,6 +64,7 @@ import org.linphone.contacts.AbstractAvatarModel
 import org.linphone.contacts.AvatarGenerator
 import org.linphone.core.ConsolidatedPresence
 import org.linphone.core.tools.Log
+import org.linphone.ui.NotoSansFont
 import org.linphone.ui.call.conference.model.ConferenceParticipantDeviceModel
 import org.linphone.ui.call.view.RoundCornersTextureView
 
@@ -237,6 +239,16 @@ fun AppCompatTextView.setDrawableTint(@ColorInt color: Int) {
 }
 
 @UiThread
+@BindingAdapter("textFont")
+fun AppCompatTextView.font(type: NotoSansFont) {
+    try {
+        typeface = ResourcesCompat.getFont(context, type.fontRes)
+    } catch (e: Exception) {
+        Log.e("$TAG Can't load font: $e")
+    }
+}
+
+@UiThread
 @BindingAdapter("presenceIcon")
 fun ImageView.setPresenceIcon(presence: ConsolidatedPresence?) {
     setPresenceIcon(presence, false)
@@ -273,6 +285,22 @@ fun AppCompatTextView.setColor(@ColorRes color: Int) {
 }
 
 @UiThread
+@BindingAdapter("coilUrl")
+fun ImageView.loadUrlImage(url: String?) {
+    if (!url.isNullOrEmpty()) {
+        load(url) {
+            listener(
+                onError = { _, result ->
+                    Log.e(
+                        "$TAG Error getting shortcut icon from URL [$url]: ${result.throwable}"
+                    )
+                }
+            )
+        }
+    }
+}
+
+@UiThread
 @BindingAdapter("coilFile")
 fun ImageView.loadFileImage(file: String?) {
     if (!file.isNullOrEmpty()) {
@@ -281,18 +309,23 @@ fun ImageView.loadFileImage(file: String?) {
 }
 
 @UiThread
-@BindingAdapter("coilBubble")
-fun ImageView.loadImageForChatBubble(file: String?) {
-    loadImageForChatBubble(this, file, false)
+@BindingAdapter("coilBubble", "coilBubbleFallback")
+fun ImageView.loadImageForChatBubbleSingle(file: String?, fallback: View?) {
+    loadImageForChatBubble(this, file, false, fallback)
 }
 
 @UiThread
-@BindingAdapter("coilBubbleGrid")
-fun ImageView.loadImageForChatBubbleGrid(file: String?) {
-    loadImageForChatBubble(this, file, true)
+@BindingAdapter("coilBubbleGrid", "coilBubbleFallback")
+fun ImageView.loadImageForChatBubbleGrid(file: String?, fallback: View?) {
+    loadImageForChatBubble(this, file, true, fallback)
 }
 
-private fun loadImageForChatBubble(imageView: ImageView, file: String?, grid: Boolean) {
+private fun loadImageForChatBubble(
+    imageView: ImageView,
+    file: String?,
+    grid: Boolean,
+    fallback: View?
+) {
     if (file.isNullOrEmpty()) return
 
     val isImage = FileUtils.isExtensionImage((file))
@@ -311,22 +344,23 @@ private fun loadImageForChatBubble(imageView: ImageView, file: String?, grid: Bo
 
         if (isVideo) {
             imageView.load(file) {
-                placeholder(R.drawable.image_square)
+                placeholder(R.drawable.file_video)
                 videoFrameMillis(0)
                 transformations(RoundedCornersTransformation(radius))
                 size(width, height)
                 listener(
                     onError = { _, result ->
                         Log.e(
-                            "$TAG Error getting preview picture from video? [$file]: ${result.throwable}"
+                            "$TAG Error getting preview picture from video (?) [$file]: ${result.throwable}"
                         )
+                        fallback?.visibility = View.VISIBLE
                         imageView.visibility = View.GONE
                     }
                 )
             }
         } else {
             imageView.load(file) {
-                placeholder(R.drawable.image_square)
+                placeholder(R.drawable.file_image)
                 // Can't have a transformation for gif file, breaks animation
                 if (FileUtils.getExtensionFromFileName(file) != "gif") {
                     transformations(RoundedCornersTransformation(radius))
@@ -337,6 +371,7 @@ private fun loadImageForChatBubble(imageView: ImageView, file: String?, grid: Bo
                         Log.e(
                             "$TAG Error getting picture from file [$file]: ${result.throwable}"
                         )
+                        fallback?.visibility = View.VISIBLE
                         imageView.visibility = View.GONE
                     }
                 )
@@ -402,7 +437,7 @@ fun ImageView.loadCallAvatarWithCoil(model: AbstractAvatarModel?) {
 fun ImageView.loadInitialsAvatarWithCoil(initials: String?) {
     val builder = AvatarGenerator(context)
     builder.setInitials(initials.orEmpty())
-    load(builder.build())
+    load(builder.buildDrawable())
 }
 
 @SuppressLint("ResourceType")

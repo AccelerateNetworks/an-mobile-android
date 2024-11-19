@@ -35,6 +35,7 @@ import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import kotlin.system.exitProcess
 import org.linphone.BuildConfig
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.contacts.ContactsManager
@@ -83,6 +84,10 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
 
     val digestAuthenticationRequestedEvent: MutableLiveData<Event<String>> by lazy {
         MutableLiveData<Event<String>>()
+    }
+
+    val refreshMicrophoneMuteStateEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
     }
 
     val showGreenToastEvent: MutableLiveData<Event<Pair<Int, Int>>> by lazy {
@@ -270,15 +275,15 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
 
         @WorkerThread
         override fun onAuthenticationRequested(core: Core, authInfo: AuthInfo, method: AuthMethod) {
-            if (authInfo.username == null || authInfo.domain == null || authInfo.realm == null) {
-                Log.e(
-                    "$TAG Authentication request but either username [${authInfo.username}], domain [${authInfo.domain}] or realm [${authInfo.realm}] is null!"
-                )
-                return
-            }
-
             when (method) {
                 AuthMethod.Bearer -> {
+                    if (authInfo.authorizationServer == null) {
+                        Log.e(
+                            "$TAG Authentication request using Bearer method but authorization server is null!"
+                        )
+                        return
+                    }
+
                     val serverUrl = authInfo.authorizationServer
                     val username = authInfo.username
                     if (!serverUrl.isNullOrEmpty()) {
@@ -296,6 +301,13 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
                     }
                 }
                 AuthMethod.HttpDigest -> {
+                    if (authInfo.username == null || authInfo.domain == null || authInfo.realm == null) {
+                        Log.e(
+                            "$TAG Authentication request using Digest method but either username [${authInfo.username}], domain [${authInfo.domain}] or realm [${authInfo.realm}] is null!"
+                        )
+                        return
+                    }
+
                     val accountFound = core.accountList.find {
                         it.params.identityAddress?.username == authInfo.username && it.params.identityAddress?.domain == authInfo.domain
                     }
@@ -345,6 +357,8 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
         }
     }
 
+    private var logcatEnabled: Boolean = corePreferences.printLogsInLogcat
+
     private val loggingServiceListener = object : LoggingServiceListenerStub() {
         @WorkerThread
         override fun onLogMessageWritten(
@@ -353,12 +367,14 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
             level: LogLevel,
             message: String
         ) {
-            when (level) {
-                LogLevel.Error -> android.util.Log.e(domain, message)
-                LogLevel.Warning -> android.util.Log.w(domain, message)
-                LogLevel.Message -> android.util.Log.i(domain, message)
-                LogLevel.Fatal -> android.util.Log.wtf(domain, message)
-                else -> android.util.Log.d(domain, message)
+            if (logcatEnabled) {
+                when (level) {
+                    LogLevel.Error -> android.util.Log.e(domain, message)
+                    LogLevel.Warning -> android.util.Log.w(domain, message)
+                    LogLevel.Message -> android.util.Log.i(domain, message)
+                    LogLevel.Fatal -> android.util.Log.wtf(domain, message)
+                    else -> android.util.Log.d(domain, message)
+                }
             }
             FirebaseCrashlytics.getInstance().log("[$domain] [${level.name}] $message")
         }
@@ -373,9 +389,17 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
         Log.i("$TAG Creating Core")
         Looper.prepare()
 
-        Factory.instance().loggingService.addListener(loggingServiceListener)
-        Log.i("$TAG Crashlytics enabled, register logging service listener")
-
+        if (BuildConfig.CRASHLYTICS_ENABLED) {
+            Log.i("$TAG Crashlytics is enabled, registering logging service listener")
+            try {
+                FirebaseCrashlytics.getInstance()
+                Factory.instance().loggingService.addListener(loggingServiceListener)
+            } catch (e: Exception) {
+                Log.e("$TAG Failed to instantiate Crashlytics: $e")
+            }
+        } else {
+            Log.i("$TAG Crashlytics is disabled")
+        }
         Log.i("=========================================")
         Log.i("==== Linphone-android information dump ====")
         Log.i("VERSION=${BuildConfig.VERSION_NAME} / ${BuildConfig.VERSION_CODE}")
@@ -445,6 +469,20 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
 
                 core.config.setBool("magic_search", "return_empty_friends", true)
                 Log.i("$TAG Showing 'empty' friends enabled")
+
+                if (LinphoneUtils.getDefaultAccount()?.params?.domain == corePreferences.defaultDomain) {
+                    corePreferences.contactsFilter = corePreferences.defaultDomain
+                    Log.i(
+                        "$TAG Setting default contacts list filter to [${corePreferences.contactsFilter}]"
+                    )
+                }
+
+                Log.i("$TAG Making sure both RFC2833 & SIP INFO are enabled for DTMFs")
+                core.useRfc2833ForDtmf = true
+                core.useInfoForDtmf = true
+
+                // Add that flag back, was disabled for a time during dev process
+                core.config.setBool("misc", "hide_empty_chat_rooms", true)
             }
 
             corePreferences.linphoneConfigurationVersion = currentVersion
@@ -483,14 +521,15 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
         val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
 
-        core.stopAsync()
+        core.stop()
 
         contactsManager.onCoreStopped(core)
         telecomManager.onCoreStopped(core)
         notificationsManager.onCoreStopped(core)
 
         // It's very unlikely the process will survive until the Core reaches GlobalStateOff sadly
-        Log.w("$TAG Core is shutting down but probably won't reach Off state")
+        Log.w("$TAG Core has been shut down")
+        exitProcess(0)
     }
 
     @AnyThread
@@ -502,8 +541,12 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
     fun postOnCoreThread(
         @WorkerThread lambda: (core: Core) -> Unit
     ) {
-        coreThread.post {
-            lambda.invoke(core)
+        if (::coreThread.isInitialized) {
+            coreThread.post {
+                lambda.invoke(core)
+            }
+        } else {
+            Log.e("$TAG Core's thread not initialized yet!")
         }
     }
 
@@ -512,9 +555,13 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
         @WorkerThread lambda: (core: Core) -> Unit,
         delay: Long
     ) {
-        coreThread.postDelayed({
-            lambda.invoke(core)
-        }, delay)
+        if (::coreThread.isInitialized) {
+            coreThread.postDelayed({
+                lambda.invoke(core)
+            }, delay)
+        } else {
+            Log.e("$TAG Core's thread not initialized yet!")
+        }
     }
 
     @AnyThread
@@ -571,7 +618,7 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
     @WorkerThread
     fun isAddressMyself(address: Address): Boolean {
         val found = core.accountList.find {
-            it.params.identityAddress?.weakEqual(address) ?: false
+            it.params.identityAddress?.weakEqual(address) == true
         }
         return found != null
     }
@@ -638,7 +685,7 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
 
         if (localAddress != null) {
             val account = core.accountList.find { account ->
-                account.params.identityAddress?.weakEqual(localAddress) ?: false
+                account.params.identityAddress?.weakEqual(localAddress) == true
             }
             if (account != null) {
                 params.account = account
@@ -744,7 +791,11 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
             CoreKeepAliveThirdPartyAccountsService::class.java
         )
         Log.i("$TAG Starting Keep alive for third party accounts Service")
-        context.startService(serviceIntent)
+        try {
+            context.startService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e("$TAG Failed to start keep alive service: $e")
+        }
     }
 
     @WorkerThread
@@ -776,8 +827,12 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
     }
 
     @WorkerThread
-    fun playDtmf(character: Char, duration: Int = 200) {
-        if (Settings.System.getInt(context.contentResolver, Settings.System.DTMF_TONE_WHEN_DIALING) != 0) {
+    fun playDtmf(character: Char, duration: Int = 200, ignoreSystemPolicy: Boolean = false) {
+        if (ignoreSystemPolicy || Settings.System.getInt(
+                context.contentResolver,
+                Settings.System.DTMF_TONE_WHEN_DIALING
+            ) != 0
+        ) {
             core.playDtmf(character, duration)
         } else {
             Log.w("$TAG Numpad DTMF tones are disabled in system settings, not playing them")
@@ -785,8 +840,14 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
     }
 
     @WorkerThread
-    private fun computeUserAgent() {
-        val deviceName = AppUtils.getDeviceName(context)
+    fun computeUserAgent() {
+        if (corePreferences.deviceName.isEmpty()) {
+            Log.i("$TAG Device name not fetched yet, doing it now")
+            corePreferences.deviceName = AppUtils.getDeviceName(context)
+            Log.i("$TAG Fetched device name is [${corePreferences.deviceName}]")
+        }
+        val deviceName = corePreferences.deviceName
+
         val appName = context.getString(org.linphone.R.string.app_name)
         val androidVersion = BuildConfig.VERSION_NAME
         val userAgent = "${appName}Android/$androidVersion ($deviceName) LinphoneSDK"
@@ -794,5 +855,10 @@ class CoreContext @UiThread constructor(val context: Context) : HandlerThread("C
         val sdkBranch = context.getString(R.string.linphone_sdk_branch)
         val sdkUserAgent = "$sdkVersion ($sdkBranch)"
         core.setUserAgent(userAgent, sdkUserAgent)
+    }
+
+    @WorkerThread
+    fun enableLogcat(enable: Boolean) {
+        logcatEnabled = enable
     }
 }

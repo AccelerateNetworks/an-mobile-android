@@ -40,7 +40,7 @@ import org.linphone.ui.call.conference.view.GridBoxLayout
 import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 
-class ConferenceViewModel : GenericViewModel() {
+class ConferenceViewModel @UiThread constructor() : GenericViewModel() {
     companion object {
         private const val TAG = "[Conference ViewModel]"
 
@@ -73,12 +73,24 @@ class ConferenceViewModel : GenericViewModel() {
 
     val isMeAdmin = MutableLiveData<Boolean>()
 
+    val isConversationAvailable = MutableLiveData<Boolean>()
+
+    val fullScreenMode = MutableLiveData<Boolean>()
+
+    val firstParticipantOtherThanOurselvesJoinedEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
+    }
+
     val showLayoutMenuEvent: MutableLiveData<Event<Boolean>> by lazy {
         MutableLiveData<Event<Boolean>>()
     }
 
     val removeParticipantEvent: MutableLiveData<Event<Pair<String, Participant>>> by lazy {
         MutableLiveData<Event<Pair<String, Participant>>>()
+    }
+
+    val goToConversationEvent: MutableLiveData<Event<Pair<String, String>>> by lazy {
+        MutableLiveData<Event<Pair<String, String>>>()
     }
 
     private lateinit var conference: Conference
@@ -90,6 +102,11 @@ class ConferenceViewModel : GenericViewModel() {
                 "$TAG Participant added: ${participant.address.asStringUriOnly()}"
             )
             addParticipant(participant)
+
+            if (conference.participantList.size == 1) { // we do not count
+                Log.i("$TAG First participant other than ourselves joined the conference")
+                firstParticipantOtherThanOurselvesJoinedEvent.postValue(Event(true))
+            }
         }
 
         @WorkerThread
@@ -108,8 +125,7 @@ class ConferenceViewModel : GenericViewModel() {
             if (conference.isMe(device.address)) {
                 val direction = device.getStreamCapability(StreamType.Video)
                 val sendingVideo = direction == MediaDirection.SendRecv || direction == MediaDirection.SendOnly
-                isMeParticipantSendingVideo.postValue(sendingVideo)
-                Log.i("$TAG We ${if (sendingVideo) "are" else "aren't"} sending video")
+                localVideoStreamToggled(sendingVideo)
             }
         }
 
@@ -226,11 +242,22 @@ class ConferenceViewModel : GenericViewModel() {
             if (conference.state == Conference.State.Created) {
                 val isIn = conference.isIn
                 isPaused.postValue(!isIn)
-                Log.i("$TAG We ${if (isIn) "are" else "aren't"} in the conference")
+                Log.i("$TAG We [${if (isIn) "are" else "aren't"}] in the conference")
 
                 computeParticipants(false)
+                if (conference.participantList.size >= 1) { // we do not count
+                    Log.i("$TAG Joined conference already has at least another participant")
+                    firstParticipantOtherThanOurselvesJoinedEvent.postValue(Event(true))
+                }
             }
         }
+    }
+
+    init {
+        isPaused.value = false
+        isConversationAvailable.value = false
+        isMeParticipantSendingVideo.value = false
+        fullScreenMode.value = false
     }
 
     @WorkerThread
@@ -254,11 +281,19 @@ class ConferenceViewModel : GenericViewModel() {
         conference.addListener(conferenceListener)
 
         val isIn = conference.isIn
-        isPaused.postValue(!isIn)
-        Log.i("$TAG We ${if (isIn) "are" else "aren't"} in the conference right now")
+        val state = conf.state
+        if (state != Conference.State.CreationPending) {
+            isPaused.postValue(!isIn)
+        }
+        Log.i(
+            "$TAG We [${if (isIn) "are" else "aren't"}] in the conference right now, current state is [$state]"
+        )
 
         val screenSharing = conference.screenSharingParticipant != null
         isScreenSharing.postValue(screenSharing)
+
+        val chatEnabled = conference.currentParams.isChatEnabled
+        isConversationAvailable.postValue(chatEnabled)
 
         val confSubject = conference.subject.orEmpty()
         Log.i(
@@ -269,6 +304,10 @@ class ConferenceViewModel : GenericViewModel() {
 
         if (conference.state == Conference.State.Created) {
             computeParticipants(false)
+            if (conference.participantList.size >= 1) { // we do not count
+                Log.i("$TAG Joined conference already has at least another participant")
+                firstParticipantOtherThanOurselvesJoinedEvent.postValue(Event(true))
+            }
         }
 
         val currentLayout = getCurrentLayout(call)
@@ -278,6 +317,55 @@ class ConferenceViewModel : GenericViewModel() {
                 "$TAG Conference has a participant sharing it's screen, changing layout from mosaic to active speaker"
             )
             setNewLayout(ACTIVE_SPEAKER_LAYOUT)
+        }
+    }
+
+    @UiThread
+    fun toggleFullScreen() {
+        if (fullScreenMode.value == true) {
+            // Always allow to switch off full screen mode
+            fullScreenMode.value = false
+            return
+        }
+
+        if (conferenceLayout.value == AUDIO_ONLY_LAYOUT) {
+            // Do not allow turning full screen on for audio only conference
+            return
+        }
+
+        if (isMeParticipantSendingVideo.value == false && participants.value.orEmpty().size == 1) {
+            // Do not allow turning full screen on if we're alone and not sending our video
+            return
+        }
+
+        fullScreenMode.value = true
+    }
+
+    @WorkerThread
+    fun localVideoStreamToggled(enabled: Boolean) {
+        isMeParticipantSendingVideo.postValue(enabled)
+        Log.i("$TAG We [${if (enabled) "are" else "aren't"}] sending video")
+    }
+
+    @UiThread
+    fun goToConversation() {
+        coreContext.postOnCoreThread { core ->
+            Log.i("$TAG Navigating to conference's conversation")
+            val chatRoom = conference.chatRoom
+            if (chatRoom != null) {
+                goToConversationEvent.postValue(
+                    Event(
+                        Pair(
+                            chatRoom.localAddress.asStringUriOnly(),
+                            chatRoom.peerAddress.asStringUriOnly()
+                        )
+                    )
+                )
+            } else {
+                Log.e(
+                    "$TAG No chat room available for current conference [${conference.conferenceAddress?.asStringUriOnly()}]"
+                )
+            }
         }
     }
 
@@ -501,8 +589,7 @@ class ConferenceViewModel : GenericViewModel() {
 
             val direction = device.getStreamCapability(StreamType.Video)
             val sendingVideo = direction == MediaDirection.SendRecv || direction == MediaDirection.SendOnly
-            isMeParticipantSendingVideo.postValue(sendingVideo)
-            Log.i("$TAG We ${if (sendingVideo) "are" else "aren't"} sending video right now")
+            localVideoStreamToggled(sendingVideo)
         }
 
         if (!activeSpeakerParticipantDeviceFound && devicesList.isNotEmpty()) {

@@ -138,6 +138,10 @@ class AccountProfileFragment : GenericMainFragment() {
             copyAddressToClipboard(viewModel.sipAddress.value.orEmpty())
         }
 
+        binding.setCopyDeviceIdClickListener {
+            copyAddressToClipboard(viewModel.deviceId.value.orEmpty())
+        }
+
         binding.setPrefixTooltipClickListener {
             showHelpPopup()
         }
@@ -161,7 +165,7 @@ class AccountProfileFragment : GenericMainFragment() {
             val dialog = DialogUtils.getConfirmAccountRemovalDialog(
                 requireActivity(),
                 model,
-                viewModel.displayName.value.orEmpty()
+                viewModel.isOnDefaultDomain.value == true
             )
 
             model.dismissEvent.observe(viewLifecycleOwner) {

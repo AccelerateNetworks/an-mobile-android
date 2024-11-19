@@ -67,10 +67,13 @@ class AccountSettingsViewModel @UiThread constructor() : GenericViewModel() {
 
     val audioVideoConferenceFactoryUri = MutableLiveData<String>()
 
+    val ccmpServerUrl = MutableLiveData<String>()
+
     val limeServerUrl = MutableLiveData<String>()
 
     val bundleModeEnabled = MutableLiveData<Boolean>()
 
+    val mwiUri = MutableLiveData<String>()
     val voicemailUri = MutableLiveData<String>()
 
     val cpimInBasicChatRooms = MutableLiveData<Boolean>()
@@ -130,7 +133,8 @@ class AccountSettingsViewModel @UiThread constructor() : GenericViewModel() {
 
                 cpimInBasicChatRooms.postValue(params.isCpimInBasicChatRoomEnabled)
 
-                voicemailUri.postValue(params.mwiServerAddress?.asStringUriOnly().orEmpty())
+                mwiUri.postValue(params.mwiServerAddress?.asStringUriOnly().orEmpty())
+                voicemailUri.postValue(params.voicemailAddress?.asStringUriOnly().orEmpty())
 
                 expire.postValue(params.expires.toString())
 
@@ -139,6 +143,8 @@ class AccountSettingsViewModel @UiThread constructor() : GenericViewModel() {
                 audioVideoConferenceFactoryUri.postValue(
                     params.audioVideoConferenceFactoryAddress?.asStringUriOnly()
                 )
+
+                ccmpServerUrl.postValue(params.ccmpServerUrl)
 
                 limeServerUrl.postValue(params.limeServerUrl)
 
@@ -185,15 +191,33 @@ class AccountSettingsViewModel @UiThread constructor() : GenericViewModel() {
 
                 newParams.isCpimInBasicChatRoomEnabled = cpimInBasicChatRooms.value == true
 
-                val mwiUri = voicemailUri.value.orEmpty()
-                if (mwiUri.isNotEmpty()) {
-                    val mwiAddress = core.interpretUrl(mwiUri, false)
+                val mwi = mwiUri.value.orEmpty()
+                if (mwi.isNotEmpty()) {
+                    val mwiAddress = core.interpretUrl(mwi, false)
                     newParams.mwiServerAddress = mwiAddress
                 } else {
                     newParams.mwiServerAddress = null
                 }
 
-                newParams.expires = expire.value?.toInt() ?: 31536000
+                val voicemail = voicemailUri.value.orEmpty()
+                if (voicemail.isNotEmpty()) {
+                    val voicemailAddress = core.interpretUrl(voicemail, false)
+                    newParams.voicemailAddress = voicemailAddress
+                } else {
+                    newParams.voicemailAddress = null
+                }
+
+                val expire = expire.value.orEmpty()
+                val expireInt = if (expire.isEmpty()) {
+                    31536000
+                } else {
+                    try {
+                        expire.toInt()
+                    } catch (_: NumberFormatException) {
+                        31536000
+                    }
+                }
+                newParams.expires = expireInt
 
                 val conferenceUri = conferenceFactoryUri.value.orEmpty()
                 if (conferenceUri.isNotEmpty()) {
@@ -215,6 +239,7 @@ class AccountSettingsViewModel @UiThread constructor() : GenericViewModel() {
                     newParams.audioVideoConferenceFactoryAddress = null
                 }
 
+                newParams.ccmpServerUrl = ccmpServerUrl.value
                 newParams.limeServerUrl = limeServerUrl.value
 
                 account.params = newParams
@@ -231,5 +256,26 @@ class AccountSettingsViewModel @UiThread constructor() : GenericViewModel() {
     @UiThread
     fun toggleAdvancedSettingsExpand() {
         expandAdvancedSettings.value = expandAdvancedSettings.value == false
+    }
+
+    @UiThread
+    fun updateAccountPassword(newPassword: String) {
+        coreContext.postOnCoreThread { core ->
+            if (::account.isInitialized) {
+                val authInfo = account.findAuthInfo()
+                if (authInfo != null) {
+                    Log.i(
+                        "$TAG Updating password for username [${authInfo.username}] using auth info [$authInfo]"
+                    )
+                    authInfo.password = newPassword
+                    core.addAuthInfo(authInfo)
+                    core.refreshRegisters()
+                } else {
+                    Log.w(
+                        "$TAG Failed to find auth info for account [${account.params.identityAddress?.asStringUriOnly()}]"
+                    )
+                }
+            }
+        }
     }
 }

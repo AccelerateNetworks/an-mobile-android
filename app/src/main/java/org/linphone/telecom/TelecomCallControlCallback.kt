@@ -36,6 +36,7 @@ import org.linphone.core.Call
 import org.linphone.core.CallListenerStub
 import org.linphone.core.tools.Log
 import org.linphone.utils.AudioUtils
+import org.linphone.utils.Event
 import org.linphone.utils.LinphoneUtils
 
 class TelecomCallControlCallback(
@@ -48,6 +49,7 @@ class TelecomCallControlCallback(
     }
 
     private var availableEndpoints: List<CallEndpointCompat> = arrayListOf()
+    private var currentEndpoint = CallEndpointCompat.TYPE_UNKNOWN
 
     private val callListener = object : CallListenerStub() {
         @WorkerThread
@@ -134,9 +136,9 @@ class TelecomCallControlCallback(
                     route.add(AudioDevice.Type.Headphones)
                     route.add(AudioDevice.Type.Headset)
                 }
-                else -> null
             }
             if (route.isNotEmpty()) {
+                currentEndpoint = endpoint.type
                 coreContext.postOnCoreThread {
                     if (!AudioUtils.applyAudioRouteChangeInLinphone(call, route)) {
                         Log.w("$TAG Failed to apply audio route change, trying again in 200ms")
@@ -157,6 +159,7 @@ class TelecomCallControlCallback(
                 // This is to prevent mic not muted when joining conference if user decided to join as muted
                 if (muted || !LinphoneUtils.isCallOutgoing(callState, false)) {
                     call.microphoneMuted = muted
+                    coreContext.refreshMicrophoneMuteStateEvent.postValue(Event(true))
                 } else {
                     Log.w("$TAG Not following unmute request because call is in state [$callState]")
                 }
@@ -164,14 +167,15 @@ class TelecomCallControlCallback(
         }.launchIn(scope)
     }
 
-    fun applyAudioRouteToCallWithId(routes: List<AudioDevice.Type>) {
+    fun applyAudioRouteToCallWithId(routes: List<AudioDevice.Type>): Boolean {
         Log.i("$TAG Looking for audio endpoint with type [${routes.first()}]")
 
+        var wiredHeadsetFound = false
         for (endpoint in availableEndpoints) {
             Log.i(
                 "$TAG Found audio endpoint [${endpoint.name}] with type [${endpoint.type}]"
             )
-            val found = when (endpoint.type) {
+            val matches = when (endpoint.type) {
                 CallEndpointCompat.Companion.TYPE_EARPIECE -> {
                     routes.find { it == AudioDevice.Type.Earpiece }
                 }
@@ -182,15 +186,20 @@ class TelecomCallControlCallback(
                     routes.find { it == AudioDevice.Type.Bluetooth }
                 }
                 CallEndpointCompat.Companion.TYPE_WIRED_HEADSET -> {
+                    wiredHeadsetFound = true
                     routes.find { it == AudioDevice.Type.Headset || it == AudioDevice.Type.Headphones }
                 }
                 else -> null
             }
 
-            if (found != null) {
+            if (matches != null) {
                 Log.i(
                     "$TAG Found matching audio endpoint [${endpoint.name}], trying to use it"
                 )
+                if (currentEndpoint == endpoint.type) {
+                    Log.w("$TAG Endpoint already in use, skipping")
+                    continue
+                }
 
                 scope.launch {
                     Log.i("$TAG Requesting audio endpoint change with [${endpoint.name}]")
@@ -211,13 +220,19 @@ class TelecomCallControlCallback(
                         Log.i(
                             "$TAG It took [$attempts] attempt(s) to change endpoint audio device..."
                         )
+                        currentEndpoint = endpoint.type
                     }
                 }
 
-                break
-            } else {
-                Log.w("$TAG No matching audio endpoint found...")
+                return true
             }
         }
+
+        if (routes.size == 1 && routes[0] == AudioDevice.Type.Earpiece && wiredHeadsetFound) {
+            Log.e("$TAG User asked for earpiece but endpoint doesn't exists!")
+        } else {
+            Log.e("$TAG No matching endpoint found")
+        }
+        return false
     }
 }

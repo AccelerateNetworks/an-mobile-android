@@ -19,12 +19,20 @@
  */
 package org.linphone.utils
 
+import android.graphics.Typeface
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.StyleSpan
 import androidx.annotation.AnyThread
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntegerRes
 import androidx.annotation.WorkerThread
+import androidx.core.text.toSpannable
+import java.text.SimpleDateFormat
+import java.util.Locale
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
+import org.linphone.contacts.getListOfSipAddresses
 import org.linphone.core.Account
 import org.linphone.core.Address
 import org.linphone.core.Call
@@ -33,12 +41,17 @@ import org.linphone.core.Call.Status
 import org.linphone.core.CallLog
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatRoom
+import org.linphone.core.Conference
 import org.linphone.core.ConferenceInfo
+import org.linphone.core.ConferenceParams
+import org.linphone.core.ConferenceScheduler
 import org.linphone.core.Core
 import org.linphone.core.Factory
+import org.linphone.core.Friend
 import org.linphone.core.Reason
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
+import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 
 class LinphoneUtils {
     companion object {
@@ -46,7 +59,7 @@ class LinphoneUtils {
 
         const val RECORDING_FILE_NAME_HEADER = "call_recording_"
         const val RECORDING_FILE_NAME_URI_TIMESTAMP_SEPARATOR = "_on_"
-        const val RECORDING_FILE_EXTENSION = ".mkv"
+        const val RECORDING_FILE_EXTENSION = ".smff"
 
         private const val CHAT_ROOM_ID_SEPARATOR = "#~#"
 
@@ -56,9 +69,16 @@ class LinphoneUtils {
         }
 
         @WorkerThread
+        fun getAccountForAddress(address: Address): Account? {
+            return coreContext.core.accountList.find {
+                it.params.identityAddress?.weakEqual(address) == true
+            }
+        }
+
+        @WorkerThread
         fun applyInternationalPrefix(account: Account? = null): Boolean {
             return account?.params?.useInternationalPrefixForCallsAndChats
-                ?: (getDefaultAccount()?.params?.useInternationalPrefixForCallsAndChats ?: false)
+                ?: (getDefaultAccount()?.params?.useInternationalPrefixForCallsAndChats == true)
         }
 
         @WorkerThread
@@ -86,6 +106,33 @@ class LinphoneUtils {
             }
             // Do not return an empty display name
             return address.displayName ?: address.username ?: address.asString()
+        }
+
+        @WorkerThread
+        fun getSingleAvailableAddressForFriend(friend: Friend): Address? {
+            val addresses = friend.getListOfSipAddresses()
+            val addressesCount = addresses.size
+            val numbersCount = friend.phoneNumbers.size
+
+            // Do not consider phone numbers if default account is in secure mode
+            val enablePhoneNumbers = !isEndToEndEncryptionMandatory()
+
+            if (addressesCount == 1 && (numbersCount == 0 || !enablePhoneNumbers)) {
+                val address = addresses.first()
+                Log.i("$TAG Only 1 SIP address found for contact [${friend.name}], using it")
+                return address
+            } else if (addressesCount == 0 && numbersCount == 1 && enablePhoneNumbers) {
+                val number = friend.phoneNumbers.first()
+                val address = friend.core.interpretUrl(number, applyInternationalPrefix())
+                if (address != null) {
+                    Log.i("$TAG Only 1 phone number found for contact [${friend.name}], using it")
+                    return address
+                } else {
+                    Log.e("$TAG Failed to interpret phone number [$number] as SIP address")
+                }
+            }
+
+            return null
         }
 
         @AnyThread
@@ -167,6 +214,39 @@ class LinphoneUtils {
         @WorkerThread
         fun isRemoteConferencingAvailable(core: Core): Boolean {
             return core.defaultAccount?.params?.audioVideoConferenceFactoryAddress != null
+        }
+
+        @WorkerThread
+        fun createConferenceScheduler(account: Account?): ConferenceScheduler {
+            if (!account?.params?.ccmpServerUrl.isNullOrEmpty()) {
+                Log.i(
+                    "$TAG CCMP server URL has been set in Account's params, using CCMP conference scheduler"
+                )
+                return coreContext.core.createConferenceSchedulerWithType(
+                    account,
+                    ConferenceScheduler.Type.CCMP
+                )
+            }
+            Log.i(
+                "$TAG CCMP server URL hasn't been set in Account's params, using SIP conference scheduler"
+            )
+            return coreContext.core.createConferenceSchedulerWithType(
+                account,
+                ConferenceScheduler.Type.SIP
+            )
+        }
+
+        @WorkerThread
+        fun getChatRoomParamsToCancelMeeting(): ConferenceParams? {
+            val chatRoomParams = coreContext.core.createConferenceParams(null)
+            chatRoomParams.isChatEnabled = true
+            chatRoomParams.isGroupEnabled = false
+            chatRoomParams.subject = "Meeting invitation" // Won't be used
+            val chatParams = chatRoomParams.chatParams ?: return null
+            chatParams.ephemeralLifetime = 0 // Make sure ephemeral is disabled by default
+            chatParams.backend = ChatRoom.Backend.FlexisipChat
+            chatRoomParams.securityLevel = Conference.SecurityLevel.EndToEnd
+            return chatRoomParams
         }
 
         @WorkerThread
@@ -272,6 +352,31 @@ class LinphoneUtils {
             }
         }
 
+        @AnyThread
+        fun formatEphemeralExpiration(duration: Long): String {
+            return when (duration) {
+                0L -> AppUtils.getString(
+                    R.string.conversation_ephemeral_messages_duration_disabled
+                )
+                60L -> AppUtils.getString(
+                    R.string.conversation_ephemeral_messages_duration_one_minute
+                )
+                3600L -> AppUtils.getString(
+                    R.string.conversation_ephemeral_messages_duration_one_hour
+                )
+                86400L -> AppUtils.getString(
+                    R.string.conversation_ephemeral_messages_duration_one_day
+                )
+                259200L -> AppUtils.getString(
+                    R.string.conversation_ephemeral_messages_duration_three_days
+                )
+                604800L -> AppUtils.getString(
+                    R.string.conversation_ephemeral_messages_duration_one_week
+                )
+                else -> "$duration s"
+            }
+        }
+
         @WorkerThread
         fun getChatRoomId(room: ChatRoom): String {
             return getChatRoomId(room.localAddress, room.peerAddress)
@@ -354,9 +459,33 @@ class LinphoneUtils {
         }
 
         @WorkerThread
-        fun getTextDescribingMessage(message: ChatMessage): String {
+        fun getFormattedTextDescribingMessage(message: ChatMessage): Spannable {
+            val pair = getTextDescribingMessage(message)
+            val builder = SpannableStringBuilder(
+                "${pair.first} ${pair.second}".trim()
+            )
+            if (pair.first.isNotEmpty()) { // prevent error log due to zero length exclusive span
+                builder.setSpan(
+                    StyleSpan(Typeface.ITALIC),
+                    0,
+                    pair.first.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            return builder.toSpannable()
+        }
+
+        @WorkerThread
+        fun getPlainTextDescribingMessage(message: ChatMessage): String {
+            val pair = getTextDescribingMessage(message)
+            return "${pair.first} ${pair.second}".trim()
+        }
+
+        @WorkerThread
+        private fun getTextDescribingMessage(message: ChatMessage): Pair<String, String> {
             // If message contains text, then use that
             var text = message.contents.find { content -> content.isText }?.utf8Text ?: ""
+            var contentDescription = ""
 
             if (text.isEmpty()) {
                 val firstContent = message.contents.firstOrNull()
@@ -365,26 +494,21 @@ class LinphoneUtils {
                         firstContent
                     )
                     if (conferenceInfo != null) {
-                        val subject = conferenceInfo.subject.orEmpty()
-                        text = when (conferenceInfo.state) {
+                        text = conferenceInfo.subject.orEmpty()
+                        contentDescription = when (conferenceInfo.state) {
                             ConferenceInfo.State.Cancelled -> {
-                                AppUtils.getFormattedString(
-                                    R.string.message_meeting_invitation_cancelled_content_description,
-                                    subject
+                                AppUtils.getString(
+                                    R.string.message_meeting_invitation_cancelled_content_description
                                 )
                             }
-
                             ConferenceInfo.State.Updated -> {
-                                AppUtils.getFormattedString(
-                                    R.string.message_meeting_invitation_updated_content_description,
-                                    subject
+                                AppUtils.getString(
+                                    R.string.message_meeting_invitation_updated_content_description
                                 )
                             }
-
                             else -> {
-                                AppUtils.getFormattedString(
-                                    R.string.message_meeting_invitation_content_description,
-                                    subject
+                                AppUtils.getString(
+                                    R.string.message_meeting_invitation_content_description
                                 )
                             }
                         }
@@ -395,7 +519,14 @@ class LinphoneUtils {
                         text = firstContent.name.orEmpty()
                     }
                 } else if (firstContent?.isVoiceRecording == true) {
-                    text = AppUtils.getString(R.string.message_voice_message_content_description)
+                    val label = AppUtils.getString(
+                        R.string.message_voice_message_content_description
+                    )
+                    val formattedDuration = SimpleDateFormat(
+                        "mm:ss",
+                        Locale.getDefault()
+                    ).format(firstContent.fileDuration) // duration is in ms
+                    contentDescription = "$label ($formattedDuration)"
                 } else {
                     for (content in message.contents) {
                         if (text.isNotEmpty()) {
@@ -406,7 +537,7 @@ class LinphoneUtils {
                 }
             }
 
-            return text
+            return Pair(contentDescription, text)
         }
 
         @WorkerThread

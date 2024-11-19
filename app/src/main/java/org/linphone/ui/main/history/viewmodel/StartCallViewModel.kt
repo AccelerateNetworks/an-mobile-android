@@ -33,6 +33,7 @@ import org.linphone.core.ConferenceSchedulerListenerStub
 import org.linphone.core.Factory
 import org.linphone.core.Participant
 import org.linphone.core.ParticipantInfo
+import org.linphone.core.StreamType
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.history.model.NumpadModel
 import org.linphone.ui.main.viewmodel.AddressSelectionViewModel
@@ -125,14 +126,25 @@ class StartCallViewModel @UiThread constructor() : AddressSelectionViewModel() {
     init {
         isNumpadVisible.value = false
         numpadModel = NumpadModel(
-            { digit ->
-                // onDigitClicked
+            false,
+            { digit -> // onDigitClicked
                 appendDigitToSearchBarEvent.value = Event(digit)
                 // Don't do that, cursor will stay at start
                 // searchFilter.value = "${searchFilter.value.orEmpty()}$digit"
             },
-            {
-                // OnBackspaceClicked
+            { // onVoicemailClicked
+                coreContext.postOnCoreThread { core ->
+                    val account = LinphoneUtils.getDefaultAccount()
+                    val voicemailAddress = account?.params?.voicemailAddress
+                    if (voicemailAddress != null) {
+                        Log.i("$TAG Calling voicemail URI [${voicemailAddress.asStringUriOnly()}]")
+                        coreContext.startCall(voicemailAddress)
+                    } else {
+                        Log.w("$TAG No voicemail URI configured for current account, nothing to do")
+                    }
+                }
+            },
+            { // OnBackspaceClicked
                 removedCharacterAtCurrentPositionEvent.value = Event(true)
             },
             { // OnCallClicked
@@ -209,6 +221,9 @@ class StartCallViewModel @UiThread constructor() : AddressSelectionViewModel() {
             conferenceInfo.organizer = account.params.identityAddress
             conferenceInfo.subject = subject.value
 
+            // Allows to have a chat room within the conference
+            conferenceInfo.setCapability(StreamType.Text, true)
+
             val participants = arrayOfNulls<ParticipantInfo>(selection.value.orEmpty().size)
             var index = 0
             for (participant in selection.value.orEmpty()) {
@@ -223,7 +238,7 @@ class StartCallViewModel @UiThread constructor() : AddressSelectionViewModel() {
             Log.i(
                 "$TAG Creating group call with subject ${subject.value} and ${participants.size} participant(s)"
             )
-            val conferenceScheduler = core.createConferenceScheduler()
+            val conferenceScheduler = LinphoneUtils.createConferenceScheduler(account)
             conferenceScheduler.addListener(conferenceSchedulerListener)
             conferenceScheduler.account = account
             // Will trigger the conference creation/update automatically

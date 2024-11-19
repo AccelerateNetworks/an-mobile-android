@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.linphone.core.tools.Log
 import org.linphone.ui.GenericViewModel
+import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import org.linphone.utils.TimestampUtils
 
@@ -58,6 +59,14 @@ class MediaViewModel @UiThread constructor() : GenericViewModel() {
     val formattedDuration = MutableLiveData<String>()
 
     val position = MutableLiveData<Int>()
+
+    val videoSizeChangedEvent: MutableLiveData<Event<Pair<Int, Int>>> by lazy {
+        MutableLiveData<Event<Pair<Int, Int>>>()
+    }
+
+    val changeFullScreenModeEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
+    }
 
     lateinit var mediaPlayer: MediaPlayer
 
@@ -107,8 +116,10 @@ class MediaViewModel @UiThread constructor() : GenericViewModel() {
     }
 
     @UiThread
-    fun toggleFullScreen() {
-        fullScreenMode.value = fullScreenMode.value != true
+    fun toggleFullScreen(): Boolean {
+        val newValue = fullScreenMode.value != true
+        fullScreenMode.value = newValue
+        return newValue
     }
 
     @UiThread
@@ -165,8 +176,18 @@ class MediaViewModel @UiThread constructor() : GenericViewModel() {
 
                 // Leave full screen when playback is done
                 fullScreenMode.postValue(false)
+                changeFullScreenModeEvent.postValue(Event(false))
             }
-            prepare()
+            setOnVideoSizeChangedListener { mediaPlayer, width, height ->
+                videoSizeChangedEvent.postValue(Event(Pair(width, height)))
+            }
+            try {
+                prepare()
+            } catch (e: Exception) {
+                fullScreenMode.postValue(false)
+                changeFullScreenModeEvent.postValue(Event(false))
+                Log.e("$TAG Failed to prepare video file: $e")
+            }
         }
 
         val durationInMillis = mediaPlayer.duration

@@ -83,7 +83,7 @@ class MeetingsListAdapter :
 
     override fun getItemViewType(position: Int): Int {
         val data = getItem(position)
-        if (data.isToday) {
+        if (data.isTodayIndicator) {
             return TODAY_INDICATOR
         }
         return MEETING
@@ -181,7 +181,10 @@ class MeetingsListAdapter :
             newItem: MeetingListItemModel
         ): Boolean {
             if (oldItem.model is MeetingModel && newItem.model is MeetingModel) {
-                return oldItem.model.subject.value.orEmpty().isNotEmpty() && oldItem.model.subject.value == newItem.model.subject.value && oldItem.model.time == newItem.model.time
+                return oldItem.model.subject.value.orEmpty().isNotEmpty() &&
+                    oldItem.model.subject.value == newItem.model.subject.value &&
+                    oldItem.model.time == newItem.model.time &&
+                    oldItem.firstMeetingOfTheWeek == newItem.firstMeetingOfTheWeek
             }
             return false
         }

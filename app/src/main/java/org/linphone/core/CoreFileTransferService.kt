@@ -20,9 +20,11 @@
 package org.linphone.core
 
 import android.Manifest
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.IBinder
+import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
@@ -32,6 +34,7 @@ import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
 import org.linphone.core.tools.Log
 import org.linphone.core.tools.service.FileTransferService
+import org.linphone.ui.main.MainActivity
 
 @MainThread
 class CoreFileTransferService : FileTransferService() {
@@ -79,6 +82,17 @@ class CoreFileTransferService : FileTransferService() {
     }
 
     override fun createServiceNotification() {
+        Log.i("$TAG Creating notification")
+
+        val intent = Intent(applicationContext, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val pendingIntent = PendingIntent.getActivity(
+            applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         mServiceNotification = builder.setContentTitle(
             getString(R.string.notification_file_transfer_title)
         )
@@ -91,7 +105,9 @@ class CoreFileTransferService : FileTransferService() {
             .setShowWhen(false)
             .setOngoing(true)
             .setProgress(0, 0, true)
+            .setContentIntent(pendingIntent)
             .build()
+        postNotification()
 
         coreContext.postOnCoreThread { core ->
             val downloadingFilesCount = core.remainingDownloadFileCount
@@ -105,6 +121,10 @@ class CoreFileTransferService : FileTransferService() {
         Log.i(
             "$TAG [$downloadingFilesCount] file(s) being downloaded, [$uploadingFilesCount] file(s) being uploaded"
         )
+        if (downloadingFilesCount == 0 && uploadingFilesCount == 0) {
+            Log.i("$TAG No more files being transferred, do not alter the notification")
+            return
+        }
 
         val downloadText = resources.getQuantityString(
             R.plurals.notification_file_transfer_download,
@@ -125,20 +145,28 @@ class CoreFileTransferService : FileTransferService() {
             )
         } else if (downloadingFilesCount > 0) {
             downloadText
-        } else if (uploadingFilesCount > 0) {
-            uploadText
         } else {
-            ""
+            uploadText
         }
 
         mServiceNotification = builder.setContentText(message).build()
+        postNotification()
+    }
+
+    @AnyThread
+    private fun postNotification() {
         val notificationsManager = NotificationManagerCompat.from(this)
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            notificationsManager.notify(SERVICE_NOTIF_ID, mServiceNotification)
+            if (mServiceNotification != null) {
+                Log.i("$TAG Sending notification to manager")
+                notificationsManager.notify(SERVICE_NOTIF_ID, mServiceNotification)
+            } else {
+                Log.e("$TAG Notification content hasn't been computed yet!")
+            }
         } else {
             Log.e("$TAG POST_NOTIFICATIONS permission wasn't granted!")
         }

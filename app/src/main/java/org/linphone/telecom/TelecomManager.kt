@@ -62,14 +62,21 @@ class TelecomManager @WorkerThread constructor(context: Context) {
     private var currentlyFollowedCalls: Int = 0
 
     init {
-        callsManager.registerAppWithTelecom(
-            CallsManager.CAPABILITY_BASELINE or
-                CallsManager.Companion.CAPABILITY_SUPPORTS_VIDEO_CALLING
-        )
-        val hasTelecomFeature = context.packageManager.hasSystemFeature("android.software.telecom")
+        val hasTelecomFeature =
+            context.packageManager.hasSystemFeature("android.software.telecom")
         Log.i(
-            "$TAG App has been registered with Telecom, android.software.telecom feature is [${if (hasTelecomFeature) "available" else "not available"}]"
+            "$TAG android.software.telecom feature is [${if (hasTelecomFeature) "available" else "not available"}]"
         )
+
+        try {
+            callsManager.registerAppWithTelecom(
+                CallsManager.CAPABILITY_BASELINE or
+                    CallsManager.Companion.CAPABILITY_SUPPORTS_VIDEO_CALLING
+            )
+            Log.i("$TAG App has been registered with Telecom")
+        } catch (e: Exception) {
+            Log.e("$TAG Can't init TelecomManager: $e")
+        }
     }
 
     @WorkerThread
@@ -79,7 +86,7 @@ class TelecomManager @WorkerThread constructor(context: Context) {
 
     @WorkerThread
     fun onCallCreated(call: Call) {
-        Log.i("$TAG Call created: $call")
+        Log.i("$TAG Call to [${call.remoteAddress.asStringUriOnly()}] created")
 
         val address = call.callLog.remoteAddress
         val friend = coreContext.contactsManager.findContactByAddress(address)
@@ -185,7 +192,6 @@ class TelecomManager @WorkerThread constructor(context: Context) {
             return false
         }
 
-        callControlCallback.applyAudioRouteToCallWithId(routes)
-        return true
+        return callControlCallback.applyAudioRouteToCallWithId(routes)
     }
 }

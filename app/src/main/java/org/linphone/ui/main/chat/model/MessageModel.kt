@@ -19,10 +19,12 @@
  */
 package org.linphone.ui.main.chat.model
 
+import android.graphics.Typeface
 import android.os.CountDownTimer
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.StyleSpan
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MediatorLiveData
@@ -53,7 +55,6 @@ import org.linphone.core.Player
 import org.linphone.core.PlayerListener
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
-import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 import org.linphone.utils.AppUtils
 import org.linphone.utils.AudioUtils
 import org.linphone.utils.Event
@@ -65,7 +66,6 @@ import org.linphone.utils.TimestampUtils
 
 class MessageModel @WorkerThread constructor(
     val chatMessage: ChatMessage,
-    val avatarModel: ContactAvatarModel,
     val isFromGroup: Boolean,
     val isReply: Boolean,
     val replyTo: String,
@@ -74,6 +74,7 @@ class MessageModel @WorkerThread constructor(
     val isForward: Boolean,
     isGroupedWithPreviousOne: Boolean,
     isGroupedWithNextOne: Boolean,
+    private val currentFilter: String = "",
     private val onContentClicked: ((fileModel: FileModel) -> Unit)? = null,
     private val onJoinConferenceClicked: ((uri: String) -> Unit)? = null,
     private val onWebUrlClicked: ((url: String) -> Unit)? = null,
@@ -101,7 +102,13 @@ class MessageModel @WorkerThread constructor(
     val time = TimestampUtils.toString(timestamp)
 
     val chatRoomIsReadOnly = chatMessage.chatRoom.isReadOnly ||
-        (!chatMessage.chatRoom.hasCapability(ChatRoom.Capabilities.Encrypted.toInt()) && isEndToEndEncryptionMandatory())
+        (
+            !chatMessage.chatRoom.hasCapability(ChatRoom.Capabilities.Encrypted.toInt()) && LinphoneUtils.getAccountForAddress(
+                chatMessage.chatRoom.localAddress
+            )?.params?.instantMessagingEncryptionMandatory == true
+            )
+
+    val avatarModel = MutableLiveData<ContactAvatarModel>()
 
     val groupedWithNextMessage = MutableLiveData<Boolean>()
 
@@ -164,6 +171,8 @@ class MessageModel @WorkerThread constructor(
         MutableLiveData<Event<Boolean>>()
     }
 
+    var isTextHighlighted = false
+
     private var voiceRecordAudioFocusRequest: AudioFocusRequestCompat? = null
 
     private lateinit var voiceRecordPath: String
@@ -199,6 +208,14 @@ class MessageModel @WorkerThread constructor(
                 transferringFileModel = null
                 if (!allFilesDownloaded) {
                     computeContentsList()
+                }
+
+                for (content in message.contents) {
+                    if (content.isVoiceRecording) {
+                        Log.i("$TAG File transfer done, updating voice record info")
+                        computeVoiceRecordContent(content)
+                        break
+                    }
                 }
             }
         }
@@ -252,6 +269,8 @@ class MessageModel @WorkerThread constructor(
     }
 
     init {
+        updateAvatarModel()
+
         groupedWithNextMessage.postValue(isGroupedWithNextOne)
         groupedWithPreviousMessage.postValue(isGroupedWithPreviousOne)
         isPlayingVoiceRecord.postValue(false)
@@ -266,7 +285,10 @@ class MessageModel @WorkerThread constructor(
 
         coreContext.postOnMainThread {
             firstFileModel.addSource(filesList) {
-                firstFileModel.value = it.firstOrNull()
+                val first = it.firstOrNull()
+                if (first != null) {
+                    firstFileModel.value = first!!
+                }
             }
         }
     }
@@ -332,6 +354,22 @@ class MessageModel @WorkerThread constructor(
         }
     }
 
+    @UiThread
+    fun markAsRead() {
+        coreContext.postOnCoreThread {
+            Log.i("$TAG Marking chat message with ID [$id] as read")
+            chatMessage.markAsRead()
+        }
+    }
+
+    @WorkerThread
+    fun updateAvatarModel() {
+        val avatar = coreContext.contactsManager.getContactAvatarModelForAddress(
+            chatMessage.fromAddress
+        )
+        avatarModel.postValue(avatar)
+    }
+
     @WorkerThread
     private fun computeContentsList() {
         Log.d("$TAG Computing message contents list")
@@ -354,22 +392,13 @@ class MessageModel @WorkerThread constructor(
                 displayableContentFound = true
             } else if (content.isText && !content.isFile) {
                 Log.d("$TAG Found plain text content")
-                computeTextContent(content)
+                computeTextContent(content, currentFilter)
 
                 displayableContentFound = true
             } else if (content.isVoiceRecording) {
                 Log.d("$TAG Found voice recording content")
                 isVoiceRecord.postValue(true)
-                voiceRecordPath = content.filePath ?: ""
-
-                val duration = content.fileDuration
-                voiceRecordingDuration.postValue(duration)
-
-                val formattedDuration = SimpleDateFormat(
-                    "mm:ss",
-                    Locale.getDefault()
-                ).format(duration) // duration is in ms
-                formattedVoiceRecordingDuration.postValue(formattedDuration)
+                computeVoiceRecordContent(content)
                 displayableContentFound = true
             } else {
                 if (content.isFile) {
@@ -480,12 +509,11 @@ class MessageModel @WorkerThread constructor(
         filesList.postValue(filesPath)
 
         if (!displayableContentFound) { // Temporary workaround to prevent empty bubbles
-            val describe = LinphoneUtils.getTextDescribingMessage(chatMessage)
+            val describe = LinphoneUtils.getFormattedTextDescribingMessage(chatMessage)
             Log.w(
                 "$TAG No displayable content found, generating text based description [$describe]"
             )
-            val spannable = Spannable.Factory.getInstance().newSpannable(describe)
-            text.postValue(spannable)
+            text.postValue(describe)
         }
     }
 
@@ -554,9 +582,38 @@ class MessageModel @WorkerThread constructor(
     }
 
     @WorkerThread
-    private fun computeTextContent(content: Content) {
+    fun highlightText(highlight: String) {
+        if (isTextHighlighted && highlight.isEmpty()) {
+            isTextHighlighted = false
+        }
+
+        val textContent = chatMessage.contents.find {
+            it.isText
+        }
+        if (textContent != null) {
+            computeTextContent(textContent, highlight)
+        }
+    }
+
+    @WorkerThread
+    private fun computeTextContent(content: Content, highlight: String) {
         val textContent = content.utf8Text.orEmpty().trim()
         val spannableBuilder = SpannableStringBuilder(textContent)
+
+        // Check for search
+        if (highlight.isNotEmpty()) {
+            val indexStart = textContent.indexOf(highlight, 0, ignoreCase = true)
+            if (indexStart >= 0) {
+                isTextHighlighted = true
+                val indexEnd = indexStart + highlight.length
+                spannableBuilder.setSpan(
+                    StyleSpan(Typeface.BOLD),
+                    indexStart,
+                    indexEnd,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
 
         // Check for mentions
         val chatRoom = chatMessage.chatRoom
@@ -833,7 +890,7 @@ class MessageModel @WorkerThread constructor(
     private fun playerTickerFlow() = flow {
         while (isPlayingVoiceRecord.value == true) {
             emit(Unit)
-            delay(50)
+            delay(10)
         }
     }
 
@@ -893,5 +950,22 @@ class MessageModel @WorkerThread constructor(
                 }
             }
         }
+    }
+
+    @WorkerThread
+    private fun computeVoiceRecordContent(content: Content) {
+        voiceRecordPath = content.filePath ?: ""
+
+        val duration = content.fileDuration
+        voiceRecordingDuration.postValue(duration)
+
+        val formattedDuration = SimpleDateFormat(
+            "mm:ss",
+            Locale.getDefault()
+        ).format(duration) // duration is in ms
+        formattedVoiceRecordingDuration.postValue(formattedDuration)
+        Log.i(
+            "$TAG Found voice record with path [$voiceRecordPath] and duration [$formattedDuration]"
+        )
     }
 }

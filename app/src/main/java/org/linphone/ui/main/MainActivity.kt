@@ -22,7 +22,6 @@ package org.linphone.ui.main
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -63,8 +62,8 @@ import org.linphone.databinding.MainActivityBinding
 import org.linphone.ui.GenericActivity
 import org.linphone.ui.assistant.AssistantActivity
 import org.linphone.ui.main.chat.fragment.ConversationsListFragmentDirections
-import org.linphone.ui.main.fragment.AuthRequestedDialogModel
 import org.linphone.ui.main.help.fragment.DebugFragmentDirections
+import org.linphone.ui.main.model.AuthRequestedDialogModel
 import org.linphone.ui.main.sso.fragment.SingleSignOnFragmentDirections
 import org.linphone.ui.main.viewmodel.MainViewModel
 import org.linphone.ui.main.viewmodel.SharedMainViewModel
@@ -119,6 +118,7 @@ class MainActivity : GenericActivity() {
         }
     }
 
+    @SuppressLint("InlinedApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         // Must be done before the setContentView
         installSplashScreen()
@@ -138,7 +138,7 @@ class MainActivity : GenericActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(binding.inCallTopBar.root) { v, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(0, insets.top, 0, 0)
-            WindowInsetsCompat.CONSUMED
+            windowInsets
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.mainNavContainer) { v, windowInsets ->
@@ -217,6 +217,12 @@ class MainActivity : GenericActivity() {
                 if (checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
                     loadContacts()
                 }
+            }
+        }
+
+        viewModel.lastAccountRemovedEvent.observe(this) {
+            it.consume {
+                startActivity(Intent(this, AssistantActivity::class.java))
             }
         }
 
@@ -310,6 +316,8 @@ class MainActivity : GenericActivity() {
     }
 
     override fun onPause() {
+        viewModel.enableAccountMonitoring(false)
+
         currentlyDisplayedAuthDialog?.dismiss()
         currentlyDisplayedAuthDialog = null
 
@@ -330,7 +338,7 @@ class MainActivity : GenericActivity() {
                 HISTORY_FRAGMENT_ID
             }
         }
-        with(getPreferences(Context.MODE_PRIVATE).edit()) {
+        with(getPreferences(MODE_PRIVATE).edit()) {
             putInt(DEFAULT_FRAGMENT_KEY, defaultFragmentId)
             apply()
         }
@@ -342,6 +350,7 @@ class MainActivity : GenericActivity() {
     override fun onResume() {
         super.onResume()
 
+        viewModel.enableAccountMonitoring(true)
         viewModel.checkForNewAccount()
         viewModel.updateNetworkReachability()
         viewModel.updatePostNotificationsPermission()
@@ -393,7 +402,7 @@ class MainActivity : GenericActivity() {
                 }
             }
 
-            val defaultFragmentId = getPreferences(Context.MODE_PRIVATE).getInt(
+            val defaultFragmentId = getPreferences(MODE_PRIVATE).getInt(
                 DEFAULT_FRAGMENT_KEY,
                 HISTORY_FRAGMENT_ID
             )
@@ -502,12 +511,20 @@ class MainActivity : GenericActivity() {
                 Log.i("$TAG First time Linphone 6.0 has been started, showing Welcome activity")
                 corePreferences.firstLaunch = false
                 coreContext.postOnMainThread {
-                    startActivity(Intent(this, WelcomeActivity::class.java))
+                    try {
+                        startActivity(Intent(this, WelcomeActivity::class.java))
+                    } catch (ise: IllegalStateException) {
+                        Log.e("$TAG Can't start activity: $ise")
+                    }
                 }
             } else if (core.accountList.isEmpty()) {
                 Log.w("$TAG No account found, showing Assistant activity")
                 coreContext.postOnMainThread {
-                    startActivity(Intent(this, AssistantActivity::class.java))
+                    try {
+                        startActivity(Intent(this, AssistantActivity::class.java))
+                    } catch (ise: IllegalStateException) {
+                        Log.e("$TAG Can't start activity: $ise")
+                    }
                 }
             } else {
                 if (intent.hasExtra("Chat")) {
@@ -596,6 +613,16 @@ class MainActivity : GenericActivity() {
             if (binding.drawerMenu.isOpen) {
                 Log.i("$TAG Drawer menu is opened, closing it")
                 closeDrawerMenu()
+            }
+            if (findNavController().currentDestination?.id == R.id.conversationsListFragment) {
+                if (sharedViewModel.displayedChatRoom != null) {
+                    Log.w(
+                        "$TAG Closing already opened conversation to prevent attaching file in it directly"
+                    )
+                    sharedViewModel.hideConversationEvent.value = Event(true)
+                } else {
+                    Log.i("$TAG No chat room currently displayed, nothing to close")
+                }
             }
 
             val paths = deferred.awaitAll()

@@ -111,12 +111,10 @@ class MeetingWaitingRoomViewModel @UiThread constructor() : GenericViewModel() {
                         Log.i("$TAG Call has ended, leaving waiting room fragment")
                         leaveWaitingRoomEvent.postValue(Event(true))
                     }
-
                     Call.State.Error -> {
                         Log.w("$TAG Call has failed, leaving waiting room fragment")
                         leaveWaitingRoomEvent.postValue(Event(true))
                     }
-
                     else -> {}
                 }
             }
@@ -351,7 +349,7 @@ class MeetingWaitingRoomViewModel @UiThread constructor() : GenericViewModel() {
                     core.outputAudioDevice ?: core.defaultOutputAudioDevice
                 }
                 val isCurrentlyInUse = device.type == currentDevice?.type && device.deviceName == currentDevice?.deviceName
-                val model = AudioDeviceModel(device, name, device.type, isCurrentlyInUse) {
+                val model = AudioDeviceModel(device, name, device.type, isCurrentlyInUse, true) {
                     // onSelected
                     coreContext.postOnCoreThread {
                         Log.i("$TAG Selected audio device with ID [${device.id}]")
@@ -360,7 +358,7 @@ class MeetingWaitingRoomViewModel @UiThread constructor() : GenericViewModel() {
                     }
                 }
                 list.add(model)
-                Log.i("$TAG Found audio device [$device]")
+                Log.i("$TAG Found audio device [${device.id}]")
             }
 
             if (list.size > 2) {

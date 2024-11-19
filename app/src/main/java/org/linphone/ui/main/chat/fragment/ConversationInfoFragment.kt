@@ -19,6 +19,9 @@
  */
 package org.linphone.ui.main.chat.fragment
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -40,9 +43,9 @@ import org.linphone.ui.GenericActivity
 import org.linphone.ui.main.chat.adapter.ConversationParticipantsAdapter
 import org.linphone.ui.main.chat.model.ParticipantModel
 import org.linphone.ui.main.chat.viewmodel.ConversationInfoViewModel
-import org.linphone.ui.main.fragment.GroupSetOrEditSubjectDialogModel
 import org.linphone.ui.main.fragment.SlidingPaneChildFragment
 import org.linphone.ui.main.history.model.ConfirmationDialogModel
+import org.linphone.ui.main.model.GroupSetOrEditSubjectDialogModel
 import org.linphone.utils.DialogUtils
 import org.linphone.utils.Event
 
@@ -166,11 +169,13 @@ class ConversationInfoFragment : SlidingPaneChildFragment() {
         }
 
         viewModel.goToScheduleMeetingEvent.observe(viewLifecycleOwner) {
-            it.consume { participants ->
+            it.consume { pair ->
+                val subject = pair.first
+                val participants = pair.second
                 Log.i(
-                    "$TAG Forward participants list of size [${participants.size}] to schedule meeting fragment"
+                    "$TAG Forward subject [$subject] and participants list of size [${participants.size}] to schedule meeting fragment"
                 )
-                sharedViewModel.goToScheduleMeetingEvent.postValue(Event(participants))
+                sharedViewModel.goToScheduleMeetingEvent.postValue(Event(pair))
                 sharedViewModel.navigateToMeetingsEvent.postValue(Event(true))
             }
         }
@@ -178,6 +183,12 @@ class ConversationInfoFragment : SlidingPaneChildFragment() {
         viewModel.infoChangedEvent.observe(viewLifecycleOwner) {
             it.consume {
                 sharedViewModel.forceRefreshConversationInfo.postValue(Event(true))
+            }
+        }
+
+        viewModel.confirmGroupCallEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                showConfirmGroupCallPopup()
             }
         }
 
@@ -309,6 +320,14 @@ class ConversationInfoFragment : SlidingPaneChildFragment() {
         binding.setDeleteHistoryClickListener {
             showDeleteHistoryConfirmationDialog()
         }
+
+        binding.setCopySipUriClickListener {
+            copyAddressToClipboard(viewModel.sipUri.value.orEmpty())
+        }
+
+        binding.setCopyPeerSipUriClickListener {
+            copyAddressToClipboard(viewModel.peerSipUri.value.orEmpty())
+        }
     }
 
     private fun showParticipantAdminPopupMenu(view: View, participantModel: ParticipantModel) {
@@ -415,5 +434,38 @@ class ConversationInfoFragment : SlidingPaneChildFragment() {
         }
 
         dialog.show()
+    }
+
+    private fun showConfirmGroupCallPopup() {
+        val model = ConfirmationDialogModel()
+        val dialog = DialogUtils.getConfirmGroupCallDialog(
+            requireActivity(),
+            model
+        )
+
+        model.dismissEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                dialog.dismiss()
+            }
+        }
+
+        model.confirmEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                viewModel.startGroupCall()
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun copyAddressToClipboard(value: String) {
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("SIP address", value))
+        val message = getString(R.string.sip_address_copied_to_clipboard_toast)
+        (requireActivity() as GenericActivity).showGreenToast(
+            message,
+            R.drawable.check
+        )
     }
 }

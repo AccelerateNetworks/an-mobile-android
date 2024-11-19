@@ -55,6 +55,8 @@ class ConversationForwardMessageFragment : SlidingPaneChildFragment() {
 
     private var numberOrAddressPickerDialog: Dialog? = null
 
+    private var disableConsumingEventOnPause = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -111,6 +113,8 @@ class ConversationForwardMessageFragment : SlidingPaneChildFragment() {
             )
             adapter.submitList(it)
 
+            // Wait for adapter to have items before setting it in the RecyclerView,
+            // otherwise scroll position isn't retained
             if (binding.contactsList.adapter != adapter) {
                 binding.contactsList.adapter = adapter
             }
@@ -133,6 +137,7 @@ class ConversationForwardMessageFragment : SlidingPaneChildFragment() {
                         localSipUri,
                         remoteSipUri
                     )
+                    disableConsumingEventOnPause = true
                     findNavController().navigate(action)
                 }
             }
@@ -168,6 +173,14 @@ class ConversationForwardMessageFragment : SlidingPaneChildFragment() {
 
         numberOrAddressPickerDialog?.dismiss()
         numberOrAddressPickerDialog = null
+
+        if (!disableConsumingEventOnPause) {
+            sharedViewModel.messageToForwardEvent.value?.consume {
+                Log.w(
+                    "$TAG Fragment is pausing, consuming forward event to prevent it from being used later"
+                )
+            }
+        }
     }
 
     private fun showNumberOrAddressPickerDialog(list: ArrayList<ContactNumberOrAddressModel>) {

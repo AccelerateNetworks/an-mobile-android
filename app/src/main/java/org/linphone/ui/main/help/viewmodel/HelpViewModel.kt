@@ -23,13 +23,16 @@ import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.launch
 import org.linphone.BuildConfig
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
+import org.linphone.contacts.ContactLoader.Companion.NATIVE_ADDRESS_BOOK_FRIEND_LIST
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
+import org.linphone.core.Factory
 import org.linphone.core.VersionUpdateCheckResult
 import org.linphone.core.tools.Log
 import org.linphone.ui.GenericViewModel
@@ -42,11 +45,15 @@ class HelpViewModel @UiThread constructor() : GenericViewModel() {
         private const val TAG = "[Help ViewModel]"
     }
 
+    val logcat = MutableLiveData<Boolean>()
+
     val version = MutableLiveData<String>()
 
     val appVersion = MutableLiveData<String>()
 
     val sdkVersion = MutableLiveData<String>()
+
+    val firebaseProjectId = MutableLiveData<String>()
 
     val checkUpdateAvailable = MutableLiveData<Boolean>()
 
@@ -128,15 +135,21 @@ class HelpViewModel @UiThread constructor() : GenericViewModel() {
     init {
         val currentVersion = BuildConfig.VERSION_NAME
         version.value = currentVersion
-        appVersion.value = "${AppUtils.getString(R.string.linphone_app_version)} (${AppUtils.getString(
-            R.string.linphone_app_branch
-        )})"
+
+        val versionCode = BuildConfig.VERSION_CODE
+        val appGitDescribe = AppUtils.getString(R.string.linphone_app_version)
+        val appBranch = AppUtils.getString(R.string.linphone_app_branch)
+        appVersion.value = "$versionCode - $appGitDescribe ($appBranch)"
+
         sdkVersion.value = coreContext.sdkVersion
         logsUploadInProgress.value = false
+
+        firebaseProjectId.value = FirebaseApp.getInstance().options.projectId
 
         coreContext.postOnCoreThread { core ->
             core.addListener(coreListener)
 
+            logcat.postValue(corePreferences.printLogsInLogcat)
             checkUpdateAvailable.postValue(corePreferences.checkForUpdateServerUrl.isNotEmpty())
             uploadLogsAvailable.postValue(!core.logCollectionUploadServerUrl.isNullOrEmpty())
         }
@@ -148,6 +161,17 @@ class HelpViewModel @UiThread constructor() : GenericViewModel() {
 
         coreContext.postOnCoreThread { core ->
             core.removeListener(coreListener)
+        }
+    }
+
+    @UiThread
+    fun toggleLogcat() {
+        val newValue = logcat.value == false
+        coreContext.postOnCoreThread {
+            corePreferences.printLogsInLogcat = newValue
+            coreContext.enableLogcat(newValue)
+            Factory.instance().enableLogcatLogs(newValue)
+            logcat.postValue(newValue)
         }
     }
 
@@ -194,6 +218,22 @@ class HelpViewModel @UiThread constructor() : GenericViewModel() {
                 } else {
                     Log.e("$TAG Failed to save .linphonerc string as file in cache folder")
                 }
+            }
+        }
+    }
+
+    @UiThread
+    fun clearNativeFriendsDatabase() {
+        coreContext.postOnCoreThread { core ->
+            val list = core.getFriendListByName(NATIVE_ADDRESS_BOOK_FRIEND_LIST)
+            if (list != null) {
+                val friends = list.friends
+                Log.i("$TAG Friend list to remove found with [${friends.size}] friends")
+                for (friend in friends) {
+                    list.removeFriend(friend)
+                }
+                core.removeFriendList(list)
+                Log.i("$TAG Friend list [$NATIVE_ADDRESS_BOOK_FRIEND_LIST] removed")
             }
         }
     }

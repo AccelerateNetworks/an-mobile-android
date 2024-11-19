@@ -34,7 +34,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import android.view.inputmethod.EditorInfo
 import android.widget.PopupWindow
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.UiThread
@@ -78,7 +80,6 @@ import org.linphone.ui.main.chat.model.MessageReactionsModel
 import org.linphone.ui.main.chat.view.RichEditText
 import org.linphone.ui.main.chat.viewmodel.ChatMessageLongPressViewModel
 import org.linphone.ui.main.chat.viewmodel.ConversationViewModel
-import org.linphone.ui.main.chat.viewmodel.ConversationViewModel.Companion.SCROLLING_POSITION_NOT_SET
 import org.linphone.ui.main.chat.viewmodel.SendMessageInConversationViewModel
 import org.linphone.ui.main.fragment.SlidingPaneChildFragment
 import org.linphone.ui.main.history.model.ConfirmationDialogModel
@@ -108,7 +109,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
     protected lateinit var sendMessageViewModel: SendMessageInConversationViewModel
 
-    protected lateinit var messageLongPressViewModel: ChatMessageLongPressViewModel
+    private lateinit var messageLongPressViewModel: ChatMessageLongPressViewModel
 
     private lateinit var adapter: ConversationEventAdapter
 
@@ -211,6 +212,17 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
             if (positionStart > 0) {
                 adapter.notifyItemChanged(positionStart - 1) // For grouping purposes
+            } else if (adapter.itemCount != itemCount) {
+                if (viewModel.searchInProgress.value == true) {
+                    val recyclerView = binding.eventsList
+                    var indexToScrollTo = viewModel.itemToScrollTo.value ?: 0
+                    if (indexToScrollTo < 0) indexToScrollTo = 0
+                    Log.i(
+                        "$TAG User has loaded more history to go to a specific message, scrolling to index [$indexToScrollTo]"
+                    )
+                    recyclerView.scrollToPosition(indexToScrollTo)
+                    viewModel.searchInProgress.postValue(false)
+                }
             }
 
             if (viewModel.isUserScrollingUp.value == true) {
@@ -291,8 +303,9 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
     private val bottomSheetCallback = object : BottomSheetCallback() {
         override fun onStateChanged(bottomSheet: View, newState: Int) {
-            if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
+            if (newState == BottomSheetBehavior.STATE_COLLAPSED || newState == BottomSheetBehavior.STATE_HIDDEN) {
                 currentChatMessageModelForBottomSheet?.isSelected?.value = false
+                backPressedCallback.isEnabled = false
             }
         }
 
@@ -302,6 +315,39 @@ open class ConversationFragment : SlidingPaneChildFragment() {
     private var bottomSheetDeliveryModel: MessageDeliveryModel? = null
 
     private var bottomSheetReactionsModel: MessageReactionsModel? = null
+
+    private val backPressedCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            if (viewModel.searchBarVisible.value == true) {
+                Log.i("$TAG Search bar is visible, closing it instead of going back")
+                viewModel.closeSearchBar()
+                return
+            }
+
+            val bottomSheetBehavior = BottomSheetBehavior.from(binding.messageBottomSheet.root)
+            if (bottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN && bottomSheetBehavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
+                Log.i(
+                    "$TAG Bottom sheet isn't hidden nor collapsed, hiding it instead of going back"
+                )
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                return
+            }
+
+            if (messageLongPressViewModel.visible.value == true) {
+                Log.i("$TAG Message long press menu is visible, hiding it instead of going back")
+                messageLongPressViewModel.dismiss()
+                return
+            }
+
+            Log.i("$TAG Search bar is closed & no bottom sheet is opened, going back")
+            isEnabled = false
+            try {
+                requireActivity().onBackPressedDispatcher.onBackPressed()
+            } catch (ise: IllegalStateException) {
+                Log.w("$TAG Can't go back: $ise")
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -326,6 +372,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
     override fun goBack(): Boolean {
         sharedViewModel.closeSlidingPaneEvent.value = Event(true)
+        sharedViewModel.displayedChatRoom = null
 
         if (findNavController().currentDestination?.id == R.id.conversationFragment) {
             // If not done this fragment won't be paused, which will cause us issues
@@ -370,10 +417,6 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         val layoutManager = LinearLayoutManager(requireContext())
         layoutManager.stackFromEnd = true
         binding.eventsList.layoutManager = layoutManager
-
-        if (binding.eventsList.adapter != adapter) {
-            binding.eventsList.adapter = adapter
-        }
 
         val callbacks = RecyclerViewSwipeUtilsCallback(
             R.drawable.reply,
@@ -434,13 +477,27 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                             Log.i("$TAG Found message to forward")
                             if (viewModel.isReadOnly.value == true || viewModel.isDisabledBecauseNotSecured.value == true) {
                                 Log.w(
-                                    "$TAG Can't forward message in this conversation as it is read only"
+                                    "$TAG Can't forward message in this conversation as it is read only, keeping it in memory until conversation is joined just in case"
                                 )
+                                viewModel.pendingForwardMessage = toForward
                             } else {
                                 sendMessageViewModel.forwardMessage(toForward)
                             }
                         }
                     }
+                }
+            }
+        }
+
+        viewModel.forwardMessageEvent.observe(viewLifecycleOwner) {
+            it.consume { toForward ->
+                Log.i("$TAG Found pending message to forward")
+                if (viewModel.isReadOnly.value == true || viewModel.isDisabledBecauseNotSecured.value == true) {
+                    Log.w(
+                        "$TAG Can't forward message in this conversation as it is still read only"
+                    )
+                } else {
+                    sendMessageViewModel.forwardMessage(toForward)
                 }
             }
         }
@@ -451,9 +508,21 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 Log.i("$TAG Events (messages) list submitted, contains [${items.size}] items")
                 adapter.submitList(items)
 
+                // Wait for adapter to have items before setting it in the RecyclerView,
+                // otherwise scroll position isn't retained
+                if (binding.eventsList.adapter != adapter) {
+                    binding.eventsList.adapter = adapter
+                }
+
                 (view.parent as? ViewGroup)?.doOnPreDraw {
                     sharedViewModel.openSlidingPaneEvent.value = Event(true)
                 }
+            }
+        }
+
+        viewModel.confirmGroupCallEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                showConfirmGroupCallPopup()
             }
         }
 
@@ -491,17 +560,21 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 val repliedMessageId = model.replyToMessageId
                 if (repliedMessageId.isNullOrEmpty()) {
                     Log.w("$TAG Message [${model.id}] doesn't have a reply to ID!")
+                    return@consume
+                }
+
+                val originalMessage = adapter.currentList.find { eventLog ->
+                    !eventLog.isEvent && (eventLog.model as MessageModel).id == repliedMessageId
+                }
+                if (originalMessage != null) {
+                    val position = adapter.currentList.indexOf(originalMessage)
+                    Log.i("$TAG Scrolling to position [$position]")
+                    binding.eventsList.scrollToPosition(position)
                 } else {
-                    val originalMessage = adapter.currentList.find { eventLog ->
-                        !eventLog.isEvent && (eventLog.model as MessageModel).id == repliedMessageId
-                    }
-                    if (originalMessage != null) {
-                        val position = adapter.currentList.indexOf(originalMessage)
-                        Log.i("$TAG Scrolling to position [$position]")
-                        binding.eventsList.scrollToPosition(position)
-                    } else {
-                        Log.w("$TAG Failed to find matching message in adapter's items!")
-                    }
+                    Log.w(
+                        "$TAG Failed to find message with ID [$repliedMessageId] in already loaded history, loading missing items"
+                    )
+                    viewModel.loadDataUpUntilToMessageId(model.replyToMessageId)
                 }
             }
         }
@@ -567,6 +640,15 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             showUnsafeConversationDetailsBottomSheet()
         }
 
+        binding.searchField.setOnEditorActionListener { view, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                view.hideKeyboard()
+                viewModel.searchUp()
+                return@setOnEditorActionListener true
+            }
+            false
+        }
+
         sendMessageViewModel.emojiToAddEvent.observe(viewLifecycleOwner) {
             it.consume { emoji ->
                 binding.sendArea.messageToSend.addCharacterAtPosition(emoji)
@@ -592,10 +674,6 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 Log.w("$TAG Asking for RECORD_AUDIO permission")
                 requestRecordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
-        }
-
-        viewModel.searchFilter.observe(viewLifecycleOwner) { filter ->
-            viewModel.applyFilter(filter.trim())
         }
 
         viewModel.focusSearchBarEvent.observe(viewLifecycleOwner) {
@@ -665,6 +743,14 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
 
+        viewModel.itemToScrollTo.observe(viewLifecycleOwner) { position ->
+            if (position >= 0) {
+                Log.i("$TAG Scrolling to message/event at position [$position]")
+                val recyclerView = binding.eventsList
+                recyclerView.scrollToPosition(position)
+            }
+        }
+
         messageLongPressViewModel.replyToMessageEvent.observe(viewLifecycleOwner) {
             it.consume {
                 val model = messageLongPressViewModel.messageModel.value
@@ -727,6 +813,13 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
 
+        sharedViewModel.hideConversationEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                Log.w("$TAG We were asked to close conversation, going back")
+                goBack()
+            }
+        }
+
         sharedViewModel.textToShareFromIntent.observe(viewLifecycleOwner) { text ->
             if (text.isNotEmpty()) {
                 Log.i("$TAG Found text to share from intent")
@@ -757,7 +850,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         sharedViewModel.forceRefreshConversationEvents.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG Force refreshing messages list")
-                viewModel.applyFilter("")
+                viewModel.applyFilter()
             }
         }
 
@@ -788,7 +881,9 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         scrollListener = object : ConversationScrollListener(layoutManager) {
             @UiThread
             override fun onLoadMore(totalItemsCount: Int) {
-                viewModel.loadMoreData(totalItemsCount)
+                if (viewModel.searchInProgress.value == false) {
+                    viewModel.loadMoreData(totalItemsCount)
+                }
             }
 
             @UiThread
@@ -805,6 +900,11 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 }
             }
         }
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
     }
 
     override fun onResume() {
@@ -825,11 +925,6 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
         val bottomSheetBehavior = BottomSheetBehavior.from(binding.messageBottomSheet.root)
         bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
-
-        if (viewModel.scrollingPosition != SCROLLING_POSITION_NOT_SET) {
-            Log.d("$TAG Restoring previous scrolling position: ${viewModel.scrollingPosition}")
-            binding.eventsList.scrollToPosition(viewModel.scrollingPosition)
-        }
     }
 
     override fun onPause() {
@@ -855,16 +950,10 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             Log.e("$TAG Failed to unregister data observer to adapter: $e")
         }
 
-        if (viewModel.isUserScrollingUp.value == true) {
-            val layoutManager = binding.eventsList.layoutManager as LinearLayoutManager
-            viewModel.scrollingPosition = layoutManager.findFirstCompletelyVisibleItemPosition()
-            Log.d("$TAG Storing current scrolling position: ${viewModel.scrollingPosition}")
-        } else {
-            viewModel.scrollingPosition = SCROLLING_POSITION_NOT_SET
-        }
-
         val bottomSheetBehavior = BottomSheetBehavior.from(binding.messageBottomSheet.root)
         bottomSheetBehavior.removeBottomSheetCallback(bottomSheetCallback)
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        currentChatMessageModelForBottomSheet?.isSelected?.value = false
         currentChatMessageModelForBottomSheet = null
     }
 
@@ -916,6 +1005,16 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         viewModel.isUserScrollingUp.value = !bottomReached
         if (bottomReached) {
             viewModel.markAsRead()
+        } else {
+            val firstUnread = adapter.currentList[firstUnreadMessagePosition]
+            if (firstUnread.model is MessageModel) {
+                Log.i("$TAG Marking only first message (to which user scrolled to) as read")
+                firstUnread.model.markAsRead()
+                viewModel.updateUnreadMessageCount()
+                sharedViewModel.updateUnreadMessageCountForCurrentConversationEvent.postValue(
+                    Event(true)
+                )
+            }
         }
     }
 
@@ -988,6 +1087,8 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         popupView.setSearchClickListener {
             Log.i("$TAG Opening search bar")
             viewModel.openSearchBar()
+            backPressedCallback.isEnabled = true
+
             popupWindow.dismiss()
         }
 
@@ -995,12 +1096,14 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             Log.i("$TAG Muting conversation")
             viewModel.mute()
             popupWindow.dismiss()
+            sharedViewModel.forceRefreshDisplayedConversation.value = Event(true)
         }
 
         popupView.setUnmuteClickListener {
             Log.i("$TAG Un-muting conversation")
             viewModel.unMute()
             popupWindow.dismiss()
+            sharedViewModel.forceRefreshDisplayedConversation.value = Event(true)
         }
 
         popupView.setConfigureEphemeralMessagesClickListener {
@@ -1047,6 +1150,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
     @UiThread
     private fun showChatMessageLongPressMenu(chatMessageModel: MessageModel) {
+        binding.sendArea.messageToSend.hideKeyboard()
         Compatibility.setBlurRenderEffect(binding.coordinatorLayout)
         messageLongPressViewModel.setMessage(chatMessageModel)
         chatMessageModel.dismissLongPressMenuEvent.observe(viewLifecycleOwner) {
@@ -1055,6 +1159,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
         messageLongPressViewModel.visible.value = true
+        backPressedCallback.isEnabled = true
     }
 
     @UiThread
@@ -1063,9 +1168,12 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         showDelivery: Boolean = false,
         showReactions: Boolean = false
     ) {
-        val bottomSheetBehavior = BottomSheetBehavior.from(binding.messageBottomSheet.root)
+        binding.sendArea.messageToSend.hideKeyboard()
+        backPressedCallback.isEnabled = true
 
+        val bottomSheetBehavior = BottomSheetBehavior.from(binding.messageBottomSheet.root)
         bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+
         binding.messageBottomSheet.setHandleClickedListener {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         }
@@ -1269,6 +1377,29 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
                 exportFile(path, mime)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun showConfirmGroupCallPopup() {
+        val model = ConfirmationDialogModel()
+        val dialog = DialogUtils.getConfirmGroupCallDialog(
+            requireActivity(),
+            model
+        )
+
+        model.dismissEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                dialog.dismiss()
+            }
+        }
+
+        model.confirmEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                viewModel.startGroupCall()
                 dialog.dismiss()
             }
         }

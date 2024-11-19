@@ -87,7 +87,7 @@
             android:id="@+id/reply"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="16dp"
+            android:layout_marginStart="32dp"
             android:text="@{model.replyText, default=`Reply`}"
             android:textColor="?attr/color_main2_500"
             android:textSize="14sp"
@@ -193,14 +193,13 @@
                 android:layout_height="wrap_content"
                 android:text="@{model.text, default=`Lorem ipsum dolor sit amet`}"
                 android:textSize="14sp"
-                android:textColor="?attr/color_main2_700"
+                android:textColor="?attr/color_main2_800"
                 android:gravity="center_vertical|start"
                 android:visibility="@{model.text.length() > 0 ? View.VISIBLE : View.GONE}"/>
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -209,6 +208,7 @@
                     android:id="@+id/ephemeral_timer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
                     android:text="@{model.ephemeralLifetime, default=`00:00`}"
                     android:textSize="12sp"
                     android:visibility="@{model.isEphemeral ? View.VISIBLE : View.GONE, default=gone}"/>
@@ -217,10 +217,10 @@
                     style="@style/default_text_style_300"
                     android:id="@+id/countdown_clock"
                     android:layout_width="@dimen/small_icon_size"
-                    android:layout_height="@dimen/small_icon_size"
-                    android:layout_gravity="center_vertical|start"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="2dp"
-                    android:layout_marginTop="2dp"
+                    android:paddingTop="7dp"
+                    android:layout_gravity="bottom"
                     android:contentDescription="@null"
                     android:src="@drawable/clock_countdown"
                     app:tint="?attr/color_main2_600"
@@ -234,6 +234,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="5dp"
+                    android:paddingTop="5dp"
                     android:text="@{model.time, default=`13:40`}"
                     android:textSize="12sp" />
 
@@ -243,9 +244,9 @@
                     android:onClick="@{showDeliveryInfoClickListener}"
                     android:onLongClick="@{onLongClickListener}"
                     android:layout_width="@dimen/small_icon_size"
-                    android:layout_height="@dimen/small_icon_size"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="5dp"
-                    android:layout_marginTop="2dp"
+                    android:paddingTop="7dp"
                     android:src="@{model.statusIcon, default=@drawable/checks}"
                     android:contentDescription="@string/content_description_chat_bubble_delivery_status"
                     app:tint="?attr/color_main1_500" />

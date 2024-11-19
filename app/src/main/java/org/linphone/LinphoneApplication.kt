@@ -21,7 +21,7 @@ package org.linphone
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.ComponentCallbacks2
+import android.os.PowerManager
 import androidx.annotation.MainThread
 import coil.ImageLoader
 import coil.ImageLoaderFactory
@@ -58,6 +58,13 @@ class LinphoneApplication : Application(), ImageLoaderFactory {
         super.onCreate()
         val context = applicationContext
 
+        val powerManager = context.getSystemService(POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "Linphone:AppCreation"
+        )
+        wakeLock.acquire(20000L) // 20 seconds
+
         Factory.instance().setLogCollectionPath(context.filesDir.absolutePath)
         Factory.instance().enableLogCollection(LogCollectionState.Enabled)
         // For VFS
@@ -88,15 +95,16 @@ class LinphoneApplication : Application(), ImageLoaderFactory {
         coreContext.start()
 
         DynamicColors.applyToActivitiesIfAvailable(this)
+        wakeLock.release()
     }
 
     override fun onTrimMemory(level: Int) {
         Log.w("$TAG onTrimMemory called with level [${trimLevelToString(level)}]($level) !")
         when (level) {
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW,
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
-            ComponentCallbacks2.TRIM_MEMORY_MODERATE,
-            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+            TRIM_MEMORY_RUNNING_LOW,
+            TRIM_MEMORY_RUNNING_CRITICAL,
+            TRIM_MEMORY_MODERATE,
+            TRIM_MEMORY_COMPLETE -> {
                 Log.i("$TAG Memory trim required, clearing imageLoader memory cache")
                 imageLoader.memoryCache?.clear()
             }
@@ -131,7 +139,7 @@ class LinphoneApplication : Application(), ImageLoaderFactory {
                     .maxSizePercent(0.02)
                     .build()
             }
-            .networkCachePolicy(CachePolicy.DISABLED)
+            .networkCachePolicy(CachePolicy.ENABLED)
             .diskCachePolicy(diskCachePolicy)
             .memoryCachePolicy(CachePolicy.ENABLED)
             .build()
@@ -139,13 +147,13 @@ class LinphoneApplication : Application(), ImageLoaderFactory {
 
     private fun trimLevelToString(level: Int): String {
         return when (level) {
-            ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> "Hidden UI"
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE -> "Moderate (Running)"
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> "Low"
-            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> "Critical"
-            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> "Background"
-            ComponentCallbacks2.TRIM_MEMORY_MODERATE -> "Moderate"
-            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> "Complete"
+            TRIM_MEMORY_UI_HIDDEN -> "Hidden UI"
+            TRIM_MEMORY_RUNNING_MODERATE -> "Moderate (Running)"
+            TRIM_MEMORY_RUNNING_LOW -> "Low"
+            TRIM_MEMORY_RUNNING_CRITICAL -> "Critical"
+            TRIM_MEMORY_BACKGROUND -> "Background"
+            TRIM_MEMORY_MODERATE -> "Moderate"
+            TRIM_MEMORY_COMPLETE -> "Complete"
             else -> level.toString()
         }
     }

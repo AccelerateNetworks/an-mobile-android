@@ -5,7 +5,6 @@
 
     <data>
         <import type="android.view.View" />
-        <import type="android.graphics.Typeface" />
         <variable
             name="viewModel"
             type="org.linphone.ui.main.history.model.ConfirmationDialogModel" />
@@ -55,6 +54,8 @@
             android:layout_marginTop="10dp"
             android:text="@string/manage_account_dialog_remove_account_message"
             android:textSize="14sp"
+            android:autoLink="web"
+            android:textColorLink="?attr/color_main1_500"
             app:layout_constraintBottom_toTopOf="@id/cancel"
             app:layout_constraintStart_toStartOf="@id/dialog_background"
             app:layout_constraintEnd_toEndOf="@id/dialog_background"
@@ -84,7 +85,7 @@
             android:layout_marginTop="16dp"
             android:layout_marginStart="15dp"
             android:layout_marginEnd="15dp"
-            android:text="@string/dialog_delete"
+            android:text="@string/manage_account_delete"
             app:layout_constraintStart_toStartOf="@id/dialog_background"
             app:layout_constraintEnd_toEndOf="@id/dialog_background"
             app:layout_constraintTop_toBottomOf="@id/cancel"

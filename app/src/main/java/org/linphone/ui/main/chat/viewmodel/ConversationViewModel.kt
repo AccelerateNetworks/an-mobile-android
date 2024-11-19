@@ -29,24 +29,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
+import org.linphone.contacts.ContactsManager
 import org.linphone.core.Address
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatMessageReaction
 import org.linphone.core.ChatRoom
+import org.linphone.core.ChatRoom.HistoryFilter
 import org.linphone.core.ChatRoomListenerStub
-import org.linphone.core.ConferenceScheduler
-import org.linphone.core.ConferenceSchedulerListenerStub
 import org.linphone.core.EventLog
-import org.linphone.core.Factory
 import org.linphone.core.Friend
-import org.linphone.core.Participant
-import org.linphone.core.ParticipantInfo
+import org.linphone.core.SearchDirection
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.chat.model.EventLogModel
 import org.linphone.ui.main.chat.model.FileModel
 import org.linphone.ui.main.chat.model.MessageModel
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
-import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
@@ -58,12 +55,12 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
         private const val MESSAGES_PER_PAGE = 30
 
         const val MAX_TIME_TO_GROUP_MESSAGES = 60 // 1 minute
-        const val SCROLLING_POSITION_NOT_SET = -1
+        const val ITEMS_TO_LOAD_BEFORE_SEARCH_RESULT = 6
     }
 
     val showBackButton = MutableLiveData<Boolean>()
 
-    val isInCallConversation = MutableLiveData<Boolean>()
+    val isCallConversation = MutableLiveData<Boolean>()
 
     val avatarModel = MutableLiveData<ContactAvatarModel>()
 
@@ -83,19 +80,23 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
 
     val ephemeralLifetime = MutableLiveData<Long>()
 
+    val ephemeralLifeTimeLabel = MutableLiveData<String>()
+
     val composingLabel = MutableLiveData<String>()
 
     val searchBarVisible = MutableLiveData<Boolean>()
 
     val searchFilter = MutableLiveData<String>()
 
+    val searchInProgress = MutableLiveData<Boolean>()
+
+    val canSearchDown = MutableLiveData<Boolean>()
+
+    val itemToScrollTo = MutableLiveData<Int>()
+
     val isUserScrollingUp = MutableLiveData<Boolean>()
 
-    val noMatchingResultForFilter = MutableLiveData<Boolean>()
-
     val unreadMessagesCount = MutableLiveData<Int>()
-
-    var scrollingPosition: Int = SCROLLING_POSITION_NOT_SET
 
     val focusSearchBarEvent: MutableLiveData<Event<Boolean>> by lazy {
         MutableLiveData<Event<Boolean>>()
@@ -125,13 +126,36 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
         MutableLiveData<Event<Boolean>>()
     }
 
+    val forwardMessageEvent: MutableLiveData<Event<MessageModel>> by lazy {
+        MutableLiveData<Event<MessageModel>>()
+    }
+
     var eventsList = arrayListOf<EventLogModel>()
+
+    var pendingForwardMessage: MessageModel? = null
+
+    private var latestMatch: EventLog? = null
 
     private val chatRoomListener = object : ChatRoomListenerStub() {
         @WorkerThread
         override fun onConferenceJoined(chatRoom: ChatRoom, eventLog: EventLog) {
             Log.i("$TAG Conversation was joined")
+            addEvents(arrayOf(eventLog))
             computeConversationInfo()
+
+            val messageToForward = pendingForwardMessage
+            if (messageToForward != null) {
+                Log.i("$TAG Found pending forward message, doing it now")
+                forwardMessageEvent.postValue(Event(messageToForward))
+                pendingForwardMessage = null
+            }
+        }
+
+        @WorkerThread
+        override fun onConferenceLeft(chatRoom: ChatRoom, eventLog: EventLog) {
+            Log.w("$TAG Conversation was left")
+            addEvents(arrayOf(eventLog))
+            isReadOnly.postValue(true)
         }
 
         @WorkerThread
@@ -168,9 +192,8 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             Log.i("$TAG Received [${eventLogs.size}] new message(s)")
             computeComposingLabel()
 
-            addEvents(eventLogs)
-
             unreadMessagesCount.postValue(chatRoom.unreadMessagesCount)
+            addEvents(eventLogs)
         }
 
         @WorkerThread
@@ -234,6 +257,9 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             ephemeralLifetime.postValue(
                 if (!chatRoom.isEphemeralEnabled) 0L else chatRoom.ephemeralLifetime
             )
+            ephemeralLifeTimeLabel.postValue(
+                LinphoneUtils.formatEphemeralExpiration(chatRoom.ephemeralLifetime)
+            )
         }
 
         @WorkerThread
@@ -263,57 +289,38 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
         }
     }
 
-    private val conferenceSchedulerListener = object : ConferenceSchedulerListenerStub() {
-        override fun onStateChanged(
-            conferenceScheduler: ConferenceScheduler,
-            state: ConferenceScheduler.State
-        ) {
-            Log.i("$TAG Conference scheduler state is $state")
-            if (state == ConferenceScheduler.State.Ready) {
-                conferenceScheduler.removeListener(this)
+    private val contactsListener = object : ContactsManager.ContactsListener {
+        @WorkerThread
+        override fun onContactsLoaded() {
+            Log.i("$TAG Contacts have been (re)loaded, updating list")
+            computeParticipantsInfo()
 
-                val conferenceAddress = conferenceScheduler.info?.uri
-                if (conferenceAddress != null) {
-                    Log.i(
-                        "$TAG Conference info created, address is ${conferenceAddress.asStringUriOnly()}"
-                    )
-                    coreContext.startVideoCall(conferenceAddress)
-                } else {
-                    Log.e("$TAG Conference info URI is null!")
-                    showRedToastEvent.postValue(
-                        Event(
-                            Pair(
-                                R.string.conference_failed_to_create_group_call_toast,
-                                R.drawable.warning_circle
-                            )
-                        )
-                    )
+            if (isGroup.value == true) {
+                for (event in eventsList) {
+                    (event.model as? MessageModel)?.updateAvatarModel()
                 }
-            } else if (state == ConferenceScheduler.State.Error) {
-                conferenceScheduler.removeListener(this)
-                Log.e("$TAG Failed to create group call!")
-                showRedToastEvent.postValue(
-                    Event(
-                        Pair(
-                            R.string.conference_failed_to_create_group_call_toast,
-                            R.drawable.warning_circle
-                        )
-                    )
-                )
             }
         }
     }
 
     init {
+        coreContext.postOnCoreThread {
+            coreContext.contactsManager.addListener(contactsListener)
+        }
+
         searchBarVisible.value = false
         isUserScrollingUp.value = false
         isDisabledBecauseNotSecured.value = false
+        searchInProgress.value = false
+        canSearchDown.value = false
+        itemToScrollTo.value = -1
     }
 
     override fun onCleared() {
         super.onCleared()
 
         coreContext.postOnCoreThread {
+            coreContext.contactsManager.removeListener(contactsListener)
             if (isChatRoomInitialized()) {
                 chatRoom.removeListener(chatRoomListener)
             }
@@ -341,14 +348,33 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
 
     @UiThread
     fun closeSearchBar() {
-        clearFilter()
+        searchFilter.value = ""
         searchBarVisible.value = false
         focusSearchBarEvent.value = Event(false)
+        latestMatch = null
+        canSearchDown.value = false
+
+        coreContext.postOnCoreThread {
+            for (eventLog in eventsList) {
+                if ((eventLog.model as? MessageModel)?.isTextHighlighted == true) {
+                    eventLog.model.highlightText("")
+                }
+            }
+        }
     }
 
     @UiThread
-    fun clearFilter() {
-        searchFilter.value = ""
+    fun searchUp() {
+        coreContext.postOnCoreThread {
+            searchChatMessage(SearchDirection.Up)
+        }
+    }
+
+    @UiThread
+    fun searchDown() {
+        coreContext.postOnCoreThread {
+            searchChatMessage(SearchDirection.Down)
+        }
     }
 
     @UiThread
@@ -360,9 +386,16 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
     }
 
     @UiThread
-    fun applyFilter(filter: String) {
+    fun updateUnreadMessageCount() {
         coreContext.postOnCoreThread {
-            computeEvents(filter)
+            unreadMessagesCount.postValue(chatRoom.unreadMessagesCount)
+        }
+    }
+
+    @UiThread
+    fun applyFilter() {
+        coreContext.postOnCoreThread {
+            computeEvents()
         }
     }
 
@@ -398,24 +431,9 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
     }
 
     @UiThread
-    fun startCall() {
-        coreContext.postOnCoreThread { core ->
-            if (LinphoneUtils.isChatRoomAGroup(chatRoom) && chatRoom.participants.size >= 2) {
-                createGroupCall()
-            } else {
-                val firstParticipant = chatRoom.participants.firstOrNull()
-                val address = firstParticipant?.address
-                if (address != null) {
-                    Log.i("$TAG Audio calling SIP address [${address.asStringUriOnly()}]")
-                    coreContext.startAudioCall(address)
-                }
-            }
-        }
-    }
-
-    @UiThread
     fun markAsRead() {
         coreContext.postOnCoreThread {
+            if (chatRoom.unreadMessagesCount == 0) return@postOnCoreThread
             Log.i("$TAG Marking chat room as read")
             chatRoom.markAsRead()
         }
@@ -440,11 +458,15 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
     @UiThread
     fun updateCurrentlyDisplayedConversation() {
         coreContext.postOnCoreThread {
-            val id = LinphoneUtils.getChatRoomId(chatRoom)
-            Log.i("$TAG Asking notifications manager not to notify messages for conversation [$id]")
-            coreContext.notificationsManager.setCurrentlyDisplayedChatRoomId(id)
+            if (isChatRoomInitialized()) {
+                val id = LinphoneUtils.getChatRoomId(chatRoom)
+                Log.i(
+                    "$TAG Asking notifications manager not to notify messages for conversation [$id]"
+                )
+                coreContext.notificationsManager.setCurrentlyDisplayedChatRoomId(id)
 
-            checkIfConversationShouldBeDisabledForSecurityReasons()
+                checkIfConversationShouldBeDisabledForSecurityReasons()
+            }
         }
     }
 
@@ -454,6 +476,9 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             LinphoneUtils.chatRoomConfigureEphemeralMessagesLifetime(chatRoom, lifetime)
             ephemeralLifetime.postValue(
                 if (!chatRoom.isEphemeralEnabled) 0L else chatRoom.ephemeralLifetime
+            )
+            ephemeralLifeTimeLabel.postValue(
+                LinphoneUtils.formatEphemeralExpiration(chatRoom.ephemeralLifetime)
             )
         }
     }
@@ -471,7 +496,7 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
                 }
 
                 val history = chatRoom.getHistoryRangeEvents(totalItemsCount, upperBound)
-                val list = getEventsListFromHistory(history, searchFilter.value.orEmpty())
+                val list = getEventsListFromHistory(history)
 
                 val lastEvent = list.lastOrNull()
                 val newEvent = eventsList.firstOrNull()
@@ -496,9 +521,9 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
     @WorkerThread
     fun checkIfConversationShouldBeDisabledForSecurityReasons() {
         if (!chatRoom.hasCapability(ChatRoom.Capabilities.Encrypted.toInt())) {
-            if (isEndToEndEncryptionMandatory()) {
+            if (LinphoneUtils.getAccountForAddress(chatRoom.localAddress)?.params?.instantMessagingEncryptionMandatory == true) {
                 Log.w(
-                    "$TAG Conversation with subject [${chatRoom.subject}] has been disabled because it isn't encrypted and default account is in secure mode"
+                    "$TAG Conversation with subject [${chatRoom.subject}] is considered as read-only because it isn't encrypted and default account is in secure mode"
                 )
                 isDisabledBecauseNotSecured.postValue(true)
             } else {
@@ -509,9 +534,27 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
         }
     }
 
+    @UiThread
+    fun loadDataUpUntilToMessageId(messageId: String?) {
+        messageId ?: return
+
+        coreContext.postOnCoreThread {
+            searchInProgress.postValue(true)
+            val eventLog = chatRoom.findEventLog(messageId)
+            if (eventLog != null) {
+                Log.i("$TAG Found event log [$eventLog] with message ID [$messageId]")
+                loadMessagesUpTo(eventLog)
+            } else {
+                Log.e(
+                    "$TAG Failed to find event log with message ID [$messageId] in chat room history!"
+                )
+                searchInProgress.postValue(false)
+            }
+        }
+    }
+
     @WorkerThread
     private fun configureChatRoom() {
-        scrollingPosition = SCROLLING_POSITION_NOT_SET
         computeComposingLabel()
 
         isEndToEndEncrypted.postValue(
@@ -532,6 +575,11 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
 
         val empty =
             chatRoom.hasCapability(ChatRoom.Capabilities.Conference.toInt()) && chatRoom.participants.isEmpty()
+        if (empty) {
+            Log.w(
+                "$TAG Conversation has conference capability but has no participants, will be considered as read only!"
+            )
+        }
         val readOnly = chatRoom.isReadOnly || empty
         isReadOnly.postValue(readOnly)
         if (readOnly) {
@@ -542,6 +590,18 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
 
         subject.postValue(chatRoom.subject)
 
+        computeParticipantsInfo()
+
+        ephemeralLifetime.postValue(
+            if (!chatRoom.isEphemeralEnabled) 0L else chatRoom.ephemeralLifetime
+        )
+        ephemeralLifeTimeLabel.postValue(
+            LinphoneUtils.formatEphemeralExpiration(chatRoom.ephemeralLifetime)
+        )
+    }
+
+    @WorkerThread
+    private fun computeParticipantsInfo() {
         val friends = arrayListOf<Friend>()
         val address = if (chatRoom.hasCapability(ChatRoom.Capabilities.Basic.toInt())) {
             chatRoom.peerAddress
@@ -557,7 +617,7 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             firstParticipant?.address ?: chatRoom.peerAddress
         }
 
-        val avatar = if (group) {
+        val avatar = if (LinphoneUtils.isChatRoomAGroup(chatRoom)) {
             val fakeFriend = coreContext.core.createFriend()
             fakeFriend.name = chatRoom.subject
             val model = ContactAvatarModel(fakeFriend)
@@ -567,28 +627,18 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             coreContext.contactsManager.getContactAvatarModelForAddress(address)
         }
         avatarModel.postValue(avatar)
-
-        ephemeralLifetime.postValue(
-            if (!chatRoom.isEphemeralEnabled) 0L else chatRoom.ephemeralLifetime
-        )
     }
 
     @WorkerThread
-    private fun computeEvents(filter: String = "") {
+    private fun computeEvents() {
         eventsList.forEach(EventLogModel::destroy)
 
         val history = chatRoom.getHistoryEvents(MESSAGES_PER_PAGE)
-        val list = getEventsListFromHistory(history, filter)
+        val list = getEventsListFromHistory(history)
         Log.i("$TAG Extracted [${list.size}] events from conversation history in database")
         eventsList = list
         updateEvents.postValue(Event(true))
         isEmpty.postValue(eventsList.isEmpty())
-
-        if (filter.isNotEmpty() && eventsList.isEmpty()) {
-            noMatchingResultForFilter.postValue(true)
-        } else {
-            noMatchingResultForFilter.postValue(false)
-        }
     }
 
     @WorkerThread
@@ -602,7 +652,7 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
         // Prevents message duplicates
         val eventsToAdd = arrayListOf<EventLog>()
         for (event in eventLogs) {
-            if (event.chatMessage != null) {
+            if (event.chatMessage != null && event.chatMessage?.messageId.orEmpty().isNotEmpty()) {
                 val found = list.find {
                     it.model is MessageModel && it.model.chatMessage.messageId == event.chatMessage?.messageId
                 }
@@ -619,8 +669,7 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
         }
 
         val newList = getEventsListFromHistory(
-            eventsToAdd.toTypedArray(),
-            searchFilter.value.orEmpty().trim()
+            eventsToAdd.toTypedArray()
         )
         val newEvent = newList.firstOrNull()
 
@@ -640,6 +689,38 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
     }
 
     @WorkerThread
+    private fun prependEvents(eventLogs: Array<EventLog>) {
+        Log.i("$TAG Prepending [${eventLogs.size}] events")
+        // Need to use a new list, otherwise ConversationFragment's dataObserver isn't triggered...
+        val list = arrayListOf<EventLogModel>()
+        val firstEvent = eventsList.firstOrNull()
+
+        // Prevents message duplicates
+        val eventsToAdd = arrayListOf<EventLog>()
+        eventsToAdd.addAll(eventLogs)
+
+        val newList = getEventsListFromHistory(
+            eventsToAdd.toTypedArray()
+        )
+        val lastEvent = newList.lastOrNull()
+
+        if (lastEvent != null && lastEvent.model is MessageModel && firstEvent != null && firstEvent.model is MessageModel && shouldWeGroupTwoEvents(
+                firstEvent.eventLog,
+                lastEvent.eventLog
+            )
+        ) {
+            lastEvent.model.groupedWithNextMessage.postValue(true)
+            firstEvent.model.groupedWithPreviousMessage.postValue(true)
+        }
+
+        list.addAll(newList)
+        list.addAll(eventsList)
+        eventsList = list
+        updateEvents.postValue(Event(true))
+        isEmpty.postValue(eventsList.isEmpty())
+    }
+
+    @WorkerThread
     private fun processGroupedEvents(
         groupedEventLogs: ArrayList<EventLog>
     ): ArrayList<EventLogModel> {
@@ -648,15 +729,12 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
 
         var index = 0
         for (groupedEvent in groupedEventLogs) {
-            val avatar = coreContext.contactsManager.getContactAvatarModelForAddress(
-                groupedEvent.chatMessage?.fromAddress
-            )
             val model = EventLogModel(
                 groupedEvent,
-                avatar,
                 groupChatRoom,
                 index > 0,
                 index != groupedEventLogs.size - 1,
+                searchFilter.value.orEmpty(),
                 { fileModel ->
                     fileToDisplayEvent.postValue(Event(fileModel))
                 },
@@ -683,8 +761,7 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
 
     @WorkerThread
     private fun getEventsListFromHistory(
-        history: Array<EventLog>,
-        filter: String = ""
+        history: Array<EventLog>
     ): ArrayList<EventLogModel> {
         val eventsList = arrayListOf<EventLogModel>()
         val groupedEventLogs = arrayListOf<EventLog>()
@@ -695,25 +772,6 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             eventsList.addAll(processGroupedEvents(arrayListOf(event)))
         } else {
             for (event in history) {
-                if (filter.isNotEmpty()) {
-                    if (event.type == EventLog.Type.ConferenceChatMessage) {
-                        val message = event.chatMessage ?: continue
-                        val fromAddress = message.fromAddress
-                        val model = coreContext.contactsManager.getContactAvatarModelForAddress(
-                            fromAddress
-                        )
-                        if (
-                            !model.name.value.orEmpty().contains(filter, ignoreCase = true) &&
-                            !fromAddress.asStringUriOnly().contains(filter, ignoreCase = true) &&
-                            !message.utf8Text.orEmpty().contains(filter, ignoreCase = true)
-                        ) {
-                            continue
-                        }
-                    } else {
-                        continue
-                    }
-                }
-
                 if (groupedEventLogs.isEmpty()) {
                     groupedEventLogs.add(event)
                     continue
@@ -800,7 +858,7 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
             composingFriends.add(name)
             label += "$name, "
         }
-        if (composingFriends.size > 0) {
+        if (composingFriends.isNotEmpty()) {
             label = label.dropLast(2)
 
             val format = AppUtils.getStringWithPlural(
@@ -815,39 +873,79 @@ class ConversationViewModel @UiThread constructor() : AbstractConversationViewMo
     }
 
     @WorkerThread
-    private fun createGroupCall() {
-        val core = coreContext.core
-        val account = core.defaultAccount
-        if (account == null) {
-            Log.e(
-                "$TAG No default account found, can't create group call!"
-            )
-            return
-        }
-
-        val conferenceInfo = Factory.instance().createConferenceInfo()
-        conferenceInfo.organizer = account.params.identityAddress
-        conferenceInfo.subject = subject.value
-
-        val participants = arrayOfNulls<ParticipantInfo>(chatRoom.participants.size)
-        var index = 0
-        for (participant in chatRoom.participants) {
-            val info = Factory.instance().createParticipantInfo(participant.address)
-            // For meetings, all participants must have Speaker role
-            info?.role = Participant.Role.Speaker
-            participants[index] = info
-            index += 1
-        }
-        conferenceInfo.setParticipantInfos(participants)
-
-        Log.i(
-            "$TAG Creating group call with subject ${subject.value} and ${participants.size} participant(s)"
+    private fun loadMessagesUpTo(targetEvent: EventLog) {
+        val mask = HistoryFilter.ChatMessage.toInt() or HistoryFilter.InfoNoDevice.toInt()
+        val historyToAdd = chatRoom.getHistoryRangeBetween(
+            targetEvent,
+            eventsList[0].eventLog,
+            mask
         )
-        val conferenceScheduler = core.createConferenceScheduler()
-        conferenceScheduler.addListener(conferenceSchedulerListener)
-        conferenceScheduler.account = account
-        // Will trigger the conference creation/update automatically
-        conferenceScheduler.info = conferenceInfo
+        Log.i(
+            "$TAG Loaded [${historyToAdd.size}] items from history to go to event log [$targetEvent]"
+        )
+
+        Log.i("$TAG Loading [$ITEMS_TO_LOAD_BEFORE_SEARCH_RESULT] items before the target")
+        val previousMessages = chatRoom.getHistoryRangeNear(
+            ITEMS_TO_LOAD_BEFORE_SEARCH_RESULT,
+            0,
+            targetEvent,
+            mask
+        )
+
+        itemToScrollTo.postValue(previousMessages.size - 2) // To go to the item before the target event
+        val toAdd = previousMessages.plus(historyToAdd)
+        prependEvents(toAdd)
+    }
+
+    @WorkerThread
+    private fun searchChatMessage(direction: SearchDirection) {
+        searchInProgress.postValue(true)
+
+        val textToSearch = searchFilter.value.orEmpty().trim()
+        val match = chatRoom.searchChatMessageByText(textToSearch, latestMatch, direction)
+        if (match == null) {
+            Log.i(
+                "$TAG No match found while looking up for message with text [$textToSearch] in direction [$direction] starting from message [${latestMatch?.chatMessage?.messageId}]"
+            )
+            searchInProgress.postValue(false)
+            val message = if (latestMatch == null) {
+                R.string.conversation_search_no_match_found
+            } else {
+                R.string.conversation_search_no_more_match
+            }
+            showRedToastEvent.postValue(
+                Event(
+                    Pair(message, R.drawable.magnifying_glass)
+                )
+            )
+        } else {
+            Log.i(
+                "$TAG Found result [${match.chatMessage?.messageId}] while looking up for message with text [$textToSearch] in direction [$direction] starting from message [${latestMatch?.chatMessage?.messageId}]"
+            )
+            latestMatch = match
+
+            val found = eventsList.find {
+                it.eventLog == match
+            }
+            if (found == null) {
+                Log.i("$TAG Found result isn't in currently loaded history, loading missing events")
+                loadMessagesUpTo(match)
+            } else {
+                Log.i("$TAG Found result is already in history, no need to load more history")
+                (found.model as? MessageModel)?.highlightText(textToSearch)
+                val index = eventsList.indexOf(found)
+                if (direction == SearchDirection.Down && index < eventsList.size - 1) {
+                    // Go to next message to prevent the message we are looking for to be behind the scroll to bottom button
+                    itemToScrollTo.postValue(index + 1)
+                } else {
+                    // Go to previous message so target message won't be displayed stuck to the top
+                    itemToScrollTo.postValue(index - 1)
+                }
+                searchInProgress.postValue(false)
+            }
+
+            canSearchDown.postValue(true)
+        }
     }
 
     @UiThread

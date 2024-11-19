@@ -19,9 +19,11 @@
  */
 package org.linphone.ui.assistant.fragment
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.telephony.TelephonyManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -90,7 +92,7 @@ class LandingFragment : GenericFragment() {
 
         binding.setThirdPartySipAccountLoginClickListener {
             if (viewModel.conditionsAndPrivacyPolicyAccepted) {
-                goToLoginThirdPartySipAccountFragment()
+                goToLoginThirdPartySipAccountFragment(false)
             } else {
                 showAcceptConditionsAndPrivacyDialog(goToThirdPartySipAccountLogin = true)
             }
@@ -116,7 +118,7 @@ class LandingFragment : GenericFragment() {
         }
 
         viewModel.accountLoggedInEvent.observe(viewLifecycleOwner) {
-            it.consume { firstAccount ->
+            it.consume {
                 Log.i("$TAG Account successfully logged-in, leaving assistant")
                 requireActivity().finish()
             }
@@ -131,8 +133,16 @@ class LandingFragment : GenericFragment() {
             }
         }
 
+        viewModel.skipLandingToThirdPartySipAccountEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                goToLoginThirdPartySipAccountFragment(true)
+            }
+        }
+
+        val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        val countryIso = telephonyManager.networkCountryIso
         coreContext.postOnCoreThread {
-            val dialPlan = PhoneNumberUtils.getDeviceDialPlan(requireContext())
+            val dialPlan = PhoneNumberUtils.getDeviceDialPlan(countryIso)
             if (dialPlan != null) {
                 viewModel.internationalPrefix.postValue(dialPlan.countryCallingCode)
                 viewModel.internationalPrefixIsoCountryCode.postValue(dialPlan.isoCountryCode)
@@ -145,8 +155,12 @@ class LandingFragment : GenericFragment() {
         findNavController().navigate(action)
     }
 
-    private fun goToLoginThirdPartySipAccountFragment() {
-        val action = LandingFragmentDirections.actionLandingFragmentToThirdPartySipAccountWarningFragment()
+    private fun goToLoginThirdPartySipAccountFragment(skipWarning: Boolean) {
+        val action = if (skipWarning) {
+            LandingFragmentDirections.actionLandingFragmentToThirdPartySipAccountLoginFragment()
+        } else {
+            LandingFragmentDirections.actionLandingFragmentToThirdPartySipAccountWarningFragment()
+        }
         findNavController().navigate(action)
     }
 
@@ -177,7 +191,7 @@ class LandingFragment : GenericFragment() {
                 if (goToAccountCreate) {
                     goToRegisterFragment()
                 } else if (goToThirdPartySipAccountLogin) {
-                    goToLoginThirdPartySipAccountFragment()
+                    goToLoginThirdPartySipAccountFragment(false)
                 }
             }
         }

@@ -26,15 +26,16 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.annotation.UiThread
-import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.linphone.R
 import org.linphone.core.tools.Log
 import org.linphone.databinding.MeetingsListFragmentBinding
+import org.linphone.ui.GenericActivity
 import org.linphone.ui.main.fragment.AbstractMainFragment
 import org.linphone.ui.main.history.model.ConfirmationDialogModel
 import org.linphone.ui.main.meetings.adapter.MeetingsListAdapter
@@ -58,6 +59,18 @@ class MeetingsListFragment : AbstractMainFragment() {
     private lateinit var adapter: MeetingsListAdapter
 
     private var bottomSheetDialog: BottomSheetDialogFragment? = null
+
+    private var meetingViewModelBeingCancelled: MeetingModel? = null
+
+    private val dataObserver = object : AdapterDataObserver() {
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            if (positionStart == 0 && adapter.itemCount == itemCount) {
+                // First time we fill the list with messages
+                Log.i("$TAG First time meeting list is filled, scrolling to 'today'")
+                scrollToToday()
+            }
+        }
+    }
 
     override fun onDefaultAccountChanged() {
         if (!goToContactsIfMeetingsAreDisabledForCurrentlyDefaultAccount()) {
@@ -108,10 +121,8 @@ class MeetingsListFragment : AbstractMainFragment() {
 
         val headerItemDecoration = RecyclerViewHeaderDecoration(requireContext(), adapter)
         binding.meetingsList.addItemDecoration(headerItemDecoration)
-
-        if (binding.meetingsList.adapter != adapter) {
-            binding.meetingsList.adapter = adapter
-        }
+        binding.meetingsList.outlineProvider = outlineProvider
+        binding.meetingsList.clipToOutline = true
 
         binding.setNewMeetingClicked {
             if (findNavController().currentDestination?.id == R.id.meetingsListFragment) {
@@ -128,24 +139,46 @@ class MeetingsListFragment : AbstractMainFragment() {
 
         adapter.meetingClickedEvent.observe(viewLifecycleOwner) {
             it.consume { model ->
-                Log.i("$TAG Show conversation with ID [${model.id}]")
-                sharedViewModel.displayedMeeting = model.conferenceInfo
-                val action = MeetingFragmentDirections.actionGlobalMeetingFragment(model.id)
-                binding.meetingsNavContainer.findNavController().navigate(action)
+                if (model.isCancelled) {
+                    Log.w("$TAG Meeting with ID [${model.id}] is cancelled, can't show the details")
+                } else {
+                    Log.i("$TAG Show meeting with ID [${model.id}]")
+                    sharedViewModel.displayedMeeting = model.conferenceInfo
+                    val action = MeetingFragmentDirections.actionGlobalMeetingFragment(model.id)
+                    binding.meetingsNavContainer.findNavController().navigate(action)
+                }
             }
         }
 
         listViewModel.meetings.observe(viewLifecycleOwner) {
-            val currentCount = adapter.itemCount
             val newCount = it.size
             adapter.submitList(it)
+
+            // Wait for adapter to have items before setting it in the RecyclerView,
+            // otherwise scroll position isn't retained
+            if (binding.meetingsList.adapter != adapter) {
+                binding.meetingsList.adapter = adapter
+            }
+
             Log.i("$TAG Meetings list ready with [$newCount] items")
             listViewModel.fetchInProgress.value = false
+        }
 
-            (view.parent as? ViewGroup)?.doOnPreDraw {
-                if (currentCount < newCount) {
-                    scrollToToday()
-                }
+        listViewModel.conferenceCancelledEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                Log.i("$TAG Meeting has been cancelled successfully, deleting it")
+                (requireActivity() as GenericActivity).showGreenToast(
+                    getString(R.string.meeting_info_cancelled_toast),
+                    R.drawable.trash_simple
+                )
+
+                meetingViewModelBeingCancelled?.delete()
+                meetingViewModelBeingCancelled = null
+                listViewModel.applyFilter()
+                (requireActivity() as GenericActivity).showGreenToast(
+                    getString(R.string.meeting_info_deleted_toast),
+                    R.drawable.trash_simple
+                )
             }
         }
 
@@ -156,12 +189,17 @@ class MeetingsListFragment : AbstractMainFragment() {
                         adapter.resetSelection()
                     },
                     { // onDelete
-                        if (model.isOrganizer()) {
+                        if (model.isOrganizer() && !model.isCancelled) {
                             showCancelMeetingDialog(model)
                         } else {
                             Log.i("$TAG Deleting meeting [${model.id}]")
                             model.delete()
                             listViewModel.applyFilter()
+
+                            (requireActivity() as GenericActivity).showGreenToast(
+                                getString(R.string.meeting_info_deleted_toast),
+                                R.drawable.trash_simple
+                            )
                         }
                     }
                 )
@@ -191,14 +229,17 @@ class MeetingsListFragment : AbstractMainFragment() {
         }
 
         sharedViewModel.goToScheduleMeetingEvent.observe(viewLifecycleOwner) {
-            it.consume { participants ->
+            it.consume { pair ->
                 if (findNavController().currentDestination?.id == R.id.meetingsListFragment) {
+                    val subject = pair.first
+                    val participants = pair.second
                     val participantsArray = participants.toTypedArray()
                     Log.i(
-                        "$TAG Going to schedule meeting fragment with pre-populated participants array of size [${participantsArray.size}]"
+                        "$TAG Going to schedule meeting fragment with pre-populated subject [$subject] and participants array of size [${participantsArray.size}]"
                     )
                     val action =
                         MeetingsListFragmentDirections.actionMeetingsListFragmentToScheduleMeetingFragment(
+                            subject,
                             participantsArray
                         )
                     findNavController().navigate(action)
@@ -221,12 +262,24 @@ class MeetingsListFragment : AbstractMainFragment() {
     override fun onPause() {
         super.onPause()
 
+        try {
+            adapter.unregisterAdapterDataObserver(dataObserver)
+        } catch (e: IllegalStateException) {
+            Log.e("$TAG Failed to unregister data observer to adapter: $e")
+        }
+
         bottomSheetDialog?.dismiss()
         bottomSheetDialog = null
     }
 
     override fun onResume() {
         super.onResume()
+
+        try {
+            adapter.registerAdapterDataObserver(dataObserver)
+        } catch (e: IllegalStateException) {
+            Log.e("$TAG Failed to register data observer to adapter: $e")
+        }
 
         goToContactsIfMeetingsAreDisabledForCurrentlyDefaultAccount()
     }
@@ -248,6 +301,7 @@ class MeetingsListFragment : AbstractMainFragment() {
         }
         val index = listViewModel.meetings.value.orEmpty().indexOf(todayMeeting)
         Log.i("$TAG 'Today' is at position [$index]")
+        binding.meetingsList.smoothScrollToPosition(index) // Workaround to have header decoration visible at top
         (binding.meetingsList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
             index,
             AppUtils.getDimension(R.dimen.meeting_list_decoration_height).toInt()
@@ -271,16 +325,20 @@ class MeetingsListFragment : AbstractMainFragment() {
                 Log.i("$TAG Deleting meeting [${meetingModel.id}]")
                 meetingModel.delete()
                 listViewModel.applyFilter()
+
                 dialog.dismiss()
+                (requireActivity() as GenericActivity).showGreenToast(
+                    getString(R.string.meeting_info_deleted_toast),
+                    R.drawable.trash_simple
+                )
             }
         }
 
         model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG Cancelling meeting [${meetingModel.id}]")
+                meetingViewModelBeingCancelled = meetingModel
                 listViewModel.cancelMeeting(meetingModel.conferenceInfo)
-                meetingModel.delete()
-                listViewModel.applyFilter()
                 dialog.dismiss()
             }
         }

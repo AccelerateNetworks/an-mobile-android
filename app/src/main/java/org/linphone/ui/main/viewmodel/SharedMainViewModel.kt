@@ -111,11 +111,17 @@ class SharedMainViewModel @UiThread constructor() : ViewModel() {
 
     val filesToShareFromIntent = MutableLiveData<ArrayList<String>>()
 
-    val messageToForwardEvent = MutableLiveData<Event<MessageModel>>()
+    val messageToForwardEvent: MutableLiveData<Event<MessageModel>> by lazy {
+        MutableLiveData<Event<MessageModel>>()
+    }
 
     var displayedChatRoom: ChatRoom? = null // Prevents the need to go look for the chat room
     val showConversationEvent: MutableLiveData<Event<Pair<String, String>>> by lazy {
         MutableLiveData<Event<Pair<String, String>>>()
+    }
+
+    val hideConversationEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
     }
 
     // When using keyboard to share gif or other, see RichContentReceiver & RichEditText classes
@@ -123,6 +129,10 @@ class SharedMainViewModel @UiThread constructor() : ViewModel() {
 
     val displayFileEvent: MutableLiveData<Event<Bundle>> by lazy {
         MutableLiveData<Event<Bundle>>()
+    }
+
+    val forceRefreshDisplayedConversation: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
     }
 
     val forceRefreshConversations: MutableLiveData<Event<Boolean>> by lazy {
@@ -141,6 +151,10 @@ class SharedMainViewModel @UiThread constructor() : ViewModel() {
         MutableLiveData<Event<Long>>()
     }
 
+    val updateUnreadMessageCountForCurrentConversationEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
+    }
+
     /* Meetings related */
 
     var displayedMeeting: ConferenceInfo? = null // Prevents the need to go look for the conference info
@@ -157,8 +171,8 @@ class SharedMainViewModel @UiThread constructor() : ViewModel() {
         MutableLiveData<Event<String>>()
     }
 
-    val goToScheduleMeetingEvent: MutableLiveData<Event<ArrayList<String>>> by lazy {
-        MutableLiveData<Event<ArrayList<String>>>()
+    val goToScheduleMeetingEvent: MutableLiveData<Event<Pair<String, ArrayList<String>>>> by lazy {
+        MutableLiveData<Event<Pair<String, ArrayList<String>>>>()
     }
 
     /* Recordings related */
@@ -166,6 +180,8 @@ class SharedMainViewModel @UiThread constructor() : ViewModel() {
     var playingRecording: RecordingModel? = null
 
     /* Other */
+
+    val mediaViewerFullScreenMode = MutableLiveData<Boolean>()
 
     val listOfSelectedSipUrisEvent: MutableLiveData<Event<ArrayList<String>>> by lazy {
         MutableLiveData<Event<ArrayList<String>>>()

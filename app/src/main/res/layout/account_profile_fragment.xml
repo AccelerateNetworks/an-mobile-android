@@ -18,6 +18,9 @@
             name="copySipUriClickListener"
             type="View.OnClickListener" />
         <variable
+            name="copyDeviceIdClickListener"
+            type="View.OnClickListener" />
+        <variable
             name="prefixTooltipClickListener"
             type="View.OnClickListener" />
         <variable
@@ -59,14 +62,22 @@
                 android:layout_width="0dp"
                 android:layout_height="@dimen/top_bar_height"
                 android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"
                 android:gravity="center_vertical"
                 android:text="@string/manage_account_title"
                 android:textColor="?attr/color_main1_500"
                 android:textSize="16sp"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/show_menu"
                 app:layout_constraintStart_toEndOf="@id/back"
                 app:layout_constraintTop_toTopOf="parent"/>
+
+            <ImageView
+                android:id="@+id/show_menu"
+                android:onLongClick="@{() -> viewModel.showDebugInfo()}"
+                android:layout_width="@dimen/top_bar_height"
+                android:layout_height="@dimen/top_bar_height"
+                android:contentDescription="@string/content_description_show_popup_menu"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
 
             <ScrollView
                 android:layout_width="0dp"
@@ -191,7 +202,7 @@
                         app:layout_constraintBottom_toBottomOf="@id/prefix"/>
 
                     <androidx.appcompat.widget.AppCompatTextView
-                        style="@style/header_style"
+                        style="@style/settings_title_style"
                         android:id="@+id/sip_address_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -219,13 +230,51 @@
                         android:ellipsize="end"
                         android:drawableEnd="@drawable/copy"
                         android:drawablePadding="5dp"
+                        app:drawableTint="?attr/color_main2_600"
                         app:layout_constraintStart_toEndOf="@id/sip_address_label"
                         app:layout_constraintEnd_toEndOf="@id/details_background"
                         app:layout_constraintTop_toTopOf="@id/sip_address_label"
                         app:layout_constraintBottom_toBottomOf="@id/sip_address_label"/>
 
                     <androidx.appcompat.widget.AppCompatTextView
-                        style="@style/header_style"
+                        style="@style/settings_title_style"
+                        android:id="@+id/device_id_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="20dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:text="@string/device_id"
+                        android:visibility="@{viewModel.showDeviceId ? View.VISIBLE : View.GONE, default=gone}"
+                        app:layout_constraintStart_toStartOf="@id/details_background"
+                        app:layout_constraintTop_toBottomOf="@id/sip_address"/>
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        style="@style/default_text_style"
+                        android:id="@+id/device_id"
+                        android:onClick="@{copyDeviceIdClickListener}"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:layout_marginEnd="5dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:text="@={viewModel.deviceId, default=`1234`}"
+                        android:textSize="13sp"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:drawableEnd="@drawable/copy"
+                        android:drawablePadding="5dp"
+                        app:drawableTint="?attr/color_main2_600"
+                        android:visibility="@{viewModel.showDeviceId ? View.VISIBLE : View.GONE, default=gone}"
+                        app:layout_constraintStart_toEndOf="@id/device_id_label"
+                        app:layout_constraintEnd_toEndOf="@id/details_background"
+                        app:layout_constraintTop_toTopOf="@id/device_id_label"
+                        app:layout_constraintBottom_toBottomOf="@id/device_id_label"/>
+
+                    <androidx.appcompat.widget.AppCompatTextView
+                        style="@style/settings_title_style"
                         android:id="@+id/display_name_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -235,7 +284,7 @@
                         android:paddingBottom="8dp"
                         android:text="@string/sip_address_display_name"
                         app:layout_constraintStart_toStartOf="@id/details_background"
-                        app:layout_constraintTop_toBottomOf="@id/sip_address"/>
+                        app:layout_constraintTop_toBottomOf="@id/device_id"/>
 
                     <androidx.appcompat.widget.AppCompatEditText
                         style="@style/default_text_style"
@@ -259,7 +308,7 @@
                         app:layout_constraintEnd_toEndOf="@id/details_background"/>
 
                     <androidx.appcompat.widget.AppCompatTextView
-                        style="@style/header_style"
+                        style="@style/settings_title_style"
                         android:id="@+id/prefix_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -279,7 +328,7 @@
                         android:layout_marginStart="8dp"
                         android:src="@drawable/info"
                         android:contentDescription="@string/content_description_click_for_more_info"
-                        app:tint="@color/black"
+                        app:tint="?attr/color_main2_600"
                         app:layout_constraintTop_toTopOf="@id/prefix_label"
                         app:layout_constraintBottom_toBottomOf="@id/prefix_label"
                         app:layout_constraintStart_toEndOf="@id/prefix_label" />
@@ -379,7 +428,7 @@
                         android:layout_marginEnd="26dp"
                         android:layout_marginTop="32dp"
                         android:text="@string/manage_account_devices_title"
-                        android:visibility="@{viewModel.devicesAvailable ? View.VISIBLE : View.GONE, default=gone}"
+                        android:visibility="@{viewModel.isOnDefaultDomain ? View.VISIBLE : View.GONE, default=gone}"
                         android:drawableEnd="@{viewModel.expandDevices ? @drawable/caret_up : @drawable/caret_down, default=@drawable/caret_up}"
                         android:drawableTint="@color/gray_main2_600"
                         app:layout_constraintStart_toStartOf="parent"
@@ -400,13 +449,27 @@
                         android:paddingEnd="16dp"
                         android:paddingBottom="20dp"
                         android:background="@drawable/shape_squircle_white_background"
-                        android:visibility="@{viewModel.devicesAvailable &amp;&amp; viewModel.expandDevices ? View.VISIBLE : View.GONE, default=gone}"
+                        android:visibility="@{viewModel.isOnDefaultDomain &amp;&amp; viewModel.expandDevices ? View.VISIBLE : View.GONE, default=gone}"
                         app:entries="@{viewModel.devices}"
                         app:layout="@{@layout/account_profile_device_list_cell}"
                         app:layout_constraintHeight_min="80dp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/devices" />
+
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/devices_fetch_progress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        app:indicatorColor="?attr/color_main1_500"
+                        android:indeterminate="true"
+                        android:visibility="@{viewModel.devicesFetchInProgress &amp;&amp; viewModel.expandDevices ? View.VISIBLE : View.GONE, default=gone}"
+                        app:layout_constraintVertical_chainStyle="packed"
+                        app:layout_constraintTop_toTopOf="@id/devices_list"
+                        app:layout_constraintStart_toStartOf="@id/devices_list"
+                        app:layout_constraintEnd_toEndOf="@id/devices_list"
+                        app:layout_constraintBottom_toBottomOf="@id/devices_list"/>
 
                     <androidx.appcompat.widget.AppCompatTextView
                         style="@style/section_header_style"
@@ -471,7 +534,7 @@
                         android:layout_marginBottom="@dimen/screen_bottom_margin"
                         android:background="@drawable/action_background"
                         android:text="@string/manage_account_delete"
-                        android:drawableStart="@drawable/trash_simple"
+                        android:drawableStart="@drawable/sign_out"
                         app:layout_constraintTop_toBottomOf="@id/action_settings"
                         app:layout_constraintStart_toStartOf="@id/actions_background"
                         app:layout_constraintEnd_toEndOf="@id/actions_background"/>

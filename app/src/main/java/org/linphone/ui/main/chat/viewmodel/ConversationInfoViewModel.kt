@@ -26,16 +26,14 @@ import androidx.lifecycle.MutableLiveData
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
+import org.linphone.contacts.ContactsManager
 import org.linphone.core.Address
 import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
-import org.linphone.core.ConferenceScheduler
-import org.linphone.core.ConferenceSchedulerListenerStub
 import org.linphone.core.EventLog
 import org.linphone.core.Factory
 import org.linphone.core.Friend
 import org.linphone.core.Participant
-import org.linphone.core.ParticipantInfo
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.chat.model.ParticipantModel
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
@@ -52,6 +50,8 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
 
     val participants = MutableLiveData<ArrayList<ParticipantModel>>()
 
+    val participantsLabel = MutableLiveData<String>()
+
     val isGroup = MutableLiveData<Boolean>()
 
     val isEndToEndEncrypted = MutableLiveData<Boolean>()
@@ -59,6 +59,10 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
     val subject = MutableLiveData<String>()
 
     val sipUri = MutableLiveData<String>()
+
+    val peerSipUri = MutableLiveData<String>()
+
+    val showPeerSipUri = MutableLiveData<Boolean>()
 
     val isReadOnly = MutableLiveData<Boolean>()
 
@@ -88,8 +92,8 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
         MutableLiveData<Event<Pair<View, ParticipantModel>>>()
     }
 
-    val goToScheduleMeetingEvent: MutableLiveData<Event<ArrayList<String>>> by lazy {
-        MutableLiveData<Event<ArrayList<String>>>()
+    val goToScheduleMeetingEvent: MutableLiveData<Event<Pair<String, ArrayList<String>>>> by lazy {
+        MutableLiveData<Event<Pair<String, ArrayList<String>>>>()
     }
 
     private val chatRoomListener = object : ChatRoomListenerStub() {
@@ -191,55 +195,28 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
         }
     }
 
-    private val conferenceSchedulerListener = object : ConferenceSchedulerListenerStub() {
-        override fun onStateChanged(
-            conferenceScheduler: ConferenceScheduler,
-            state: ConferenceScheduler.State
-        ) {
-            Log.i("$TAG Conference scheduler state is $state")
-            if (state == ConferenceScheduler.State.Ready) {
-                conferenceScheduler.removeListener(this)
-
-                val conferenceAddress = conferenceScheduler.info?.uri
-                if (conferenceAddress != null) {
-                    Log.i(
-                        "$TAG Conference info created, address is ${conferenceAddress.asStringUriOnly()}"
-                    )
-                    coreContext.startVideoCall(conferenceAddress)
-                } else {
-                    Log.e("$TAG Conference info URI is null!")
-                    showRedToastEvent.postValue(
-                        Event(
-                            Pair(
-                                R.string.conference_failed_to_create_group_call_toast,
-                                R.drawable.warning_circle
-                            )
-                        )
-                    )
-                }
-            } else if (state == ConferenceScheduler.State.Error) {
-                conferenceScheduler.removeListener(this)
-                Log.e("$TAG Failed to create group call!")
-                showRedToastEvent.postValue(
-                    Event(
-                        Pair(
-                            R.string.conference_failed_to_create_group_call_toast,
-                            R.drawable.warning_circle
-                        )
-                    )
-                )
-            }
+    private val contactsListener = object : ContactsManager.ContactsListener {
+        @WorkerThread
+        override fun onContactsLoaded() {
+            Log.i("$TAG Contacts have been (re)loaded, updating list")
+            computeParticipantsList()
         }
     }
 
     init {
         expandParticipants.value = true
+        showPeerSipUri.value = false
+
+        coreContext.postOnCoreThread {
+            coreContext.contactsManager.addListener(contactsListener)
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
 
         coreContext.postOnCoreThread {
+            coreContext.contactsManager.removeListener(contactsListener)
             if (isChatRoomInitialized()) {
                 chatRoom.removeListener(chatRoomListener)
             }
@@ -286,38 +263,22 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
     }
 
     @UiThread
-    fun call() {
-        coreContext.postOnCoreThread { core ->
-            if (LinphoneUtils.isChatRoomAGroup(chatRoom) && chatRoom.participants.size >= 2) {
-                createGroupCall()
-            } else {
-                val firstParticipant = chatRoom.participants.firstOrNull()
-                val address = firstParticipant?.address
-                if (address != null) {
-                    Log.i("$TAG Audio calling SIP address [${address.asStringUriOnly()}]")
-                    coreContext.startAudioCall(address)
-                } else {
-                    Log.e("$TAG Failed to find participant to call!")
-                }
-            }
-        }
-    }
-
-    @UiThread
     fun scheduleMeeting() {
         coreContext.postOnCoreThread {
             if (LinphoneUtils.isChatRoomAGroup(chatRoom)) {
                 val participantsList = arrayListOf<String>()
                 for (participant in chatRoom.participants) {
                     participantsList.add(participant.address.asStringUriOnly())
-                    goToScheduleMeetingEvent.postValue(Event(participantsList))
                 }
+                goToScheduleMeetingEvent.postValue(
+                    Event(Pair(chatRoom.subject.orEmpty(), participantsList))
+                )
             } else {
                 val firstParticipant = chatRoom.participants.firstOrNull()
                 val address = firstParticipant?.address
                 if (address != null) {
                     val participantsList = arrayListOf(address.asStringUriOnly())
-                    goToScheduleMeetingEvent.postValue(Event(participantsList))
+                    goToScheduleMeetingEvent.postValue(Event(Pair("", participantsList)))
                 } else {
                     Log.e("$TAG Failed to find participant to call!")
                 }
@@ -478,6 +439,12 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
     }
 
     @UiThread
+    fun showDebugInfo(): Boolean {
+        showPeerSipUri.value = true
+        return true
+    }
+
+    @UiThread
     fun updateSubject(newSubject: String) {
         coreContext.postOnCoreThread {
             if (isChatRoomInitialized()) {
@@ -517,6 +484,7 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
         }
 
         subject.postValue(chatRoom.subject)
+        peerSipUri.postValue(chatRoom.peerAddress.asStringUriOnly())
 
         val firstParticipant = chatRoom.participants.firstOrNull()
         if (firstParticipant != null) {
@@ -609,42 +577,12 @@ class ConversationInfoViewModel @UiThread constructor() : AbstractConversationVi
         avatarModel.postValue(avatar)
 
         participants.postValue(participantsList)
-    }
-
-    @WorkerThread
-    private fun createGroupCall() {
-        val core = coreContext.core
-        val account = core.defaultAccount
-        if (account == null) {
-            Log.e(
-                "$TAG No default account found, can't create group call!"
+        participantsLabel.postValue(
+            AppUtils.getFormattedString(
+                R.string.conversation_info_participants_list_title,
+                participantsList.size.toString()
             )
-            return
-        }
-
-        val conferenceInfo = Factory.instance().createConferenceInfo()
-        conferenceInfo.organizer = account.params.identityAddress
-        conferenceInfo.subject = subject.value
-
-        val participants = arrayOfNulls<ParticipantInfo>(chatRoom.participants.size)
-        var index = 0
-        for (participant in chatRoom.participants) {
-            val info = Factory.instance().createParticipantInfo(participant.address)
-            // For meetings, all participants must have Speaker role
-            info?.role = Participant.Role.Speaker
-            participants[index] = info
-            index += 1
-        }
-        conferenceInfo.setParticipantInfos(participants)
-
-        Log.i(
-            "$TAG Creating group call with subject ${subject.value} and ${participants.size} participant(s)"
         )
-        val conferenceScheduler = core.createConferenceScheduler()
-        conferenceScheduler.addListener(conferenceSchedulerListener)
-        conferenceScheduler.account = account
-        // Will trigger the conference creation/update automatically
-        conferenceScheduler.info = conferenceInfo
     }
 
     @WorkerThread

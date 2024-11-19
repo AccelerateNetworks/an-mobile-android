@@ -25,7 +25,9 @@ import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.core.tools.Log
 
 open class NumpadModel @UiThread constructor(
+    private val inCallNumpad: Boolean,
     private val onDigitClicked: (value: String) -> (Unit),
+    private val onVoicemailClicked: () -> (Unit),
     private val onBackspaceClicked: () -> (Unit),
     private val onCallClicked: () -> (Unit),
     private val onClearClicked: () -> (Unit)
@@ -42,15 +44,23 @@ open class NumpadModel @UiThread constructor(
         onDigitClicked.invoke(value)
 
         if (value.isNotEmpty()) {
-            coreContext.postOnCoreThread { core ->
-                coreContext.playDtmf(value[0])
+            coreContext.postOnCoreThread {
+                coreContext.playDtmf(value[0], ignoreSystemPolicy = inCallNumpad)
             }
         }
     }
 
+    @UiThread
     fun onDigitLongClicked(value: String): Boolean {
         Log.i("$TAG Long clicked on digit [$value]")
         onDigitClicked.invoke(value)
+        return true
+    }
+
+    @UiThread
+    fun onVoicemailLongClicked(): Boolean {
+        Log.i("$TAG Long clicked on voicemail icon")
+        onVoicemailClicked.invoke()
         return true
     }
 

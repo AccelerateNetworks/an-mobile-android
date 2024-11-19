@@ -20,7 +20,6 @@
 package org.linphone.ui.call
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
@@ -32,6 +31,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.UiThread
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
@@ -131,10 +131,13 @@ class CallActivity : GenericActivity() {
         binding.lifecycleOwner = this
         setUpToastsArea(binding.toastsArea)
 
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.otherCallsTopBar.root) { v, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.updatePadding(0, insets.top, 0, 0)
-            WindowInsetsCompat.CONSUMED
+            windowInsets
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.callNavContainer) { v, windowInsets ->
@@ -144,7 +147,7 @@ class CallActivity : GenericActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         if (!powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
             Log.w("$TAG PROXIMITY_SCREEN_OFF_WAKE_LOCK isn't supported on this device!")
         }
@@ -293,6 +296,15 @@ class CallActivity : GenericActivity() {
         sharedViewModel.toggleFullScreenEvent.observe(this) {
             it.consume { hide ->
                 hideUI(hide)
+            }
+        }
+
+        coreContext.refreshMicrophoneMuteStateEvent.observe(this) {
+            it.consume {
+                Log.i(
+                    "$TAG Refreshing microphone mute state, probably to sync with Android Auto action"
+                )
+                callViewModel.refreshMicrophoneState()
             }
         }
     }
@@ -450,15 +462,11 @@ class CallActivity : GenericActivity() {
 
     private fun hideUI(hide: Boolean) {
         Log.i("$TAG Switching full screen mode to ${if (hide) "ON" else "OFF"}")
-        val windowInsetsCompat = WindowInsetsControllerCompat(window, window.decorView)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         if (hide) {
-            windowInsetsCompat.let {
-                it.hide(WindowInsetsCompat.Type.systemBars())
-                it.systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
+            windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
         } else {
-            windowInsetsCompat.show(WindowInsetsCompat.Type.systemBars())
+            windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
         }
     }
 

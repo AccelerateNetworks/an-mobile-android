@@ -43,10 +43,12 @@
 
     <!-- Common words -->
     <string name="sip_address">SIP address</string>
+    <string name="device_id">Device ID</string>
     <string name="sip_address_hint">username@domain</string>
     <string name="sip_address_display_name">Display name</string>
     <string name="sip_address_domain">Domain</string>
     <string name="username">Username</string>
+    <string name="authentication_id">Authentication ID (if different)</string>
     <string name="password">Password</string>
     <string name="phone_number">Phone number</string>
     <string name="or">or</string>
@@ -77,6 +79,7 @@
     <string name="dialog_no">No</string>
     <string name="dialog_yes">Yes</string>
     <string name="dialog_remove">Remove</string>
+    <string name="dialog_confirm">Confirm</string>
 
     <!-- Related to Android notifications -->
     <string name="notification_channel_call_name">&appName; active calls notifications</string>
@@ -85,7 +88,7 @@
     <string name="notification_channel_service_name">&appName; service notification</string>
     <string name="notification_channel_service_desc">This service will run all the time to keep app alive and allow you to receive calls and messages without push notifications.</string>
     <string name="notification_channel_chat_name">&appName; instant messages notifications</string>
-    <string name="notification_chat_message_reaction_received">Reacted by %s to: %s</string>
+    <string name="notification_chat_message_reaction_received">Reacted by %1$s to: %2$s</string>
     <string name="notification_mark_message_as_read">Mark as read</string>
     <string name="notification_reply_to_message">Reply</string>
     <string name="notification_missed_call">Missed call from %s</string>
@@ -152,21 +155,6 @@
     <string name="assistant_third_party_sip_account_warning_ok">I understand</string>
     <string name="assistant_third_party_sip_account_username_or_identity">Username or SIP identity*</string>
     <string name="assistant_account_register_unavailable_no_push_toast">Push notifications not available, account creation disabled</string>
-    <string name="assistant_account_register_username_already_in_use_error">This account already exists</string>
-    <string name="assistant_account_register_username_invalid_characters_error">Invalid characters: capital letters and special characters are not allowed</string>
-    <string name="assistant_account_register_username_too_short_error">Username is too short</string>
-    <string name="assistant_account_register_username_too_long_error">Username is too long</string>
-    <string name="assistant_account_register_username_error">Unexpected username error</string>
-    <string name="assistant_account_register_phone_number_already_in_use_error">Phone number already used</string>
-    <string name="assistant_account_register_invalid_phone_number_international_prefix_error">Invalid phone number</string>
-    <string name="assistant_account_register_invalid_phone_number_too_long_error">Phone number is too long</string>
-    <string name="assistant_account_register_invalid_phone_number_too_short_error">Phone number is too short</string>
-    <string name="assistant_account_register_invalid_phone_number_error">Unexpected phone number error</string>
-    <string name="assistant_account_register_password_invalid_characters_error">Invalid characters</string>
-    <string name="assistant_account_register_password_too_short">Password is too short</string>
-    <string name="assistant_account_register_password_too_long_error">Password is too long</string>
-    <string name="assistant_account_register_invalid_password_error">Unexpected password error</string>
-    <string name="assistant_account_register_server_error">Failed to create account, error %i</string>
     <string name="assistant_account_register_push_notification_not_received_error">Push notification with auth token not received in 5 seconds, please try again later</string>
     <string name="assistant_account_register_unexpected_error">Unexpected error occurred, please try again later</string>
     <string name="assistant_account_login_forbidden_error">Wrong username or password</string>
@@ -209,15 +197,19 @@
     <string name="help_error_checking_version_toast_message">An error occurred while checking for update</string>
     <string name="help_dialog_update_available_title">Update available</string>
     <string name="help_dialog_update_available_message">A new version %s is available. Do you want to update?</string>
+    <string name="help_quit_title">Quit app</string>
     <string name="help_troubleshooting_title">Troubleshooting</string>
+    <string name="help_troubleshooting_print_logs_in_logcat">Print logs in logcat</string>
     <string name="help_troubleshooting_clean_logs">Clean logs</string>
     <string name="help_troubleshooting_share_logs">Share logs</string>
     <string name="help_troubleshooting_app_version_title">App version</string>
     <string name="help_troubleshooting_sdk_version_title">SDK version</string>
+    <string name="help_troubleshooting_firebase_project_title">Firebase project ID</string>
     <string name="help_troubleshooting_share_logs_dialog_title">Share debug logs link using…</string>
     <string name="help_troubleshooting_debug_logs_cleaned_toast_message">Debug logs have been cleaned</string>
     <string name="help_troubleshooting_debug_logs_upload_error_toast_message">Failed to upload debug logs</string>
     <string name="help_troubleshooting_show_config_file">Show configuration</string>
+    <string name="help_troubleshooting_clear_native_friends_in_database">Clear imported contacts from native address book</string>
 
     <!-- App & SDK settings -->
     <string name="settings_title">Settings</string>
@@ -226,8 +218,14 @@
     <string name="settings_security_enable_vfs_subtitle">Warning: once enabled it can\'t be disabled!</string>
     <string name="settings_security_prevent_screenshots_title">Prevent interface from being recorded</string>
     <string name="settings_calls_title">Calls</string>
-    <string name="settings_calls_echo_canceller_title">Use echo canceller</string>
-    <string name="settings_calls_echo_canceller_subtitle">Prevents echo from being heard by remote end</string>
+    <string name="settings_calls_echo_canceller_title">Use software echo canceller</string>
+    <string name="settings_calls_echo_canceller_subtitle">Prevents echo from being heard by remote end if no hardware echo canceller is available</string>
+    <string name="settings_calls_calibrate_echo_canceller_title">Calibrate echo canceller</string>
+    <string name="settings_calls_calibrate_echo_canceller_in_progress">in progress</string>
+    <string name="settings_calls_calibrate_echo_canceller_done_no_echo">no echo</string>
+    <string name="settings_calls_calibrate_echo_canceller_done">%s ms</string>
+    <string name="settings_calls_calibrate_echo_canceller_failed">failed</string>
+    <string name="settings_calls_adaptive_rate_control_title">Adaptive rate control</string>
     <string name="settings_calls_enable_video_title">Enable video</string>
     <string name="settings_calls_enable_fec_title">Enable video FEC</string>
     <string name="settings_calls_vibrate_while_ringing_title">Vibrate while incoming call is ringing</string>
@@ -235,6 +233,7 @@
     <string name="settings_calls_change_ringtone_title">Change ringtone</string>
     <string name="settings_conversations_title">Conversations</string>
     <string name="settings_conversations_auto_download_title">Auto-download files</string>
+    <string name="settings_conversations_mark_as_read_when_dismissing_notif_title">Mark conversation as read when dismissing message notification</string>
     <string name="settings_contacts_title">Contacts</string>
     <string name="settings_contacts_add_ldap_server_title">Add LDAP server</string>
     <string name="settings_contacts_edit_ldap_server_title">Edit LDAP server</string>
@@ -245,6 +244,7 @@
     <string name="settings_contacts_carddav_username_title">Username</string>
     <string name="settings_contacts_carddav_password_title">Password</string>
     <string name="settings_contacts_carddav_realm_title">Auth realm</string>
+    <string name="settings_contacts_carddav_use_as_default_title">Store newly created contacts in it</string>
     <string name="settings_contacts_carddav_sync_successful_toast">Synchronization was successful</string>
     <string name="settings_contacts_carddav_sync_error_toast">Synchronization error!</string>
     <string name="settings_contacts_carddav_deleted_toast">CardDAV account removed</string>
@@ -290,6 +290,9 @@
 
     <string name="settings_advanced_title">Advanced settings</string>
     <string name="settings_advanced_keep_alive_service_title">Keep app alive using Service</string>
+    <string name="settings_advanced_device_id">Device ID</string>
+    <string name="settings_advanced_media_encryption_title">Media encryption</string>
+    <string name="settings_advanced_media_encryption_mandatory_title">Media encryption mandatory</string>
     <string name="settings_advanced_remote_provisioning_url">Remote provisioning URL</string>
     <string name="settings_advanced_download_apply_remote_provisioning">Download &amp; apply</string>
     <string name="settings_advanced_audio_devices_title">Audio devices</string>
@@ -312,7 +315,7 @@
     <string name="manage_account_international_prefix">International Prefix</string>
     <string name="manage_account_dialog_international_prefix_help_message">Pick your country to allow &appName; to match your contacts.</string>
     <string name="manage_account_settings">Account settings</string>
-    <string name="manage_account_delete">Delete account</string>
+    <string name="manage_account_delete">Sign out</string>
     <string name="manage_account_choose_mode_title">Choose account mode</string>
     <string name="manage_account_choose_mode_apply_label">Apply</string>
     <string name="manage_account_e2e_encrypted_mode_default_title">End-to-end encrypted mode</string>
@@ -321,8 +324,8 @@
     <string name="manage_account_e2e_encrypted_mode_interoperable_summary">This mode allows you to enjoy all &appName; features while staying interoperable with any SIP service through point-to-point encryption.</string>
     <string name="manage_account_device_remove">Remove</string>
     <string name="manage_account_device_last_connection">Last connection:</string>
-    <string name="manage_account_dialog_remove_account_title">Delete %s?</string>
-    <string name="manage_account_dialog_remove_account_message">You can reconnect at any time by clicking “Add an account”. However, all data on this phone will be deleted.</string>
+    <string name="manage_account_dialog_remove_account_title">Sign out of your account?</string>
+    <string name="manage_account_dialog_remove_account_message">If you wish to delete your account permanently, go to: https://sip.linphone.org</string>
 
     <string name="account_settings_title">Account settings</string>
     <string name="account_settings_push_notification_title">Allow push notifications</string>
@@ -336,10 +339,13 @@
     <string name="account_settings_expire_title">Expire (in seconds)</string>
     <string name="account_settings_conference_factory_uri_title">Conference factory URI</string>
     <string name="account_settings_audio_video_conference_factory_uri_title">Audio/video conference factory URI</string>
+    <string name="account_settings_ccmp_server_url_title">CCMP server URL</string>
     <string name="account_settings_lime_server_url_title">E2E encryption keys server URL</string>
     <string name="account_settings_bundle_mode_title">Bundle mode</string>
-    <string name="account_settings_cpim_in_basic_conversations_title">Use CPIM in "basic" conversations</string>
-    <string name="account_settings_mwi_uri_title">Voicemail URI</string>
+    <string name="account_settings_cpim_in_basic_conversations_title">Use CPIM in \"basic\" conversations</string>
+    <string name="account_settings_voicemail_uri_title">Voicemail URI</string>
+    <string name="account_settings_mwi_uri_title"> MWI server URI (Message Waiting Indicator)</string>
+    <string name="account_settings_update_password_title">Update password</string>
 
     <string name="account_settings_dialog_invalid_password_title">Authentication needed</string>
     <string name="account_settings_dialog_invalid_password_message">Connection failed because authentication is missing or invalid for account \n%s.\n\nYou can provide password again, or check your account configuration in the settings.</string>
@@ -355,6 +361,7 @@
     <string name="history_group_call_start_dialog_set_subject">Set group call subject</string>
     <string name="history_group_call_start_dialog_subject_hint">Group call subject</string>
     <string name="history_list_empty_history">No call for the moment…</string>
+    <string name="history_group_call_go_to_conversation">Conversation</string>
 
     <string name="history_dialog_delete_all_call_logs_title">Do you really want to delete all calls history?</string>
     <string name="history_dialog_delete_all_call_logs_message">All calls will be removed from the history</string>
@@ -400,7 +407,7 @@
     <string name="contact_details_phone_number_copied_to_clipboard_toast">Number copied into clipboard</string>
 
     <string name="contact_dialog_increase_trust_level_title">Increase trust level</string>
-    <string name="contact_dialog_increase_trust_level_message">You\'re about to make a call to $1%s\'s device $2%s.\nDo you want to make the call?</string>
+    <string name="contact_dialog_increase_trust_level_message">You\'re about to make a call to %1$s\'s device %2$s.\nDo you want to make the call?</string>
     <string name="contact_dialog_devices_trust_help_title">Trust level</string>
     <string name="contact_dialog_devices_trust_help_message">Check all of your contact devices to make sure your communications will be secured an unaltered.\nWhen all will be verified, you\'ll reach maximum trust level.</string>
     <string name="contact_dialog_delete_title">Delete %s?</string>
@@ -479,7 +486,6 @@
     <string name="conversation_dialog_edit_subject">Edit conversation subject</string>
     <string name="conversation_dialog_subject_cant_be_empty_error">Subject is mandatory</string>
     <string name="conversation_dialog_subject_hint">Conversation subject</string>
-    <string name="conversation_dialog_edit_subject_confirm_button">Confirm</string>
     <string name="conversation_dialog_open_or_export_file_title">Open or export file?</string>
     <string name="conversation_dialog_open_or_export_file_message">&appName; can\'t open this file.\n\nDo you want to open it in another app (if possible), or export it on your device?</string>
     <string name="conversation_dialog_open_file_label">Open file</string>
@@ -499,8 +505,10 @@
     <string name="conversation_group_left_toast">You have left the group</string>
     <string name="conversation_no_app_registered_to_handle_content_type_error_toast">No app found to open this kind of file</string>
     <string name="conversation_to_display_no_found_toast">Conversation was not found</string>
+    <string name="conversation_search_no_match_found">No matching result found</string>
+    <string name="conversation_search_no_more_match">Last matching result reached</string>
 
-    <string name="conversation_info_participants_list_title">Group members</string>
+    <string name="conversation_info_participants_list_title">Group members (%s)</string>
     <string name="conversation_info_add_participants_label">Add participants</string>
     <string name="conversation_info_participant_is_admin_label">Admin</string>
     <string name="conversation_info_delete_history_action">Delete history</string>
@@ -518,6 +526,8 @@
     <string name="conversation_info_participant_no_longer_has_admin_rights_toast">%s is no longer admin</string>
     <string name="conversation_info_cant_find_contact_to_display_toast">Contact was not found</string>
     <string name="conversation_info_no_address_to_add_to_contact_toast">No address to add to contact</string>
+    <string name="conversation_info_confirm_start_group_call_dialog_title">Start a group call?</string>
+    <string name="conversation_info_confirm_start_group_call_dialog_message">All participants will receive a call.</string>
 
     <string name="conversation_event_conference_created">You have joined the group</string>
     <string name="conversation_event_conference_destroyed">You have left the group</string>
@@ -544,12 +554,16 @@
     <string name="message_delivery_info_sent_title">Sent %s</string>
     <string name="message_delivery_info_error_title">Error %s</string>
     <string name="message_reactions_info_all_title">Reactions %s</string>
-    <string name="message_reactions_info_emoji_title">%s %s</string>
+    <string name="message_reactions_info_emoji_title">%1$s %2$s</string>
     <string name="message_reaction_click_to_remove_label">Click to remove</string>
     <string name="message_forwarded_label">Forwarded</string>
 
+    <string name="message_meeting_invitation_content_description">meeting invite:</string>
+    <string name="message_meeting_invitation_updated_content_description">meeting updated:</string>
+    <string name="message_meeting_invitation_cancelled_content_description">meeting cancelled:</string>
+    <string name="message_voice_message_content_description">voice message</string>
+
     <!-- Scheduled conferences -->
-    <string name="meetings_list_empty">No meeting for the moment…</string>
     <string name="meetings_list_no_meeting_for_today">No meeting scheduled for today</string>
 
     <string name="meeting_schedule_title">New meeting</string>
@@ -557,9 +571,7 @@
     <string name="meeting_schedule_broadcast_label">Broadcast</string>
     <string name="meeting_schedule_broadcast_help">Info about broadcast.\n<u>Learn more</u></string>
     <string name="meeting_schedule_subject_hint">Add title…</string>
-    <string name="meeting_schedule_date_all_day_title">All day</string>
     <string name="meeting_schedule_pick_start_date_title">Choose the start date</string>
-    <string name="meeting_schedule_pick_end_date_title">Choose the end date</string>
     <string name="meeting_schedule_pick_start_time_title">Choose the start time</string>
     <string name="meeting_schedule_pick_end_time_title">Choose the end time</string>
     <string name="meeting_schedule_timezone_title">Timezone</string>
@@ -581,6 +593,7 @@
     <string name="meeting_info_created_toast">Meeting has been created</string>
     <string name="meeting_info_updated_toast">Meeting has been updated</string>
     <string name="meeting_info_cancelled_toast">Meeting has been cancelled</string>
+    <string name="meeting_info_cancelled">Meeting cancelled</string>
     <string name="meeting_failed_to_schedule_toast">Failed to schedule meeting!</string>
     <string name="meeting_schedule_mandatory_field_not_filled_toast">A least a mandatory field wasn\'t filled</string>
     <string name="meeting_failed_to_send_invites_toast">Failed to send all invites to meeting!</string>
@@ -595,12 +608,18 @@
 
     <!-- Call related -->
     <string name="call_outgoing">Outgoing call</string>
-    <string name="call_incoming">Incoming call</string>
+    <string name="call_audio_incoming">Incoming call</string>
+    <string name="call_video_incoming">Incoming video call</string>
     <string name="call_ended">Call ended</string>
-    <string name="call_incoming_for_account">Incoming call for %s</string>
+    <string name="call_audio_incoming_for_account">Incoming call for %s</string>
+    <string name="call_video_incoming_for_account">Incoming video call for %s</string>
+    <string name="call_transfer_current_call_title">Transfer %s to…</string>
+    <string name="call_transfer_active_calls_label">Current calls</string>
+    <string name="call_transfer_no_active_call_label">No other call</string>
+    <string name="call_transfer_confirm_dialog_tittle">Confirm call transfer</string>
+    <string name="call_transfer_confirm_dialog_message">You\'re about to transfer call %1$s to %2$s.</string>
 
-    <string name="call_action_blind_transfer">Transfer</string>
-    <string name="call_action_attended_transfer">Attended transfer</string>
+    <string name="call_action_transfer">Transfer</string>
     <string name="call_action_start_new_call">New call</string>
     <string name="call_action_go_to_calls_list">Calls list</string>
     <string name="call_action_show_dialer">Dialer</string>
@@ -620,13 +639,11 @@
     <string name="call_state_ended">Ended</string>
     <string name="call_waiting_for_encryption_info">Waiting for encryption…</string>
     <string name="call_zrtp_end_to_end_encrypted">End-to-end encrypted by ZRTP</string>
-    <string name="call_post_quantum_zrtp_end_to_end_encrypted">End-to-end encrypted by post-quantum ZRTP</string>
     <string name="call_do_zrtp_sas_validation_again">Validate ZRTP SAS again</string>
     <string name="call_zrtp_sas_validation_required">Validation required</string>
     <string name="call_srtp_point_to_point_encrypted">Point-to-point encrypted by SRTP</string>
     <string name="call_not_encrypted">Call is not encrypted</string>
     <string name="calls_list_title">Calls list</string>
-    <string name="call_transfer_title">Transfer call to</string>
     <string name="call_remote_is_recording">%s is recording</string>
     <string name="calls_count_label">%s calls</string>
     <string name="calls_paused_count_label">%s paused calls</string>
@@ -653,6 +670,8 @@
     <string name="call_stats_audio_title">Audio</string>
     <string name="call_stats_codec_label">Codec: %s</string>
     <string name="call_stats_bandwidth_label">Bandwidth: %s</string>
+    <string name="call_stats_loss_rate_label">Loss rate: %s</string>
+    <string name="call_stats_jitter_buffer_label">Jitter buffer: %s</string>
     <string name="call_stats_video_title">Video</string>
     <string name="call_stats_resolution_label">Resolution: %s</string>
     <string name="call_stats_fps_label">FPS: %s</string>
@@ -712,6 +731,10 @@
     <string name="recordings_title">Recordings</string>
     <string name="recordings_list_empty">No recording for the moment…</string>
 
+    <!-- Android Auto UI texts -->
+    <string name="car_favorites_contacts_title">Favorites</string>
+    <string name="car_favorites_contacts_list_empty">No favorite contact yet</string>
+
     <!-- Various menu entries -->
     <string name="menu_add_address_to_contacts">Add to contacts</string>
     <string name="menu_see_existing_contact">See contact</string>
@@ -756,12 +779,6 @@
     <string name="assistant_forgotten_password"><u>Forgotten password?</u></string>
     <string name="call_zrtp_sas_validation_skip"><u>Skip</u></string>
 
-    <!-- Keep <i></i> in the following strings translations! -->
-    <string name="message_meeting_invitation_content_description"><i>meeting invite: </i>%s</string>
-    <string name="message_meeting_invitation_updated_content_description"><i>meeting updated: </i>%s</string>
-    <string name="message_meeting_invitation_cancelled_content_description"><i>meeting cancelled: </i>%s</string>
-    <string name="message_voice_message_content_description"><i>voice message</i></string>
-
     <!-- Keep <b></b> in the following strings translations! -->
     <string name="conversation_message_meeting_updated_label"><b>Meeting has been updated</b></string>
     <string name="conversation_message_meeting_cancelled_label"><b>Meeting has been cancelled!</b></string>
@@ -782,7 +799,8 @@
     <string name="content_description_toggle_password_visibility">Toggles password visibility</string>
     <string name="content_description_toggle_bottom_sheet">Expands/retracts bottom sheet</string>
     <string name="content_description_hang_up_call">Terminates the call</string>
-    <string name="content_description_answer_call">Answers the call</string>
+    <string name="content_description_answer_audio_call">Answers the call</string>
+    <string name="content_description_answer_video_call">Answers the video call</string>
     <string name="content_description_call_start">Starts a call</string>
     <string name="content_description_call_start_video">Starts a video call</string>
     <string name="content_description_toggle_video">Enables/disables sending  your camera feed</string>
@@ -815,6 +833,7 @@
     <string name="content_description_chat_bubble_forward">This message was forwarded from another conversation</string>
     <string name="content_description_chat_bubble_delivery_status">Click to have delivery status</string>
     <string name="content_description_chat_bubble_toggle_voice_message_play_pause">Plays/pauses the voice message playback</string>
+    <string name="content_description_chat_remove_attachment">Remove this file from attachments</string>
     <string name="content_description_chat_remove_attachments">Close attachments</string>
     <string name="content_description_chat_muted">Conversation has been silenced</string>
     <string name="content_description_chat_ephemeral_enabled">Ephemeral messages are enabled</string>
@@ -832,6 +851,8 @@
     <string name="content_description_chat_toggle_mute">Silences on/off this conversation</string>
     <string name="content_description_chat_removal_in_progress">Conversation is being removed</string>
     <string name="content_description_chat_unsecured">This conversation isn\'t secured</string>
+    <string name="content_description_chat_search_message_up">Search up</string>
+    <string name="content_description_chat_search_message_down">Search down</string>
     <string name="content_description_chat_create">Start a new conversation</string>
     <string name="content_description_meeting_today">Scroll to today</string>
     <string name="content_description_schedule_meeting">Schedule a meeting</string>
@@ -850,4 +871,26 @@
     <string name="content_description_ldap_delete">Delete this LDAP configuration</string>
     <string name="content_description_ldap_save">Save LDAP configuration</string>
     <string name="content_description_play_call_recording">Plays the call recording</string>
+    <string name="content_description_go_to_conversation">Go to conversation</string>
+
+    <!-- Copy of private hosts_allowlist_sample in androidx.car.app:app:1.7.0-beta01, as they recommend it -->
+    <string-array name="hosts_allowlist_sample_copy" translatable="false">
+        <item>fdb00c43dbde8b51cb312aa81d3b5fa17713adb94b28f598d77f8eb89daceedf,
+            com.google.android.projection.gearhead</item>
+
+        <item>70811a3eacfd2e83e18da9bfede52df16ce91f2e69a44d21f18ab66991130771,
+            com.google.android.projection.gearhead</item>
+
+        <item>1975b2f17177bc89a5dff31f9e64a6cae281a53dc1d1d59b1d147fe1c82afa00,
+            com.google.android.projection.gearhead</item>
+
+        <item>c241ffbc8e287c4e9a4ad19632ba1b1351ad361d5177b7d7b29859bd2b7fc631,
+            com.google.android.apps.automotive.templates.host</item>
+
+        <item>dd66deaf312d8daec7adbe85a218ecc8c64f3b152f9b5998d5b29300c2623f61,
+            com.google.android.apps.automotive.templates.host</item>
+
+        <item>50e603d333c6049a37bd751375d08f3bd0abebd33facd30bd17b64b89658b421,
+            com.google.android.apps.automotive.templates.host</item>
+        </string-array>
 </resources>

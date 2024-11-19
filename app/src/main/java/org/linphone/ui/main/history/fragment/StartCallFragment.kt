@@ -19,6 +19,7 @@
  */
 package org.linphone.ui.main.history.fragment
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -29,6 +30,7 @@ import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import org.linphone.LinphoneApplication.Companion.coreContext
+import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
 import org.linphone.core.Address
 import org.linphone.core.Friend
@@ -36,8 +38,8 @@ import org.linphone.core.tools.Log
 import org.linphone.databinding.StartCallFragmentBinding
 import org.linphone.ui.GenericActivity
 import org.linphone.ui.main.fragment.GenericAddressPickerFragment
-import org.linphone.ui.main.fragment.GroupSetOrEditSubjectDialogModel
 import org.linphone.ui.main.history.viewmodel.StartCallViewModel
+import org.linphone.ui.main.model.GroupSetOrEditSubjectDialogModel
 import org.linphone.utils.DialogUtils
 import org.linphone.utils.Event
 import org.linphone.utils.addCharacterAtPosition
@@ -65,6 +67,7 @@ class StartCallFragment : GenericAddressPickerFragment() {
         return binding.root
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         viewModel = ViewModelProvider(this)[StartCallViewModel::class.java]
 
@@ -167,6 +170,16 @@ class StartCallFragment : GenericAddressPickerFragment() {
     override fun onSingleAddressSelected(address: Address, friend: Friend) {
         coreContext.startAudioCall(address)
         viewModel.leaveFragmentEvent.postValue(Event(true))
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        coreContext.postOnCoreThread {
+            if (corePreferences.automaticallyShowDialpad) {
+                viewModel.isNumpadVisible.postValue(true)
+            }
+        }
     }
 
     override fun onPause() {

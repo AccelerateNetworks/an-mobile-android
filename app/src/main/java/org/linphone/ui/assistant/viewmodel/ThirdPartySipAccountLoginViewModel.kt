@@ -47,6 +47,8 @@ class ThirdPartySipAccountLoginViewModel @UiThread constructor() : GenericViewMo
 
     val username = MutableLiveData<String>()
 
+    val authId = MutableLiveData<String>()
+
     val password = MutableLiveData<String>()
 
     val domain = MutableLiveData<String>()
@@ -65,9 +67,17 @@ class ThirdPartySipAccountLoginViewModel @UiThread constructor() : GenericViewMo
 
     val registrationInProgress = MutableLiveData<Boolean>()
 
-    val accountLoggedInEvent = MutableLiveData<Event<Boolean>>()
+    val accountLoggedInEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData<Event<Boolean>>()
+    }
 
-    val accountLoginErrorEvent = MutableLiveData<Event<String>>()
+    val accountLoginErrorEvent: MutableLiveData<Event<String>> by lazy {
+        MutableLiveData<Event<String>>()
+    }
+
+    val defaultTransportIndexEvent: MutableLiveData<Event<Int>> by lazy {
+        MutableLiveData<Event<Int>>()
+    }
 
     val availableTransports = arrayListOf<String>()
 
@@ -133,6 +143,20 @@ class ThirdPartySipAccountLoginViewModel @UiThread constructor() : GenericViewMo
         availableTransports.add(TransportType.Udp.name.uppercase(Locale.getDefault()))
         availableTransports.add(TransportType.Tcp.name.uppercase(Locale.getDefault()))
         availableTransports.add(TransportType.Tls.name.uppercase(Locale.getDefault()))
+
+        coreContext.postOnCoreThread {
+            domain.postValue(corePreferences.thirdPartySipAccountDefaultDomain)
+
+            val defaultTransport = corePreferences.thirdPartySipAccountDefaultTransport.uppercase(
+                Locale.getDefault()
+            )
+            val index = if (defaultTransport.isNotEmpty()) {
+                availableTransports.indexOf(defaultTransport)
+            } else {
+                availableTransports.size - 1
+            }
+            defaultTransportIndexEvent.postValue(Event(index))
+        }
     }
 
     @UiThread
@@ -151,6 +175,7 @@ class ThirdPartySipAccountLoginViewModel @UiThread constructor() : GenericViewMo
             // Allow to enter SIP identity instead of simply username
             // in case identity domain doesn't match proxy domain
             val user = username.value.orEmpty().trim()
+            val userId = authId.value.orEmpty().trim()
             val identity = if (user.startsWith("sip:")) {
                 if (user.contains("@")) {
                     user
@@ -168,7 +193,7 @@ class ThirdPartySipAccountLoginViewModel @UiThread constructor() : GenericViewMo
 
             newlyCreatedAuthInfo = Factory.instance().createAuthInfo(
                 user,
-                null,
+                userId,
                 password.value.orEmpty().trim(),
                 null,
                 null,

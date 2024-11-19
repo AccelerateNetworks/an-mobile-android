@@ -30,17 +30,20 @@ import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
 import org.linphone.core.Address
 import org.linphone.core.ChatRoom
+import org.linphone.core.Conference
 import org.linphone.core.ConferenceInfo
 import org.linphone.core.ConferenceScheduler
 import org.linphone.core.ConferenceSchedulerListenerStub
 import org.linphone.core.Factory
 import org.linphone.core.Participant
 import org.linphone.core.ParticipantInfo
+import org.linphone.core.StreamType
 import org.linphone.core.tools.Log
 import org.linphone.ui.GenericViewModel
 import org.linphone.ui.main.meetings.model.TimeZoneModel
 import org.linphone.ui.main.model.SelectedAddressModel
 import org.linphone.utils.Event
+import org.linphone.utils.LinphoneUtils
 import org.linphone.utils.TimestampUtils
 
 class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
@@ -129,11 +132,15 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
 
                     if (sendInvitations.value == true) {
                         Log.i("$TAG User asked for invitations to be sent, let's do it")
-                        val chatRoomParams = coreContext.core.createDefaultChatRoomParams()
+
+                        val chatRoomParams = coreContext.core.createConferenceParams(null)
+                        chatRoomParams.isChatEnabled = true
                         chatRoomParams.isGroupEnabled = false
-                        chatRoomParams.backend = ChatRoom.Backend.FlexisipChat
-                        chatRoomParams.isEncryptionEnabled = true
                         chatRoomParams.subject = "Meeting invitation" // Won't be used
+                        val chatParams = chatRoomParams.chatParams ?: return
+                        chatParams.ephemeralLifetime = 0 // Make sure ephemeral is disabled by default
+                        chatParams.backend = ChatRoom.Backend.FlexisipChat
+                        chatRoomParams.securityLevel = Conference.SecurityLevel.EndToEnd
                         conferenceScheduler.sendInvitations(chatRoomParams)
                     } else {
                         Log.i("$TAG User didn't asked for invitations to be sent")
@@ -193,7 +200,6 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
         }
         isBroadcastSelected.value = false
         showBroadcastHelp.value = false
-        allDayMeeting.value = false
         sendInvitations.value = true
 
         selectedTimeZone.value = availableTimeZones.find {
@@ -286,20 +292,20 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
 
     @UiThread
     fun setStartDate(timestamp: Long) {
-        startTimestamp = timestamp
-        endTimestamp = timestamp
-        computeDateLabels()
-    }
+        val cal = Calendar.getInstance(
+            TimeZone.getTimeZone(selectedTimeZone.value?.id ?: TimeZone.getDefault().id)
+        )
+        cal.timeInMillis = timestamp
+        cal.set(Calendar.HOUR_OF_DAY, startHour)
+        cal.set(Calendar.MINUTE, startMinutes)
+        startTimestamp = cal.timeInMillis
 
-    @UiThread
-    fun getCurrentlySelectedEndDate(): Long {
-        return endTimestamp
-    }
+        cal.set(Calendar.HOUR_OF_DAY, endHour)
+        cal.set(Calendar.MINUTE, endMinutes)
+        endTimestamp = cal.timeInMillis
 
-    @UiThread
-    fun setEndDate(timestamp: Long) {
-        endTimestamp = timestamp
         computeDateLabels()
+        computeTimeLabels()
     }
 
     @UiThread
@@ -404,9 +410,16 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
             conferenceInfo.subject = subject.value
             conferenceInfo.description = description.value
 
+            // Allows to have a chat room within the conference
+            conferenceInfo.setCapability(StreamType.Text, true)
+
             val startTime = startTimestamp / 1000 // Linphone expects timestamp in seconds
+            val duration =
+                (((endTimestamp - startTimestamp) / 1000) / 60).toInt() // Linphone expects duration in minutes
+            Log.i(
+                "$TAG Scheduling meeting using start hour [$startTime] and duration [$duration] (minutes)"
+            )
             conferenceInfo.dateTime = startTime
-            val duration = (((endTimestamp - startTimestamp) / 1000) / 60).toInt() // Linphone expects duration in minutes
             conferenceInfo.duration = duration
 
             val participantsList = participants.value.orEmpty()
@@ -430,7 +443,7 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
             conferenceInfo.setParticipantInfos(participantsInfoArray)
 
             if (!::conferenceScheduler.isInitialized) {
-                conferenceScheduler = core.createConferenceScheduler()
+                conferenceScheduler = LinphoneUtils.createConferenceScheduler(localAccount)
                 conferenceScheduler.addListener(conferenceSchedulerListener)
             }
 
@@ -482,7 +495,9 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
             conferenceInfo.setParticipantInfos(participantsInfoArray)
 
             if (!::conferenceScheduler.isInitialized) {
-                conferenceScheduler = core.createConferenceScheduler()
+                conferenceScheduler = LinphoneUtils.createConferenceScheduler(
+                    LinphoneUtils.getDefaultAccount()
+                )
                 conferenceScheduler.addListener(conferenceSchedulerListener)
             }
 
@@ -582,7 +597,8 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
             cal.set(Calendar.HOUR_OF_DAY, startHour)
             cal.set(Calendar.MINUTE, startMinutes)
         }
-        val start = TimestampUtils.timeToString(cal.timeInMillis, timestampInSecs = false)
+        startTimestamp = cal.timeInMillis
+        val start = TimestampUtils.timeToString(startTimestamp, timestampInSecs = false)
         Log.i("$TAG Computed start time for timestamp [$startTimestamp] is [$start]")
         fromTime.postValue(start)
 
@@ -590,8 +606,17 @@ class ScheduleMeetingViewModel @UiThread constructor() : GenericViewModel() {
         if (endHour != -1 && endMinutes != -1) {
             cal.set(Calendar.HOUR_OF_DAY, endHour)
             cal.set(Calendar.MINUTE, endMinutes)
+
+            if (endHour < startHour || (endHour == startHour && endMinutes <= startMinutes)) {
+                // Make sure if endTime is after startTime that it is on the next day
+                if (cal.timeInMillis <= startTimestamp) {
+                    Log.i("$TAG endTime < startTime, adding 1 day to endTimestamp")
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                }
+            }
         }
-        val end = TimestampUtils.timeToString(cal.timeInMillis, timestampInSecs = false)
+        endTimestamp = cal.timeInMillis
+        val end = TimestampUtils.timeToString(endTimestamp, timestampInSecs = false)
         Log.i("$TAG Computed end time for timestamp [$endTimestamp] is [$end]")
         toTime.postValue(end)
     }

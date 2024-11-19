@@ -19,10 +19,8 @@
  */
 package org.linphone.utils
 
-import android.content.Context
 import android.content.res.Resources
 import android.provider.ContactsContract
-import android.telephony.TelephonyManager
 import androidx.annotation.AnyThread
 import androidx.annotation.WorkerThread
 import org.linphone.core.DialPlan
@@ -34,9 +32,7 @@ class PhoneNumberUtils {
         private const val TAG = "[Phone Number Utils]"
 
         @WorkerThread
-        fun getDeviceDialPlan(context: Context): DialPlan? {
-            val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            val countryIso = telephonyManager.networkCountryIso
+        fun getDeviceDialPlan(countryIso: String): DialPlan? {
             for (dp in Factory.instance().dialPlans) {
                 if (dp.isoCountryCode.equals(countryIso, true)) {
                     val prefix = dp.countryCallingCode
@@ -72,8 +68,18 @@ class PhoneNumberUtils {
                 ContactsContract.CommonDataKinds.Phone.TYPE_WORK -> "work"
                 ContactsContract.CommonDataKinds.Phone.TYPE_WORK_MOBILE -> "work,cell"
                 ContactsContract.CommonDataKinds.Phone.TYPE_WORK_PAGER -> "work,pager"
-                ContactsContract.CommonDataKinds.BaseTypes.TYPE_CUSTOM -> default ?: "custom"
-                else -> default ?: type.toString()
+                ContactsContract.CommonDataKinds.BaseTypes.TYPE_CUSTOM -> {
+                    Log.i(
+                        "$TAG Found custom phone label type using default value [$default] or 'custom' if null"
+                    )
+                    default ?: "custom"
+                }
+                else -> {
+                    Log.w(
+                        "$TAG Can't translate phone label type [$type], using default value [$default]"
+                    )
+                    default ?: type.toString()
+                }
             }
         }
 

@@ -25,6 +25,7 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Bundle
 import android.provider.ContactsContract
 import androidx.annotation.MainThread
 import androidx.annotation.UiThread
@@ -33,7 +34,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.Person
 import androidx.core.graphics.drawable.IconCompat
 import androidx.loader.app.LoaderManager
-import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,6 +42,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.linphone.LinphoneApplication.Companion.coreContext
+import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.core.Account
 import org.linphone.core.Address
 import org.linphone.core.ConferenceInfo
@@ -84,6 +85,8 @@ class ContactsManager @UiThread constructor() {
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var reloadContactsJob: Job? = null
+
+    private var loadContactsOnlyFromDefaultDirectory = true
 
     private val friendListListener: FriendListListenerStub = object : FriendListListenerStub() {
         @WorkerThread
@@ -147,7 +150,9 @@ class ContactsManager @UiThread constructor() {
     fun loadContacts(activity: MainActivity) {
         Log.i("$TAG Starting contacts loader")
         val manager = LoaderManager.getInstance(activity)
-        manager.restartLoader(0, null, ContactLoader())
+        val args = Bundle()
+        args.putBoolean("defaultDirectory", loadContactsOnlyFromDefaultDirectory)
+        manager.restartLoader(0, args, ContactLoader())
     }
 
     @WorkerThread
@@ -432,6 +437,8 @@ class ContactsManager @UiThread constructor() {
 
     @WorkerThread
     fun onCoreStarted(core: Core) {
+        loadContactsOnlyFromDefaultDirectory = corePreferences.fetchContactsFromDefaultDirectory
+
         core.addListener(coreListener)
         for (list in core.friendsLists) {
             list.addListener(friendListListener)
@@ -595,7 +602,7 @@ class ContactsManager @UiThread constructor() {
     @WorkerThread
     fun getMePerson(localAddress: Address): Person {
         val account = coreContext.core.accountList.find {
-            it.params.identityAddress?.weakEqual(localAddress) ?: false
+            it.params.identityAddress?.weakEqual(localAddress) == true
         }
         val name = account?.params?.identityAddress?.displayName ?: LinphoneUtils.getDisplayName(
             localAddress
@@ -620,7 +627,6 @@ class ContactsManager @UiThread constructor() {
 
     @WorkerThread
     fun updateContactsModelDependingOnDefaultAccountMode() {
-        val account = coreContext.core.defaultAccount
         val showTrust = true
         Log.i(
             "$TAG Default account mode is [${if (showTrust) "end-to-end encryption mandatory" else "interoperable"}], update all contact models showTrust value"
@@ -647,8 +653,17 @@ class ContactsManager @UiThread constructor() {
 }
 
 @WorkerThread
-fun Friend.getAvatarBitmap(): Bitmap? {
-    return ImageUtils.getBitmap(coreContext.context, photo)
+fun Friend.getAvatarBitmap(round: Boolean = false): Bitmap? {
+    try {
+        return ImageUtils.getBitmap(
+            coreContext.context,
+            photo ?: getNativeContactPictureUri()?.toString(),
+            round
+        )
+    } catch (numberFormatException: NumberFormatException) {
+        // Expected for contacts created by Linphone
+    }
+    return null
 }
 
 @WorkerThread
@@ -673,7 +688,9 @@ fun Friend.getNativeContactPictureUri(): Uri? {
                     fd.close()
                     return pictureUri
                 }
-            } catch (_: IOException) { }
+            } catch (e: Exception) {
+                Log.e("[Contacts Manager] Can't open [$pictureUri] for contact [$name]: $e")
+            }
 
             // Fallback to thumbnail
             return Uri.withAppendedPath(
@@ -710,10 +727,23 @@ fun Friend.getPerson(): Person {
 }
 
 @WorkerThread
+fun Friend.getListOfSipAddresses(): ArrayList<Address> {
+    val addressesList = arrayListOf<Address>()
+
+    for (address in addresses) {
+        if (addressesList.find { it.weakEqual(address) } == null) {
+            addressesList.add(address)
+        }
+    }
+
+    return addressesList
+}
+
+@WorkerThread
 fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddressClickListener): ArrayList<ContactNumberOrAddressModel> {
     val addressesAndNumbers = arrayListOf<ContactNumberOrAddressModel>()
 
-    for (address in addresses) {
+    for (address in getListOfSipAddresses()) {
         val data = ContactNumberOrAddressModel(
             this,
             address,
@@ -735,32 +765,26 @@ fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddress
             Log.d("[Friend] Phone number [${number.phoneNumber}] has presence information")
             // Show linked SIP address if not already stored as-is
             val contact = presenceModel.contact
-            val found = addressesAndNumbers.find {
-                it.displayedValue == contact
-            }
-            if (!contact.isNullOrEmpty() && found == null) {
+            if (!contact.isNullOrEmpty()) {
                 val address = core.interpretUrl(contact, false)
                 if (address != null) {
                     address.clean() // To remove ;user=phone
                     presenceAddress = address
-                    val data = ContactNumberOrAddressModel(
-                        this,
-                        address,
-                        address.asStringUriOnly(),
-                        true, // SIP addresses are always enabled
-                        listener,
-                        true
-                    )
-                    addressesAndNumbers.add(indexOfLastSipAddress, data)
+                    if (addressesAndNumbers.find { it.address?.weakEqual(address) == true } == null) {
+                        val data = ContactNumberOrAddressModel(
+                            this,
+                            address,
+                            address.asStringUriOnly(),
+                            true, // SIP addresses are always enabled
+                            listener,
+                            true
+                        )
+                        addressesAndNumbers.add(indexOfLastSipAddress, data)
+                    }
                     Log.d(
                         "[Friend] Phone number [${number.phoneNumber}] is linked to SIP address [${presenceAddress.asStringUriOnly()}]"
                     )
                 }
-            } else if (found != null) {
-                presenceAddress = found.address
-                Log.d(
-                    "[Friend] Phone number [${number.phoneNumber}] is linked to existing SIP address [${presenceAddress?.asStringUriOnly()}]"
-                )
             }
         }
 

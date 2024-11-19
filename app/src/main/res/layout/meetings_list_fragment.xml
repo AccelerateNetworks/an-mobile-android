@@ -30,13 +30,8 @@
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <androidx.constraintlayout.widget.Group
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:constraint_referenced_ids="no_meeting_image, no_meeting_label"
-                    android:visibility="@{viewModel.meetings.empty ? View.VISIBLE : View.GONE}" />
+                android:layout_height="match_parent"
+                android:background="?attr/color_main1_500">
 
                 <include
                     android:id="@+id/top_bar"
@@ -52,45 +47,18 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"/>
 
-                <ImageView
-                    android:id="@+id/background"
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:src="?attr/color_main2_000"
-                    android:contentDescription="@null"
-                    app:layout_constraintBottom_toTopOf="@id/bottom_nav_bar"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/top_bar" />
-
-                <ImageView
-                    android:id="@+id/no_meeting_image"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="10dp"
-                    android:src="@drawable/illu"
-                    android:contentDescription="@null"
-                    app:layout_constraintHeight_max="200dp"
-                    app:layout_constraintBottom_toTopOf="@id/no_meeting_label"
-                    app:layout_constraintDimensionRatio="1:1"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/background" />
-
-                <androidx.appcompat.widget.AppCompatTextView
-                    style="@style/section_header_style"
-                    android:id="@+id/no_meeting_label"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@{viewModel.isFilterEmpty ? @string/meetings_list_empty : @string/list_filter_no_result_found, default=@string/meetings_list_empty}"
-                    app:layout_constraintBottom_toTopOf="@id/background"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/no_meeting_image" />
+                <View
+                    android:id="@+id/shadow_effect"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="@dimen/top_bar_shadow_height"
+                    android:background="@drawable/shape_squircle_white_r20_top_shadow"
+                    app:layout_constraintTop_toTopOf="parent" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/meetings_list"
                     android:layout_width="match_parent"
+                    android:background="@drawable/shape_squircle_white_r20_top_background"
                     android:layout_height="0dp"
                     android:layout_marginTop="@dimen/top_bar_height"
                     app:layout_constraintTop_toTopOf="parent"
@@ -102,7 +70,7 @@
                     android:layout_height="wrap_content"
                     android:indeterminate="true"
                     android:visibility="@{viewModel.fetchInProgress ? View.VISIBLE : View.GONE}"
-                    app:indicatorColor="@color/main1_500"
+                    app:indicatorColor="?attr/color_main1_500"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
@@ -110,12 +78,10 @@
 
                 <include
                     android:id="@+id/bottom_nav_bar"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     layout="@layout/bottom_nav_bar"
                     bind:viewModel="@{viewModel}"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -134,6 +100,10 @@
                     app:layout_constraintBottom_toTopOf="@id/bottom_nav_bar" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <include
+                layout="@layout/operation_in_progress"
+                bind:visibility="@{viewModel.operationInProgress}" />
 
         </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

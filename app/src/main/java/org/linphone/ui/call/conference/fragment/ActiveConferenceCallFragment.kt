@@ -29,6 +29,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.vectordrawable.graphics.drawable.AnimatedVectorDrawableCompat
@@ -101,6 +102,38 @@ class ActiveConferenceCallFragment : GenericCallFragment() {
         }
     }
 
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            val actionsBottomSheetBehavior = BottomSheetBehavior.from(binding.bottomBar.root)
+            if (actionsBottomSheetBehavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
+                actionsBottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                return
+            }
+
+            val callStatsBottomSheetBehavior = BottomSheetBehavior.from(binding.callStats.root)
+            if (callStatsBottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                callStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                return
+            }
+
+            val callMediaEncryptionStatsBottomSheetBehavior = BottomSheetBehavior.from(
+                binding.callMediaEncryptionStats.root
+            )
+            if (callMediaEncryptionStatsBottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                callMediaEncryptionStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+                return
+            }
+
+            Log.i("$TAG Back gesture/click detected, no bottom sheet is expanded, going back")
+            isEnabled = false
+            try {
+                requireActivity().onBackPressedDispatcher.onBackPressed()
+            } catch (ise: IllegalStateException) {
+                Log.w("$TAG Can't go back: $ise")
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -169,11 +202,15 @@ class ActiveConferenceCallFragment : GenericCallFragment() {
             }
         }
 
-        callViewModel.fullScreenMode.observe(viewLifecycleOwner) { hide ->
-            Log.i("$TAG Switching full screen mode to ${if (hide) "ON" else "OFF"}")
+        callViewModel.conferenceModel.fullScreenMode.observe(viewLifecycleOwner) { hide ->
+            Log.i("$TAG Switching full screen mode to [${if (hide) "ON" else "OFF"}]")
             sharedViewModel.toggleFullScreenEvent.value = Event(hide)
             callStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             callMediaEncryptionStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+
+            if (hide != callViewModel.fullScreenMode.value) {
+                callViewModel.fullScreenMode.value = hide
+            }
         }
 
         callViewModel.conferenceModel.conferenceLayout.observe(viewLifecycleOwner) { layout ->
@@ -187,8 +224,39 @@ class ActiveConferenceCallFragment : GenericCallFragment() {
                     Log.i("$TAG We are alone in that conference, using nativePreviewWindowId")
                     core.nativePreviewWindowId = binding.localPreviewVideoSurface
 
-                    // Don't forget to leave full screen mode, otherwise we won't be able to leave it by touching video surface...
-                    callViewModel.fullScreenMode.postValue(false)
+                    if (callViewModel.conferenceModel.fullScreenMode.value == true && callViewModel.conferenceModel.isMeParticipantSendingVideo.value == false) {
+                        // Don't forget to leave full screen mode, otherwise we won't be able to leave it by touching video surface...
+                        callViewModel.conferenceModel.fullScreenMode.postValue(false)
+                    }
+                }
+            }
+        }
+
+        callViewModel.conferenceModel.firstParticipantOtherThanOurselvesJoinedEvent.observe(
+            viewLifecycleOwner
+        ) {
+            it.consume {
+                if (callViewModel.conferenceModel.fullScreenMode.value == false) {
+                    Log.i("$TAG First participant joined conference, switching to full screen mode")
+                    callViewModel.conferenceModel.toggleFullScreen()
+                }
+            }
+        }
+
+        callViewModel.conferenceModel.goToConversationEvent.observe(viewLifecycleOwner) {
+            it.consume { pair ->
+                if (findNavController().currentDestination?.id == R.id.activeConferenceCallFragment) {
+                    val localSipUri = pair.first
+                    val remoteSipUri = pair.second
+                    Log.i(
+                        "$TAG Display conversation with local SIP URI [$localSipUri] and remote SIP URI [$remoteSipUri]"
+                    )
+                    val action =
+                        ActiveConferenceCallFragmentDirections.actionActiveConferenceCallFragmentToInCallConversationFragment(
+                            localSipUri,
+                            remoteSipUri
+                        )
+                    findNavController().navigate(action)
                 }
             }
         }
@@ -240,6 +308,11 @@ class ActiveConferenceCallFragment : GenericCallFragment() {
             callStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             callMediaEncryptionStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
         }
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
     }
 
     @SuppressLint("ClickableViewAccessibility")

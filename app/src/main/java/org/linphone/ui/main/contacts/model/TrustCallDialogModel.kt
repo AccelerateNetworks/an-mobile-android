@@ -21,6 +21,7 @@ package org.linphone.ui.main.contacts.model
 
 import androidx.annotation.UiThread
 import androidx.lifecycle.MutableLiveData
+import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 
 class TrustCallDialogModel @UiThread constructor(contact: String, device: String) {
@@ -33,7 +34,11 @@ class TrustCallDialogModel @UiThread constructor(contact: String, device: String
     val confirmCallEvent = MutableLiveData<Event<Boolean>>()
 
     init {
-        message.value = "You're about to call $contact's device $device.\nAre you sure you want to make a call now?"
+        message.value = AppUtils.getFormattedString(
+            org.linphone.R.string.contact_dialog_increase_trust_level_message,
+            contact,
+            device
+        )
     }
 
     @UiThread

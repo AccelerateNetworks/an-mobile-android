@@ -25,6 +25,7 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
+import android.view.View
 import android.view.Window
 import android.view.WindowManager
 import androidx.annotation.UiThread
@@ -35,6 +36,7 @@ import androidx.lifecycle.LifecycleOwner
 import org.linphone.R
 import org.linphone.databinding.DialogAssistantAcceptConditionsAndPolicyBinding
 import org.linphone.databinding.DialogAssistantCreateAccountConfirmPhoneNumberBinding
+import org.linphone.databinding.DialogCallConfirmTransferBinding
 import org.linphone.databinding.DialogCancelContactChangesBinding
 import org.linphone.databinding.DialogCancelMeetingBinding
 import org.linphone.databinding.DialogContactConfirmTrustCallBinding
@@ -50,20 +52,24 @@ import org.linphone.databinding.DialogRemoveAllCallLogsBinding
 import org.linphone.databinding.DialogRemoveCallLogsBinding
 import org.linphone.databinding.DialogRemoveConversationHistoryBinding
 import org.linphone.databinding.DialogSetOrEditGroupSubjectBindingImpl
+import org.linphone.databinding.DialogStartGroupCallFromConversationBinding
+import org.linphone.databinding.DialogUpdateAccountPasswordAfterRegisterFailureBinding
 import org.linphone.databinding.DialogUpdateAccountPasswordBinding
 import org.linphone.databinding.DialogUpdateAvailableBinding
 import org.linphone.databinding.DialogZrtpSasValidationBinding
 import org.linphone.databinding.DialogZrtpSecurityAlertBinding
 import org.linphone.ui.assistant.model.AcceptConditionsAndPolicyDialogModel
 import org.linphone.ui.assistant.model.ConfirmPhoneNumberDialogModel
+import org.linphone.ui.call.model.ConfirmCallTransferDialogModel
 import org.linphone.ui.call.model.ZrtpAlertDialogModel
 import org.linphone.ui.call.model.ZrtpSasConfirmationDialogModel
 import org.linphone.ui.main.contacts.model.ContactTrustDialogModel
 import org.linphone.ui.main.contacts.model.NumberOrAddressPickerDialogModel
 import org.linphone.ui.main.contacts.model.TrustCallDialogModel
-import org.linphone.ui.main.fragment.AuthRequestedDialogModel
-import org.linphone.ui.main.fragment.GroupSetOrEditSubjectDialogModel
 import org.linphone.ui.main.history.model.ConfirmationDialogModel
+import org.linphone.ui.main.model.AuthRequestedDialogModel
+import org.linphone.ui.main.model.GroupSetOrEditSubjectDialogModel
+import org.linphone.ui.main.settings.model.UpdatePasswordDialogModel
 
 class DialogUtils {
     companion object {
@@ -121,7 +127,7 @@ class DialogUtils {
         fun getConfirmAccountRemovalDialog(
             context: Context,
             viewModel: ConfirmationDialogModel,
-            displayName: String
+            showDeleteAccountLink: Boolean
         ): Dialog {
             val binding: DialogRemoveAccountBinding = DataBindingUtil.inflate(
                 LayoutInflater.from(context),
@@ -130,10 +136,7 @@ class DialogUtils {
                 false
             )
             binding.viewModel = viewModel
-            binding.title.text = context.getString(
-                R.string.manage_account_dialog_remove_account_title,
-                displayName
-            )
+            binding.message.visibility = if (showDeleteAccountLink) View.VISIBLE else View.GONE
 
             return getDialog(context, binding)
         }
@@ -282,6 +285,22 @@ class DialogUtils {
         }
 
         @UiThread
+        fun getConfirmGroupCallDialog(
+            context: Context,
+            viewModel: ConfirmationDialogModel
+        ): Dialog {
+            val binding: DialogStartGroupCallFromConversationBinding = DataBindingUtil.inflate(
+                LayoutInflater.from(context),
+                R.layout.dialog_start_group_call_from_conversation,
+                null,
+                false
+            )
+            binding.viewModel = viewModel
+
+            return getDialog(context, binding)
+        }
+
+        @UiThread
         fun getDeleteConversationHistoryConfirmationDialog(
             context: Context,
             viewModel: ConfirmationDialogModel
@@ -336,6 +355,23 @@ class DialogUtils {
             context: Context,
             viewModel: AuthRequestedDialogModel
         ): Dialog {
+            val binding: DialogUpdateAccountPasswordAfterRegisterFailureBinding = DataBindingUtil.inflate(
+                LayoutInflater.from(context),
+                R.layout.dialog_update_account_password_after_register_failure,
+                null,
+                false
+            )
+            binding.viewModel = viewModel
+            binding.lifecycleOwner = context as LifecycleOwner
+
+            return getDialog(context, binding)
+        }
+
+        @UiThread
+        fun getUpdatePasswordDialog(
+            context: Context,
+            viewModel: UpdatePasswordDialogModel
+        ): Dialog {
             val binding: DialogUpdateAccountPasswordBinding = DataBindingUtil.inflate(
                 LayoutInflater.from(context),
                 R.layout.dialog_update_account_password,
@@ -388,6 +424,22 @@ class DialogUtils {
             val binding: DialogMergeCallsIntoConferenceBinding = DataBindingUtil.inflate(
                 LayoutInflater.from(context),
                 R.layout.dialog_merge_calls_into_conference,
+                null,
+                false
+            )
+            binding.viewModel = viewModel
+
+            return getDialog(context, binding)
+        }
+
+        @UiThread
+        fun getConfirmCallTransferCallDialog(
+            context: Context,
+            viewModel: ConfirmCallTransferDialogModel
+        ): Dialog {
+            val binding: DialogCallConfirmTransferBinding = DataBindingUtil.inflate(
+                LayoutInflater.from(context),
+                R.layout.dialog_call_confirm_transfer,
                 null,
                 false
             )

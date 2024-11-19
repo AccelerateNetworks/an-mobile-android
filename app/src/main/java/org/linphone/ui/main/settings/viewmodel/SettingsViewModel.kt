@@ -30,8 +30,10 @@ import org.linphone.core.AudioDevice
 import org.linphone.core.Conference
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
+import org.linphone.core.EcCalibratorStatus
 import org.linphone.core.Factory
 import org.linphone.core.FriendList
+import org.linphone.core.MediaEncryption
 import org.linphone.core.Tunnel
 import org.linphone.core.VFS
 import org.linphone.core.tools.Log
@@ -67,6 +69,10 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
 
     // Calls settings
     val echoCancellerEnabled = MutableLiveData<Boolean>()
+    val calibratedEchoCancellerValue = MutableLiveData<String>()
+
+    val adaptiveRateControlEnabled = MutableLiveData<Boolean>()
+
     val videoEnabled = MutableLiveData<Boolean>()
     val videoFecEnabled = MutableLiveData<Boolean>()
 
@@ -81,6 +87,8 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
     val showConversationsSettings = MutableLiveData<Boolean>()
 
     val autoDownloadEnabled = MutableLiveData<Boolean>()
+
+    val markAsReadWhenDismissingNotification = MutableLiveData<Boolean>()
 
     // Contacts settings
     val showContactsSettings = MutableLiveData<Boolean>()
@@ -169,7 +177,13 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
     // Advanced settings
     val keepAliveThirdPartyAccountsService = MutableLiveData<Boolean>()
 
+    val deviceName = MutableLiveData<String>()
     val remoteProvisioningUrl = MutableLiveData<String>()
+
+    val mediaEncryptionIndex = MutableLiveData<Int>()
+    val mediaEncryptionLabels = arrayListOf<String>()
+    private val mediaEncryptionValues = arrayListOf<MediaEncryption>()
+    val mediaEncryptionMandatory = MutableLiveData<Boolean>()
 
     val expandAudioDevices = MutableLiveData<Boolean>()
     val inputAudioDeviceIndex = MutableLiveData<Int>()
@@ -186,11 +200,18 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
     val videoCodecs = MutableLiveData<List<CodecModel>>()
 
     private val coreListener = object : CoreListenerStub() {
+        @WorkerThread
         override fun onAudioDevicesListUpdated(core: Core) {
             Log.i(
                 "$TAG Audio devices list has changed, update available input/output audio devices list"
             )
             setupAudioDevices()
+        }
+
+        @WorkerThread
+        override fun onEcCalibrationResult(core: Core, status: EcCalibratorStatus, delayMs: Int) {
+            if (status == EcCalibratorStatus.InProgress) return
+            echoCancellerCalibrationFinished(status, delayMs)
         }
     }
 
@@ -231,6 +252,24 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
             isUiSecureModeEnabled.postValue(corePreferences.enableSecureMode)
 
             echoCancellerEnabled.postValue(core.isEchoCancellationEnabled)
+            val delay = core.echoCancellationCalibration
+            if (delay > 0) {
+                val label = AppUtils.getString(
+                    R.string.settings_calls_calibrate_echo_canceller_done
+                ).format(
+                    delay
+                )
+                calibratedEchoCancellerValue.postValue(label)
+            } else if (delay == 0) {
+                calibratedEchoCancellerValue.postValue(
+                    AppUtils.getString(
+                        R.string.settings_calls_calibrate_echo_canceller_done_no_echo
+                    )
+                )
+            }
+
+            adaptiveRateControlEnabled.postValue(core.isAdaptiveRateControlEnabled)
+
             videoEnabled.postValue(core.isVideoEnabled)
             videoFecEnabled.postValue(core.isFecEnabled)
             vibrateDuringIncomingCall.postValue(core.isVibrationOnIncomingCallEnabled)
@@ -240,6 +279,9 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
             allowIpv6.postValue(core.isIpv6Enabled)
 
             autoDownloadEnabled.postValue(core.maxSizeForAutoDownloadIncomingFiles == 0)
+            markAsReadWhenDismissingNotification.postValue(
+                corePreferences.markConversationAsReadWhenDismissingMessageNotification
+            )
 
             defaultLayout.postValue(core.defaultConferenceLayout.toInt())
 
@@ -252,8 +294,10 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
 
             keepAliveThirdPartyAccountsService.postValue(corePreferences.keepServiceAlive)
 
+            deviceName.postValue(corePreferences.deviceName)
             remoteProvisioningUrl.postValue(core.provisioningUri)
 
+            setupMediaEncryption()
             setupAudioDevices()
             setupCodecs()
         }
@@ -311,6 +355,26 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
     }
 
     @UiThread
+    fun calibrateEchoCanceller() {
+        coreContext.postOnCoreThread { core ->
+            Log.i("$TAG Starting echo canceller calibration")
+            core.startEchoCancellerCalibration()
+            calibratedEchoCancellerValue.postValue(
+                AppUtils.getString(R.string.settings_calls_calibrate_echo_canceller_in_progress)
+            )
+        }
+    }
+
+    @UiThread
+    fun toggleAdaptiveRateControl() {
+        val newValue = adaptiveRateControlEnabled.value == false
+        coreContext.postOnCoreThread { core ->
+            core.isAdaptiveRateControlEnabled = newValue
+            adaptiveRateControlEnabled.postValue(newValue)
+        }
+    }
+
+    @UiThread
     fun toggleEnableVideo() {
         val newValue = videoEnabled.value == false
         coreContext.postOnCoreThread { core ->
@@ -363,6 +427,15 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
         coreContext.postOnCoreThread { core ->
             core.maxSizeForAutoDownloadIncomingFiles = if (newValue) 0 else -1
             autoDownloadEnabled.postValue(newValue)
+        }
+    }
+
+    @UiThread
+    fun toggleMarkConversationAsReadWhenDismissingNotification() {
+        val newValue = markAsReadWhenDismissingNotification.value == false
+        coreContext.postOnCoreThread {
+            corePreferences.markConversationAsReadWhenDismissingMessageNotification = newValue
+            markAsReadWhenDismissingNotification.postValue(newValue)
         }
     }
 
@@ -556,10 +629,87 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
         }
     }
 
+    @WorkerThread
+    private fun setupMediaEncryption() {
+        val core = coreContext.core
+
+        mediaEncryptionLabels.clear()
+        mediaEncryptionValues.clear()
+
+        var index = 0
+        val defaultMediaEncryption = core.mediaEncryption
+        Log.i("$TAG Current media encryption is [$defaultMediaEncryption]")
+        for (encryption in MediaEncryption.entries) {
+            if (core.isMediaEncryptionSupported(encryption)) {
+                if (encryption == MediaEncryption.ZRTP) {
+                    if (core.postQuantumAvailable) {
+                        Log.i("$TAG Post Quantum ZRTP is available")
+                        mediaEncryptionLabels.add(
+                            AppUtils.getString(
+                                R.string.call_stats_media_encryption_zrtp_post_quantum
+                            )
+                        )
+                    } else {
+                        Log.i(
+                            "$TAG Post Quantum ZRTP isn't available, will use classic ZRTP instead"
+                        )
+                        mediaEncryptionLabels.add(encryption.toString())
+                    }
+                } else {
+                    mediaEncryptionLabels.add(encryption.toString())
+                }
+                mediaEncryptionValues.add(encryption)
+                if (encryption == defaultMediaEncryption) {
+                    mediaEncryptionIndex.postValue(index)
+                }
+                index += 1
+            }
+        }
+
+        mediaEncryptionMandatory.postValue(core.isMediaEncryptionMandatory)
+    }
+
+    @UiThread
+    fun setMediaEncryption(index: Int) {
+        coreContext.postOnCoreThread { core ->
+            val mediaEncryption = mediaEncryptionValues[index]
+            core.mediaEncryption = mediaEncryption
+
+            if (mediaEncryption == MediaEncryption.None) {
+                core.isMediaEncryptionMandatory = false
+                mediaEncryptionMandatory.postValue(false)
+            }
+        }
+    }
+
+    @UiThread
+    fun toggleMediaEncryptionMandatory() {
+        val newValue = mediaEncryptionMandatory.value == false
+
+        coreContext.postOnCoreThread { core ->
+            core.isMediaEncryptionMandatory = newValue
+            mediaEncryptionMandatory.postValue(newValue)
+        }
+    }
+
+    @UiThread
+    fun updateDeviceName() {
+        coreContext.postOnCoreThread {
+            val newDeviceName = deviceName.value.orEmpty().trim()
+            if (newDeviceName != corePreferences.deviceName) {
+                corePreferences.deviceName = newDeviceName
+                Log.i(
+                    "$TAG Updated device name to [${corePreferences.deviceName}], re-compute user-agent"
+                )
+                coreContext.computeUserAgent()
+            }
+        }
+    }
+
     @UiThread
     fun updateRemoteProvisioningUrl() {
         coreContext.postOnCoreThread { core ->
-            val newProvisioningUri = remoteProvisioningUrl.value.orEmpty()
+            val newProvisioningUri = remoteProvisioningUrl.value.orEmpty().trim()
             if (newProvisioningUri != core.provisioningUri) {
                 Log.i("$TAG Updating remote provisioning URI to [$newProvisioningUri]")
                 if (newProvisioningUri.isEmpty()) {
@@ -680,5 +830,26 @@ class SettingsViewModel @UiThread constructor() : GenericViewModel() {
             videoCodecsList.add(model)
         }
         videoCodecs.postValue(videoCodecsList)
+    }
+
+    @WorkerThread
+    private fun echoCancellerCalibrationFinished(status: EcCalibratorStatus, delay: Int) {
+        val value = when (status) {
+            EcCalibratorStatus.DoneNoEcho -> {
+                echoCancellerEnabled.postValue(false)
+                AppUtils.getString(R.string.settings_calls_calibrate_echo_canceller_done_no_echo)
+            }
+            EcCalibratorStatus.Done -> {
+                echoCancellerEnabled.postValue(true)
+                AppUtils.getString(R.string.settings_calls_calibrate_echo_canceller_done).format(
+                    delay
+                )
+            }
+            EcCalibratorStatus.Failed -> {
+                AppUtils.getString(R.string.settings_calls_calibrate_echo_canceller_failed)
+            }
+            else -> ""
+        }
+        calibratedEchoCancellerValue.postValue(value)
     }
 }

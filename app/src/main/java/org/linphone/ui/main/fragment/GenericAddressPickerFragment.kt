@@ -37,7 +37,6 @@ import org.linphone.ui.main.contacts.model.ContactNumberOrAddressModel
 import org.linphone.ui.main.contacts.model.NumberOrAddressPickerDialogModel
 import org.linphone.ui.main.model.ConversationContactOrSuggestionModel
 import org.linphone.ui.main.model.SelectedAddressModel
-import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 import org.linphone.ui.main.viewmodel.AddressSelectionViewModel
 import org.linphone.utils.DialogUtils
 import org.linphone.utils.LinphoneUtils
@@ -148,6 +147,23 @@ abstract class GenericAddressPickerFragment : GenericMainFragment() {
     }
 
     private fun handleClickOnContactModel(model: ConversationContactOrSuggestionModel) {
+        if (model.selected.value == true) {
+            Log.i(
+                "$TAG User clicked on already selected item [${model.name}], removing it from selection"
+            )
+            val found = viewModel.selection.value.orEmpty().find {
+                it.address.weakEqual(model.address) || it.avatarModel?.friend == model.friend
+            }
+            if (found != null) {
+                coreContext.postOnCoreThread {
+                    viewModel.removeAddressModelFromSelection(found)
+                }
+                return
+            } else {
+                Log.e("$TAG Failed to find already selected entry matching the one clicked")
+            }
+        }
+
         coreContext.postOnCoreThread { core ->
             val friend = model.friend
             if (friend == null) {
@@ -158,25 +174,12 @@ abstract class GenericAddressPickerFragment : GenericMainFragment() {
                 return@postOnCoreThread
             }
 
-            val addressesCount = friend.addresses.size
-            val numbersCount = friend.phoneNumbers.size
-
-            // Do not consider phone numbers if default account is in secure mode
-            val enablePhoneNumbers = !isEndToEndEncryptionMandatory()
-
-            if (addressesCount == 1 && (numbersCount == 0 || !enablePhoneNumbers)) {
-                val address = friend.addresses.first()
-                Log.i("$TAG Only 1 SIP address found for contact [${friend.name}], using it")
-                onAddressSelected(address, friend)
-            } else if (addressesCount == 0 && numbersCount == 1 && enablePhoneNumbers) {
-                val number = friend.phoneNumbers.first()
-                val address = core.interpretUrl(number, LinphoneUtils.applyInternationalPrefix())
-                if (address != null) {
-                    Log.i("$TAG Only 1 phone number found for contact [${friend.name}], using it")
-                    onAddressSelected(address, friend)
-                } else {
-                    Log.e("$TAG Failed to interpret phone number [$number] as SIP address")
-                }
+            val singleAvailableAddress = LinphoneUtils.getSingleAvailableAddressForFriend(friend)
+            if (singleAvailableAddress != null) {
+                Log.i(
+                    "$TAG Only 1 SIP address or phone number found for contact [${friend.name}], using it"
+                )
+                onAddressSelected(singleAvailableAddress, friend)
             } else {
                 val list = friend.getListOfSipAddressesAndPhoneNumbers(listener)
                 Log.i(

@@ -42,7 +42,8 @@ import org.linphone.core.CallStats
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
-import org.linphone.core.ChatRoomParams
+import org.linphone.core.Conference
+import org.linphone.core.ConferenceParams
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
 import org.linphone.core.MediaDirection
@@ -56,7 +57,6 @@ import org.linphone.ui.call.model.CallMediaEncryptionModel
 import org.linphone.ui.call.model.CallStatsModel
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
 import org.linphone.ui.main.history.model.NumpadModel
-import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 import org.linphone.utils.AppUtils
 import org.linphone.utils.AudioUtils
 import org.linphone.utils.Event
@@ -139,10 +139,6 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         MutableLiveData<Event<Pair<Boolean, String>>>()
     }
 
-    val goToInitiateBlindTransferEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
-    }
-
     val goToEndedCallEvent: MutableLiveData<Event<String>> by lazy {
         MutableLiveData<Event<String>>()
     }
@@ -177,8 +173,6 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
     val zrtpAuthTokenVerifiedEvent: MutableLiveData<Event<Boolean>> by lazy {
         MutableLiveData<Event<Boolean>>()
     }
-
-    var zrtpSasValidationAttempts = 0
 
     var isZrtpDialogVisible: Boolean = false
     var isZrtpAlertDialogVisible: Boolean = false
@@ -239,7 +233,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         MutableLiveData<Event<Boolean>>()
     }
 
-    private lateinit var currentCall: Call
+    lateinit var currentCall: Call
 
     private val callListener = object : CallListenerStub() {
         @WorkerThread
@@ -252,7 +246,6 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
             Log.w(
                 "$TAG Notified that authentication token is [${if (verified) "verified" else "not verified!"}]"
             )
-            zrtpSasValidationAttempts += 1
             isZrtpSasValidationRequired.postValue(!verified)
             zrtpAuthTokenVerifiedEvent.postValue(Event(verified))
             if (verified) {
@@ -276,7 +269,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
             Log.i("$TAG Call [${call.remoteAddress.asStringUriOnly()}] state changed [$state]")
             if (LinphoneUtils.isCallOutgoing(call.state)) {
                 isVideoEnabled.postValue(call.params.isVideoEnabled)
-                updateVideoDirection(call.currentParams.videoDirection)
+                updateVideoDirection(call.params.videoDirection)
             } else if (LinphoneUtils.isCallEnding(call.state)) {
                 // If current call is being terminated but there is at least one other call, switch
                 val core = call.core
@@ -330,13 +323,8 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                 isVideoEnabled.postValue(videoEnabled)
                 updateVideoDirection(call.currentParams.videoDirection)
 
-                // Toggle full screen OFF when remote disables video
-                if (!videoEnabled && fullScreenMode.value == true) {
-                    Log.w("$TAG Video is not longer enabled, leaving full screen mode")
-                    fullScreenMode.postValue(false)
-                }
-
                 if (call.state == Call.State.Connected) {
+                    updateCallDuration()
                     if (call.conference != null) {
                         Log.i(
                             "$TAG Call is in Connected state and conference isn't null, going to conference fragment"
@@ -347,6 +335,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                         conferenceModel.destroy()
                     }
                 } else if (call.state == Call.State.StreamsRunning) {
+                    updateCallDuration()
                     if (corePreferences.automaticallyStartCallRecording) {
                         isRecording.postValue(call.params.isRecording)
                     }
@@ -378,6 +367,8 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         @WorkerThread
         override fun onStateChanged(chatRoom: ChatRoom, newState: ChatRoom.State?) {
             val state = chatRoom.state
+            if (state == ChatRoom.State.Instantiated) return
+
             val id = LinphoneUtils.getChatRoomId(chatRoom)
             Log.i("$TAG Conversation [$id] (${chatRoom.subject}) state changed: [$state]")
 
@@ -435,6 +426,10 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                     "$TAG There was no current call (shouldn't be possible), using [${call.remoteAddress.asStringUriOnly()}] anyway"
                 )
                 configureCall(call)
+            }
+
+            if (LinphoneUtils.isCallEnding(call.state)) {
+                waitingForEncryptionInfo.postValue(false)
             }
 
             updateProximitySensor()
@@ -531,6 +526,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         }
 
         numpadModel = NumpadModel(
+            true,
             { digit -> // onDigitClicked
                 appendDigitToSearchBarEvent.value = Event(digit)
                 coreContext.postOnCoreThread {
@@ -539,6 +535,8 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                         currentCall.sendDtmf(digit.first())
                     }
                 }
+            },
+            { // onVoicemailClicked
             },
             { // OnBackspaceClicked
                 removedCharacterAtCurrentPositionEvent.value = Event(true)
@@ -635,7 +633,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         coreContext.postOnCoreThread {
             if (::currentCall.isInitialized) {
                 val micMuted = if (currentCall.conference != null) {
-                    currentCall.conference?.microphoneMuted ?: false
+                    currentCall.conference?.microphoneMuted == true
                 } else {
                     currentCall.microphoneMuted
                 }
@@ -644,7 +642,33 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                 } else {
                     currentCall.microphoneMuted = !micMuted
                 }
+                if (micMuted) {
+                    Log.w("$TAG Muting microphone")
+                } else {
+                    Log.i("$TAG Un-muting microphone")
+                }
                 isMicrophoneMuted.postValue(!micMuted)
+            }
+        }
+    }
+
+    @UiThread
+    fun refreshMicrophoneState() {
+        coreContext.postOnCoreThread {
+            if (::currentCall.isInitialized) {
+                val micMuted = if (currentCall.conference != null) {
+                    currentCall.conference?.microphoneMuted == true
+                } else {
+                    currentCall.microphoneMuted
+                }
+                if (micMuted != isMicrophoneMuted.value) {
+                    if (micMuted) {
+                        Log.w("$TAG Microphone is muted, updating button state accordingly")
+                    } else {
+                        Log.i("$TAG Microphone is not muted, updating button state accordingly")
+                    }
+                    isMicrophoneMuted.postValue(micMuted)
+                }
             }
         }
     }
@@ -688,8 +712,8 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                     else -> device.deviceName
                 }
                 val currentDevice = currentCall.outputAudioDevice
-                val isCurrentlyInUse = device.type == currentDevice?.type && device.deviceName == currentDevice?.deviceName
-                val model = AudioDeviceModel(device, name, device.type, isCurrentlyInUse) {
+                val isCurrentlyInUse = device.type == currentDevice?.type && device.deviceName == currentDevice.deviceName
+                val model = AudioDeviceModel(device, name, device.type, isCurrentlyInUse, true) {
                     // onSelected
                     coreContext.postOnCoreThread {
                         Log.i("$TAG Selected audio device with ID [${device.id}]")
@@ -710,7 +734,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                     }
                 }
                 list.add(model)
-                Log.i("$TAG Found audio device [$device]")
+                Log.i("$TAG Found audio device [${device.id}]")
             }
 
             if (list.size > 2) {
@@ -764,6 +788,9 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                             params?.videoDirection = MediaDirection.SendRecv
                         }
                     }
+
+                    val sendingVideo = params?.videoDirection == MediaDirection.SendRecv || params?.videoDirection == MediaDirection.SendOnly
+                    conferenceModel.localVideoStreamToggled(sendingVideo)
                 } else if (params != null) {
                     params.isVideoEnabled = true
                     params.videoDirection = when (currentCall.currentParams.videoDirection) {
@@ -833,8 +860,17 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
 
     @UiThread
     fun toggleFullScreen() {
-        if (fullScreenMode.value == false && isVideoEnabled.value == false) return
-        fullScreenMode.value = fullScreenMode.value != true
+        if (fullScreenMode.value == true) {
+            // Always allow to switch off full screen mode
+            fullScreenMode.value = false
+            return
+        }
+
+        if (isVideoEnabled.value == false) {
+            // Do not allow turning full screen on for audio only calls
+            return
+        }
+        fullScreenMode.value = true
     }
 
     @UiThread
@@ -845,35 +881,6 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
     @UiThread
     fun showNumpad() {
         showNumpadBottomSheetEvent.value = Event(true)
-    }
-
-    @UiThread
-    fun transferClicked() {
-        coreContext.postOnCoreThread { core ->
-            if (core.callsNb == 1) {
-                Log.i("$TAG Only one call, initiate blind call transfer")
-                goToInitiateBlindTransferEvent.postValue(Event(true))
-            } else {
-                val callToTransferTo = core.calls.findLast {
-                    it.state == Call.State.Paused && it != currentCall
-                }
-                if (callToTransferTo == null) {
-                    Log.e(
-                        "$TAG Couldn't find a call in Paused state to transfer current call to"
-                    )
-                    return@postOnCoreThread
-                }
-
-                Log.i(
-                    "$TAG Doing an attended transfer between currently displayed call [${currentCall.remoteAddress.asStringUriOnly()}] and paused call [${callToTransferTo.remoteAddress.asStringUriOnly()}]"
-                )
-                if (callToTransferTo.transferToAnother(currentCall) != 0) {
-                    Log.e("$TAG Failed to make attended transfer!")
-                } else {
-                    Log.i("$TAG Attended transfer is successful")
-                }
-            }
-        }
     }
 
     @UiThread
@@ -899,6 +906,20 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
                     Log.i("$TAG No existing conversation was found, let's create it")
                     createCurrentCallConversation(currentCall)
                 }
+            }
+        }
+    }
+
+    @WorkerThread
+    fun attendedTransferCallTo(to: Call) {
+        if (::currentCall.isInitialized) {
+            Log.i(
+                "$TAG Doing an attended transfer between currently displayed call [${currentCall.remoteAddress.asStringUriOnly()}] and paused call [${to.remoteAddress.asStringUriOnly()}]"
+            )
+            if (to.transferToAnother(currentCall) == 0) {
+                Log.i("$TAG Attended transfer is successful")
+            } else {
+                Log.e("$TAG Failed to make attended transfer!")
             }
         }
     }
@@ -1002,7 +1023,6 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         contact.value?.destroy()
 
         terminatedByUsed = false
-        zrtpSasValidationAttempts = 0
         currentCall = call
         callStatsModel.update(call, call.audioStats)
         callMediaEncryptionModel.update(call)
@@ -1032,25 +1052,44 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         }
 
         if (call.dir == Call.Dir.Incoming) {
+            val isVideo = call.remoteParams?.isVideoEnabled == true && call.remoteParams?.videoDirection != MediaDirection.Inactive
             if (call.core.accountList.size > 1) {
                 val displayName = LinphoneUtils.getDisplayName(call.toAddress)
-                incomingCallTitle.postValue(
-                    AppUtils.getFormattedString(
-                        R.string.call_incoming_for_account,
-                        displayName
+                if (isVideo) {
+                    incomingCallTitle.postValue(
+                        AppUtils.getFormattedString(
+                            R.string.call_video_incoming_for_account,
+                            displayName
+                        )
                     )
-                )
+                } else {
+                    incomingCallTitle.postValue(
+                        AppUtils.getFormattedString(
+                            R.string.call_audio_incoming_for_account,
+                            displayName
+                        )
+                    )
+                }
             } else {
-                incomingCallTitle.postValue(AppUtils.getString(R.string.call_incoming))
+                if (isVideo) {
+                    incomingCallTitle.postValue(AppUtils.getString(R.string.call_video_incoming))
+                } else {
+                    incomingCallTitle.postValue(AppUtils.getString(R.string.call_audio_incoming))
+                }
             }
         }
 
         if (LinphoneUtils.isCallOutgoing(call.state)) {
             isVideoEnabled.postValue(call.params.isVideoEnabled)
+            updateVideoDirection(call.params.videoDirection)
+        } else if (LinphoneUtils.isCallIncoming(call.state)) {
+            isVideoEnabled.postValue(
+                call.remoteParams?.isVideoEnabled == true && call.remoteParams?.videoDirection != MediaDirection.Inactive
+            )
         } else {
             isVideoEnabled.postValue(call.currentParams.isVideoEnabled)
+            updateVideoDirection(call.currentParams.videoDirection)
         }
-        updateVideoDirection(call.currentParams.videoDirection)
 
         if (ActivityCompat.checkSelfPermission(
                 coreContext.context,
@@ -1062,7 +1101,11 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
             )
             isMicrophoneMuted.postValue(true)
         } else {
-            isMicrophoneMuted.postValue(call.conference?.microphoneMuted ?: call.microphoneMuted)
+            val micMuted = call.conference?.microphoneMuted ?: call.microphoneMuted
+            if (micMuted) {
+                Log.w("$TAG Microphone is currently muted")
+            }
+            isMicrophoneMuted.postValue(micMuted)
         }
 
         val audioDevice = call.outputAudioDevice
@@ -1104,7 +1147,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
 
         isRecording.postValue(call.params.isRecording)
 
-        val isRemoteRecording = call.remoteParams?.isRecording ?: false
+        val isRemoteRecording = call.remoteParams?.isRecording == true
         if (isRemoteRecording) {
             Log.w("$TAG Remote end [${displayedName.value.orEmpty()}] is recording the call")
             isRemoteRecordingEvent.postValue(Event(Pair(true, displayedName.value.orEmpty())))
@@ -1164,15 +1207,38 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
 
     @WorkerThread
     private fun updateVideoDirection(direction: MediaDirection) {
+        val state = currentCall.state
+        if (state != Call.State.StreamsRunning) {
+            return
+        }
+
         val isSending = direction == MediaDirection.SendRecv || direction == MediaDirection.SendOnly
-        val isReceived = direction == MediaDirection.SendRecv || direction == MediaDirection.RecvOnly
-        isSendingVideo.postValue(
-            isSending
-        )
-        isReceivingVideo.postValue(
-            isReceived
-        )
-        Log.d("$TAG Is video being sent? [$isSending] Is video being received? [$isReceived]")
+        val isReceiving = direction == MediaDirection.SendRecv || direction == MediaDirection.RecvOnly
+
+        val wasSending = isSendingVideo.value == true
+        val wasReceiving = isReceivingVideo.value == true
+
+        if (isReceiving != wasReceiving || isSending != wasSending) {
+            Log.i(
+                "$TAG Video is enabled in ${if (isSending && isReceiving) "both ways" else if (isSending) "upload" else "download"}"
+            )
+            isSendingVideo.postValue(isSending)
+            isReceivingVideo.postValue(isReceiving)
+        }
+
+        if (currentCall.conference == null) { // Let conference view model handle full screen while in conference
+            if (isReceiving && !wasReceiving) { // Do not change full screen mode base on our video being sent when it wasn't
+                if (fullScreenMode.value != true) {
+                    Log.i(
+                        "$TAG Video is being received or sent (and it wasn't before), switching to full-screen mode"
+                    )
+                    fullScreenMode.postValue(true)
+                }
+            } else if (!isSending && !isReceiving && fullScreenMode.value == true) {
+                Log.w("$TAG Video is no longer sent nor received, leaving full screen mode")
+                fullScreenMode.postValue(false)
+            }
+        }
 
         updateProximitySensor()
     }
@@ -1248,7 +1314,7 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
         val params = getChatRoomParams(call) ?: return // TODO: show error to user
         val conversation = core.createChatRoom(params, localAddress, participants)
         if (conversation != null) {
-            if (params.backend == ChatRoom.Backend.FlexisipChat) {
+            if (params.chatParams?.backend == ChatRoom.Backend.FlexisipChat) {
                 if (conversation.state == ChatRoom.State.Created) {
                     val id = LinphoneUtils.getChatRoomId(conversation)
                     Log.i("$TAG 1-1 conversation [$id] has been created")
@@ -1290,39 +1356,39 @@ class CurrentCallViewModel @UiThread constructor() : GenericViewModel() {
     }
 
     @WorkerThread
-    private fun getChatRoomParams(call: Call): ChatRoomParams? {
+    private fun getChatRoomParams(call: Call): ConferenceParams? {
         val localAddress = call.callLog.localAddress
         val remoteAddress = call.remoteAddress
         val core = call.core
-        val account = core.accountList.find {
-            it.params.identityAddress?.weakEqual(localAddress) == true
-        } ?: LinphoneUtils.getDefaultAccount() ?: return null
+        val account = LinphoneUtils.getAccountForAddress(localAddress) ?: LinphoneUtils.getDefaultAccount() ?: return null
 
-        val params: ChatRoomParams = core.createDefaultChatRoomParams()
+        val params = coreContext.core.createConferenceParams(call.conference)
+        params.isChatEnabled = true
         params.isGroupEnabled = false
         params.subject = AppUtils.getString(R.string.conversation_one_to_one_hidden_subject)
-        params.ephemeralLifetime = 0 // Make sure ephemeral is disabled by default
+        val chatParams = params.chatParams ?: return null
+        chatParams.ephemeralLifetime = 0 // Make sure ephemeral is disabled by default
 
         val sameDomain = remoteAddress.domain == corePreferences.defaultDomain && remoteAddress.domain == account.params.domain
-        if (isEndToEndEncryptionMandatory() && sameDomain) {
+        if (account.params.instantMessagingEncryptionMandatory && sameDomain) {
             Log.i(
                 "$TAG Account is in secure mode & domain matches, requesting E2E encryption"
             )
-            params.backend = ChatRoom.Backend.FlexisipChat
-            params.isEncryptionEnabled = true
-        } else if (!isEndToEndEncryptionMandatory()) {
+            chatParams.backend = ChatRoom.Backend.FlexisipChat
+            params.securityLevel = Conference.SecurityLevel.EndToEnd
+        } else if (!account.params.instantMessagingEncryptionMandatory) {
             if (LinphoneUtils.isEndToEndEncryptedChatAvailable(core)) {
                 Log.i(
                     "$TAG Account is in interop mode but LIME is available, requesting E2E encryption"
                 )
-                params.backend = ChatRoom.Backend.FlexisipChat
-                params.isEncryptionEnabled = true
+                chatParams.backend = ChatRoom.Backend.FlexisipChat
+                params.securityLevel = Conference.SecurityLevel.EndToEnd
             } else {
                 Log.i(
                     "$TAG Account is in interop mode but LIME isn't available, disabling E2E encryption"
                 )
-                params.backend = ChatRoom.Backend.Basic
-                params.isEncryptionEnabled = false
+                chatParams.backend = ChatRoom.Backend.Basic
+                params.securityLevel = Conference.SecurityLevel.None
             }
         } else {
             Log.e(

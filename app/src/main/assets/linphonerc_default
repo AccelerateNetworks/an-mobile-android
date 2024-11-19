@@ -11,6 +11,8 @@ sip_tcp_port=-1
 sip_tls_port=-1
 media_encryption=none
 update_presence_model_timestamp_before_publish_expires_refresh=1
+use_rfc2833=1
+use_info=1
 
 [net]
 #Because dynamic bitrate adaption can increase bitrate, we must allow "no limit"
@@ -39,12 +41,15 @@ version_check_url_root=https://www.linphone.org/releases
 max_calls=10
 history_max_size=100
 conference_layout=1
-hide_empty_chat_rooms=0
+hide_empty_chat_rooms=1
 
 [fec]
 fec_enabled=1
 
 [magic_search]
 return_empty_friends=1
+
+[ui]
+contacts_filter=sip.linphone.org
 
 ## End of default rc

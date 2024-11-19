@@ -58,7 +58,7 @@
             android:layout_height="wrap_content"
             android:textSize="12sp"
             android:text="@{model.avatarModel.name, default=`John Doe`}"
-            android:textColor="?attr/color_main2_700"
+            android:textColor="?attr/color_main2_800"
             android:maxLines="1"
             android:ellipsize="end"
             android:visibility="@{!model.isFromGroup ? View.GONE: model.groupedWithPreviousMessage ? View.GONE : View.VISIBLE}"
@@ -221,14 +221,13 @@
                 android:layout_height="wrap_content"
                 android:text="@{model.text, default=`Lorem ipsum dolor sit amet`}"
                 android:textSize="14sp"
-                android:textColor="?attr/color_main2_700"
+                android:textColor="?attr/color_main2_800"
                 android:gravity="center_vertical|start"
                 android:visibility="@{model.text.length() > 0 ? View.VISIBLE : View.GONE}"/>
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="5dp"
                 android:gravity="center_vertical|start"
                 android:orientation="horizontal">
 
@@ -239,6 +238,7 @@
                     android:onLongClick="@{onLongClickListener}"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:paddingTop="5dp"
                     android:text="@{model.time, default=`13:40`}"
                     android:textSize="12sp" />
 
@@ -248,9 +248,9 @@
                     android:onClick="@{showDeliveryInfoClickListener}"
                     android:onLongClick="@{onLongClickListener}"
                     android:layout_width="@dimen/small_icon_size"
-                    android:layout_height="@dimen/small_icon_size"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="5dp"
-                    android:layout_marginTop="2dp"
+                    android:paddingTop="7dp"
                     android:contentDescription="@string/content_description_chat_bubble_delivery_status"
                     android:src="@{model.statusIcon, default=@drawable/checks}"
                     android:visibility="@{model.isFromGroup ? View.VISIBLE : View.GONE}"
@@ -260,9 +260,10 @@
                     style="@style/default_text_style_300"
                     android:id="@+id/countdown_clock"
                     android:layout_width="@dimen/small_icon_size"
-                    android:layout_height="@dimen/small_icon_size"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="5dp"
-                    android:layout_marginTop="2dp"
+                    android:paddingTop="7dp"
+                    android:layout_gravity="bottom"
                     android:contentDescription="@null"
                     android:src="@drawable/clock_countdown"
                     app:tint="?attr/color_main2_600"
@@ -274,7 +275,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="2dp"
-                    android:textAlignment="textEnd"
+                    android:layout_gravity="bottom"
                     android:text="@{model.ephemeralLifetime, default=`00:00`}"
                     android:textSize="12sp"
                     android:visibility="@{model.isEphemeral ? View.VISIBLE : View.GONE, default=gone}"/>

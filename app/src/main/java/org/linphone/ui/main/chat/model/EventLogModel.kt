@@ -23,15 +23,14 @@ import androidx.annotation.WorkerThread
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.core.EventLog
 import org.linphone.core.tools.Log
-import org.linphone.ui.main.contacts.model.ContactAvatarModel
 import org.linphone.utils.LinphoneUtils
 
 class EventLogModel @WorkerThread constructor(
     val eventLog: EventLog,
-    val avatarModel: ContactAvatarModel,
     isFromGroup: Boolean = false,
     isGroupedWithPreviousOne: Boolean = false,
     isGroupedWithNextOne: Boolean = false,
+    currentFilter: String = "",
     onContentClicked: ((fileModel: FileModel) -> Unit)? = null,
     onJoinConferenceClicked: ((uri: String) -> Unit)? = null,
     onWebUrlClicked: ((url: String) -> Unit)? = null,
@@ -59,7 +58,7 @@ class EventLogModel @WorkerThread constructor(
                 val avatarModel = coreContext.contactsManager.getContactAvatarModelForAddress(from)
                 replyTo = avatarModel.contactName ?: LinphoneUtils.getDisplayName(from)
 
-                LinphoneUtils.getTextDescribingMessage(replyMessage)
+                LinphoneUtils.getPlainTextDescribingMessage(replyMessage)
             } else {
                 Log.e(
                     "$TAG Failed to find the reply message from ID [${chatMessage.replyMessageId}]"
@@ -73,7 +72,6 @@ class EventLogModel @WorkerThread constructor(
 
         MessageModel(
             chatMessage,
-            avatarModel,
             isFromGroup,
             isReply,
             replyTo,
@@ -82,6 +80,7 @@ class EventLogModel @WorkerThread constructor(
             chatMessage.isForward,
             isGroupedWithPreviousOne,
             isGroupedWithNextOne,
+            currentFilter,
             onContentClicked,
             onJoinConferenceClicked,
             onWebUrlClicked,

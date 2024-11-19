@@ -1,6 +1,9 @@
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
+import com.google.gms.googleservices.GoogleServicesPlugin
 import java.io.ByteArrayOutputStream
+import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -8,7 +11,6 @@ plugins {
     alias(libs.plugins.ktlint)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.navigation)
-    alias(libs.plugins.googleGmsServices)
     alias(libs.plugins.crashlytics)
 }
 
@@ -19,7 +21,15 @@ val sdkPath = providers.gradleProperty("LinphoneSdkBuildDir").get()
 val googleServices = File(projectDir.absolutePath + "/google-services.json")
 val linphoneLibs = File("$sdkPath/libs/")
 val linphoneDebugLibs = File("$sdkPath/libs-debug/")
+val firebaseCloudMessagingAvailable = googleServices.exists()
 val crashlyticsAvailable = googleServices.exists() && linphoneLibs.exists() && linphoneDebugLibs.exists()
+
+if (firebaseCloudMessagingAvailable) {
+    println("google-services.json found, enabling CloudMessaging feature")
+    apply<GoogleServicesPlugin>()
+} else {
+    println("google-services.json not found, disabling CloudMessaging feature")
+}
 
 var gitBranch = ByteArrayOutputStream()
 var gitVersion = "6.0.0"
@@ -62,6 +72,7 @@ task("getGitVersion") {
     } catch (e: Exception) {
         println("Git not found [$e], using $gitVersion")
     }
+    project.version = gitVersion
 }
 project.tasks.preBuild.dependsOn("getGitVersion")
 
@@ -103,8 +114,28 @@ android {
         variant.outputs
             .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
             .forEach { output ->
-                output.outputFileName = "linphone-android-${variant.buildType.name}-$versionName.apk"
+                output.outputFileName = "linphone-android-${variant.buildType.name}-${project.version}.apk"
             }
+    }
+
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val keystoreProperties = Properties()
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+
+    signingConfigs {
+        create("release") {
+            val keyStorePath = keystoreProperties["storeFile"] as String
+            val keyStore = project.file(keyStorePath)
+            if (keyStore.exists()) {
+                storeFile = keyStore
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                println("Signing config release is using keystore [$storeFile]")
+            } else {
+                println("Keystore [$storeFile] doesn't exists!")
+            }
+        }
     }
 
     buildTypes {
@@ -124,11 +155,13 @@ android {
             resValue("string", "linphone_app_branch", gitBranch.toString().trim())
 
             if (crashlyticsAvailable) {
+                val path = File("$sdkPath/libs-debug/").toString()
                 configure<CrashlyticsExtension> {
                     nativeSymbolUploadEnabled = true
-                    unstrippedNativeLibsDir = File("$sdkPath/libs-debug/").toString()
+                    unstrippedNativeLibsDir = path
                 }
             }
+            buildConfigField("Boolean", "CRASHLYTICS_ENABLED", crashlyticsAvailable.toString())
         }
 
         getByName("release") {
@@ -137,17 +170,20 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
 
             resValue("string", "file_provider", "$packageName.fileprovider")
             resValue("string", "linphone_app_version", gitVersion.trim())
             resValue("string", "linphone_app_branch", gitBranch.toString().trim())
 
             if (crashlyticsAvailable) {
+                val path = File("$sdkPath/libs-debug/").toString()
                 configure<CrashlyticsExtension> {
                     nativeSymbolUploadEnabled = true
-                    unstrippedNativeLibsDir = File("$sdkPath/libs-debug/").toString()
+                    unstrippedNativeLibsDir = path
                 }
             }
+            buildConfigField("Boolean", "CRASHLYTICS_ENABLED", crashlyticsAvailable.toString())
         }
     }
 

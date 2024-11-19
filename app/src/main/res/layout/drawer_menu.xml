@@ -14,6 +14,9 @@
             name="helpClickedListener"
             type="View.OnClickListener" />
         <variable
+            name="quitClickedListener"
+            type="View.OnClickListener" />
+        <variable
             name="viewModel"
             type="org.linphone.ui.main.viewmodel.DrawerMenuViewModel" />
     </data>
@@ -31,12 +34,12 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginStart="26dp"
-            android:layout_marginTop="30dp"
+            android:layout_marginTop="15dp"
             android:src="@drawable/linphone_notification"
             android:contentDescription="@string/app_name"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:tint="@color/main1_500" />
+            app:tint="?attr/color_main1_500" />
 
         <androidx.appcompat.widget.AppCompatTextView
             style="@style/section_header_style"
@@ -44,8 +47,6 @@
             android:onClick="@{() -> viewModel.closeDrawerMenu()}"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="30dp"
-            android:layout_marginTop="30dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:text="@string/app_name"
@@ -53,15 +54,16 @@
             android:drawableEnd="@drawable/x"
             android:drawablePadding="15dp"
             app:drawableTint="?attr/color_main2_600"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toTopOf="@id/brand_icon"
             app:layout_constraintStart_toEndOf="@id/brand_icon"
+            app:layout_constraintBottom_toBottomOf="@id/brand_icon"
             app:layout_constraintEnd_toEndOf="parent" />
 
         <ScrollView
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginTop="20dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="15dp"
             android:fillViewport="true"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -113,7 +115,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginBottom="30dp"
+            android:layout_marginBottom="15dp"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:text="@string/drawer_menu_add_account"
@@ -130,10 +132,25 @@
             android:id="@+id/separator"
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_marginBottom="30dp"
+            android:layout_marginBottom="15dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:background="?attr/color_main2_200"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/shortcuts" />
+
+        <LinearLayout
+            android:id="@+id/shortcuts"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:orientation="vertical"
+            android:visibility="@{viewModel.shortcuts.empty ? View.GONE : View.VISIBLE, default=gone}"
+            app:entries="@{viewModel.shortcuts}"
+            app:layout="@{@layout/drawer_shortcuts_list_cell}"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toTopOf="@id/settings" />
@@ -182,12 +199,43 @@
             android:id="@+id/help"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
+            android:layout_marginBottom="15dp"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:text="@string/help_title"
             android:drawableStart="@drawable/question"
             android:drawableEnd="@drawable/caret_right"
+            android:drawablePadding="8dp"
+            app:drawableTint="?attr/color_main2_500"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/separator_2" />
+
+        <View
+            android:id="@+id/separator_2"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginBottom="15dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="?attr/color_main2_200"
+            android:visibility="@{viewModel.hideQuitButton ? View.GONE : View.VISIBLE, default=gone}"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/quit" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:onClick="@{quitClickedListener}"
+            style="@style/header_style"
+            android:id="@+id/quit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="15dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:text="@string/help_quit_title"
+            android:visibility="@{viewModel.hideQuitButton ? View.GONE : View.VISIBLE, default=gone}"
+            android:drawableStart="@drawable/power"
             android:drawablePadding="8dp"
             app:drawableTint="?attr/color_main2_500"
             app:layout_constraintStart_toStartOf="parent"

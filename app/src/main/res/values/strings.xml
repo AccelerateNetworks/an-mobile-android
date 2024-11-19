@@ -1,11 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
-<!DOCTYPE resources [
-    <!ENTITY appName "Accelerate Networks">
-]>
-
 <resources>
-    <string name="app_name" translatable="false">&appName;</string>
+    <string name="app_name" translatable="false">Accelerate Networks</string>
 
     <!-- Not translatable strings -->
     <string name="vertical_separator" translatable="false">|</string>
@@ -82,21 +78,21 @@
     <string name="dialog_confirm">Confirm</string>
 
     <!-- Related to Android notifications -->
-    <string name="notification_channel_call_name">&appName; active calls notifications</string>
-    <string name="notification_channel_incoming_call_name">&appName; incoming calls notifications</string>
-    <string name="notification_channel_missed_call_name">&appName; missed calls notifications</string>
-    <string name="notification_channel_service_name">&appName; service notification</string>
+    <string name="notification_channel_call_name">Accelerate Networks active calls notifications</string>
+    <string name="notification_channel_incoming_call_name">Accelerate Networks incoming calls notifications</string>
+    <string name="notification_channel_missed_call_name">Accelerate Networks missed calls notifications</string>
+    <string name="notification_channel_service_name">Accelerate Networks service notification</string>
     <string name="notification_channel_service_desc">This service will run all the time to keep app alive and allow you to receive calls and messages without push notifications.</string>
-    <string name="notification_channel_chat_name">&appName; instant messages notifications</string>
+    <string name="notification_channel_chat_name">Accelerate Networks instant messages notifications</string>
     <string name="notification_chat_message_reaction_received">Reacted by %1$s to: %2$s</string>
     <string name="notification_mark_message_as_read">Mark as read</string>
     <string name="notification_reply_to_message">Reply</string>
     <string name="notification_missed_call">Missed call from %s</string>
     <string name="notification_missed_calls">%s missed calls</string>
     <string name="notification_missed_call_title">Missed call</string>
-    <string name="notification_push_received_title">&appName;</string>
+    <string name="notification_push_received_title">Accelerate Networks</string>
     <string name="notification_push_received_message">Searching for new messages</string>
-    <string name="notification_file_transfer_title">&appName;</string>
+    <string name="notification_file_transfer_title">Accelerate Networks</string>
     <string name="notification_file_transfer_startup_message">File(s) transfer in progress</string>
     <plurals name="notification_file_transfer_upload">
         <item quantity="one">%s file being uploaded</item>
@@ -110,6 +106,7 @@
 
     <!-- First screens user see when app is installed and started -->
     <string name="welcome_page_title">Welcome</string>
+    <string name="welcome_page_subtitle"/>
     <string name="welcome_page_1_message">A <b>secure</b>, <b>open source</b> communication app.</string>
     <string name="welcome_page_2_title">Secure</string>
     <string name="welcome_page_2_message">Your communications are safe thanks to our <b>end-to-end encryption</b>.</string>
@@ -150,7 +147,7 @@
     <string name="assistant_create_account_using_email_on_our_web_platform">Create an account with your email on:</string>
     <string name="assistant_already_have_an_account">Already have an account?</string>
     <string name="assistant_sip_account_transport_protocol">Transport</string>
-    <string name="assistant_third_party_sip_account_warning_explanation">Some features require a &appName; account, such as group messaging, video conferences…\n\nThese features are hidden when you register with a third party SIP account.\n\nTo enable it in a commercial project, please contact us.</string>
+    <string name="assistant_third_party_sip_account_warning_explanation">Some features require a Accelerate Networks account, such as group messaging, video conferences…\n\nThese features are hidden when you register with a third party SIP account.\n\nTo enable it in a commercial project, please contact us.</string>
     <string name="assistant_third_party_sip_account_create_linphone_account">I prefer to create an account</string>
     <string name="assistant_third_party_sip_account_warning_ok">I understand</string>
     <string name="assistant_third_party_sip_account_username_or_identity">Username or SIP identity*</string>
@@ -162,8 +159,8 @@
     <string name="assistant_permissions_title">Grant permissions</string>
     <string name="assistant_permissions_grant_all_of_them">OK</string>
     <string name="assistant_permissions_skip_permissions">Do it later</string>
-    <string name="assistant_permissions_subtitle">To fully enjoy &appName; we need you to grant us the following permissions :</string>
-    <string name="assistant_permissions_read_contacts_title"><b>Read contacts:</b> To display your contacts and find who is using &appName;.</string>
+    <string name="assistant_permissions_subtitle">To fully enjoy Accelerate Networks we need you to grant us the following permissions :</string>
+    <string name="assistant_permissions_read_contacts_title"><b>Read contacts:</b> To display your contacts and find who is using Accelerate Networks.</string>
     <string name="assistant_permissions_post_notifications_title"><b>Push notifications:</b> Allows you to receive a message or call.</string>
     <string name="assistant_permissions_record_audio_title"><b>Record audio:</b> So you can be heard when making and receiving calls.</string>
     <string name="assistant_permissions_access_camera_title"><b>Access camera:</b> So you can scan the QR Code to connect your app.</string>
@@ -186,12 +183,12 @@
 
     <!-- Help & troubleshooting related -->
     <string name="help_title">Help</string>
-    <string name="help_about_title">About &appName;</string>
+    <string name="help_about_title">About Accelerate Networks</string>
     <string name="help_about_privacy_policy_title">Privacy policy</string>
-    <string name="help_about_privacy_policy_subtitle">What information &appName; collects and uses</string>
+    <string name="help_about_privacy_policy_subtitle">What information Accelerate Networks collects and uses</string>
     <string name="help_about_version_title">Version</string>
     <string name="help_about_check_for_update">Check update</string>
-    <string name="help_about_contribute_translations_title">Contribute on &appName; translation</string>
+    <string name="help_about_contribute_translations_title">Contribute on Accelerate Networks translation</string>
     <string name="help_about_advanced_title">Advanced</string>
     <string name="help_version_up_to_date_toast_message">Your version is up-to-date</string>
     <string name="help_error_checking_version_toast_message">An error occurred while checking for update</string>
@@ -313,7 +310,7 @@
     <string name="manage_account_status_progress_summary">Account is connecting to the server, please wait…</string>
     <string name="manage_account_status_failed_summary">Account connection failed, check your settings.</string>
     <string name="manage_account_international_prefix">International Prefix</string>
-    <string name="manage_account_dialog_international_prefix_help_message">Pick your country to allow &appName; to match your contacts.</string>
+    <string name="manage_account_dialog_international_prefix_help_message">Pick your country to allow Accelerate Networks to match your contacts.</string>
     <string name="manage_account_settings">Account settings</string>
     <string name="manage_account_delete">Sign out</string>
     <string name="manage_account_choose_mode_title">Choose account mode</string>
@@ -321,7 +318,7 @@
     <string name="manage_account_e2e_encrypted_mode_default_title">End-to-end encrypted mode</string>
     <string name="manage_account_e2e_encrypted_mode_interoperable_title">Interoperable mode</string>
     <string name="manage_account_e2e_encrypted_mode_default_summary">This mode guarantee your data confidentiality. Our end-to-end encryption technology provide the highest level or security for your communications.</string>
-    <string name="manage_account_e2e_encrypted_mode_interoperable_summary">This mode allows you to enjoy all &appName; features while staying interoperable with any SIP service through point-to-point encryption.</string>
+    <string name="manage_account_e2e_encrypted_mode_interoperable_summary">This mode allows you to enjoy all Accelerate Networks features while staying interoperable with any SIP service through point-to-point encryption.</string>
     <string name="manage_account_device_remove">Remove</string>
     <string name="manage_account_device_last_connection">Last connection:</string>
     <string name="manage_account_dialog_remove_account_title">Sign out of your account?</string>
@@ -373,7 +370,7 @@
     <string name="contacts_list_favourites_title">Favourites</string>
     <string name="contacts_list_all_contacts_title">All contacts</string>
     <string name="contacts_list_filter_popup_see_all">See all</string>
-    <string name="contacts_list_filter_popup_see_linphone_only">See &appName; contacts</string>
+    <string name="contacts_list_filter_popup_see_linphone_only">See Accelerate Networks contacts</string>
     <string name="contacts_list_filter_popup_see_sip_only">See SIP contacts</string>
 
     <string name="contact_new_title">New contact</string>
@@ -402,7 +399,7 @@
     <string name="contact_details_remove_from_favourites">Remove from favourites</string>
     <string name="contact_details_share">Share</string>
     <string name="contact_details_delete">Delete</string>
-    <string name="contact_sms_invite_content">Hello, join me on &appName;! You can download it for free at %s</string>
+    <string name="contact_sms_invite_content">Hello, join me on Accelerate Networks! You can download it for free at %s</string>
     <string name="contact_deleted_toast">Contact has been removed</string>
     <string name="contact_details_phone_number_copied_to_clipboard_toast">Number copied into clipboard</string>
 
@@ -476,7 +473,7 @@
     <string name="conversation_end_to_end_encrypted_event_title">End-to-end encrypted conversation</string>
     <string name="conversation_end_to_end_encrypted_event_subtitle">Messages in this conversation are e2e encrypted. Only your correspondent can decrypt them.</string>
     <string name="conversation_end_to_end_encrypted_bottom_sheet_title">Guaranteed confidentiality</string>
-    <string name="conversation_end_to_end_encrypted_bottom_sheet_message">Thanks to end-to-end encryption technology in &appName;, messages, calls and meetings confidentiality are guaranteed. No-one can decrypt exchanged data, not even ourselves.</string>
+    <string name="conversation_end_to_end_encrypted_bottom_sheet_message">Thanks to end-to-end encryption technology in Accelerate Networks, messages, calls and meetings confidentiality are guaranteed. No-one can decrypt exchanged data, not even ourselves.</string>
     <string name="conversation_warning_disabled_because_not_secured_title">This conversation is not encrypted!</string>
     <string name="conversation_warning_disabled_because_not_secured_subtitle">For your safety, this conversation was disabled.</string>
     <string name="conversation_warning_disabled_encrypted_bottom_sheet_title">Mandatory encryption</string>
@@ -487,7 +484,7 @@
     <string name="conversation_dialog_subject_cant_be_empty_error">Subject is mandatory</string>
     <string name="conversation_dialog_subject_hint">Conversation subject</string>
     <string name="conversation_dialog_open_or_export_file_title">Open or export file?</string>
-    <string name="conversation_dialog_open_or_export_file_message">&appName; can\'t open this file.\n\nDo you want to open it in another app (if possible), or export it on your device?</string>
+    <string name="conversation_dialog_open_or_export_file_message">Accelerate Networks can\'t open this file.\n\nDo you want to open it in another app (if possible), or export it on your device?</string>
     <string name="conversation_dialog_open_file_label">Open file</string>
     <string name="conversation_dialog_export_file_label">Export file</string>
     <string name="conversation_failed_to_play_voice_recording_message">Voice recording cannot be played!</string>

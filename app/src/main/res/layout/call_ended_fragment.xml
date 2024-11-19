@@ -61,7 +61,6 @@
             app:layout_constraintBottom_toBottomOf="@id/call_direction_label"/>
 
         <include
-            android:visibility="@{View.GONE}"
             android:id="@+id/call_media_encryption_info"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

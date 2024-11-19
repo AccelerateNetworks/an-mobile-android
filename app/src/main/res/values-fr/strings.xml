@@ -1,9 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
-<!DOCTYPE resources [
-    <!ENTITY appName "Linphone">
-]>
-
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Common words -->
     <string name="sip_address">Adresse SIP</string>
@@ -46,21 +42,21 @@
     <string name="dialog_confirm">Confirmer</string>
 
     <!-- Related to Android notifications -->
-    <string name="notification_channel_call_name">&appName; notifications d\'appels en cours</string>
-    <string name="notification_channel_incoming_call_name">&appName; notifications d\'appels entrants</string>
-    <string name="notification_channel_missed_call_name">&appName; notifications d\'appels manqués</string>
-    <string name="notification_channel_service_name">&appName; notification de service</string>
+    <string name="notification_channel_call_name">Accelerate Networks notifications d\'appels en cours</string>
+    <string name="notification_channel_incoming_call_name">Accelerate Networks notifications d\'appels entrants</string>
+    <string name="notification_channel_missed_call_name">Accelerate Networks notifications d\'appels manqués</string>
+    <string name="notification_channel_service_name">Accelerate Networks notification de service</string>
     <string name="notification_channel_service_desc">Ce service sera actif en permanence pour garder l\'app en vie et vous permettre de recevoir appels et messages sans recourir aux notifications push.</string>
-    <string name="notification_channel_chat_name">&appName; notifications des conversations</string>
+    <string name="notification_channel_chat_name">Accelerate Networks notifications des conversations</string>
     <string name="notification_chat_message_reaction_received">A réagi par %1$s à : %2$s</string>
     <string name="notification_mark_message_as_read">Marquer comme lu</string>
     <string name="notification_reply_to_message">Répondre</string>
     <string name="notification_missed_call">Appel manqué de %s</string>
     <string name="notification_missed_calls">%s appels manqués</string>
     <string name="notification_missed_call_title">Appel manqué</string>
-    <string name="notification_push_received_title">&appName;</string>
+    <string name="notification_push_received_title">Accelerate Networks</string>
     <string name="notification_push_received_message">Recherche de nouveaux messages</string>
-    <string name="notification_file_transfer_title">&appName;</string>
+    <string name="notification_file_transfer_title">Accelerate Networks</string>
     <string name="notification_file_transfer_startup_message">Transfert de fichier(s) en cours</string>
     <plurals name="notification_file_transfer_upload" tools:ignore="MissingQuantity">
         <item quantity="one">%s fichier en cours d\'envoi</item>
@@ -73,7 +69,7 @@
 
     <!-- First screens user see when app is installed and started -->
     <string name="welcome_page_title">Bienvenue</string>
-    <string name="welcome_page_subtitle">sur &appName;</string>
+    <string name="welcome_page_subtitle">sur Accelerate Networks</string>
     <string name="welcome_page_1_message">Une application de communication <b>sécurisée</b>, <b>open source</b> et <b>française</b>.</string>
     <string name="welcome_page_2_title">Sécurisé</string>
     <string name="welcome_page_2_message">Vos communications sont en sécurité grâce au <b>chiffrement de bout en bout</b>.</string>
@@ -114,7 +110,7 @@
     <string name="assistant_create_account_using_email_on_our_web_platform">Créez un compte avec votre email ici :</string>
     <string name="assistant_already_have_an_account">Vous avez déjà un compte ?</string>
     <string name="assistant_sip_account_transport_protocol">Transport</string>
-    <string name="assistant_third_party_sip_account_warning_explanation">Certaines fonctionalités telles que les conversations de groupe, les vidéo-conférences, etc… nécessitent un compte &appName;.\n\nCes fonctionalités seront masquées si vous utilisez un compte SIP tiers.\n\nPour les activer dans un projet commercial, merci de nous contacter.</string>
+    <string name="assistant_third_party_sip_account_warning_explanation">Certaines fonctionalités telles que les conversations de groupe, les vidéo-conférences, etc… nécessitent un compte Accelerate Networks.\n\nCes fonctionalités seront masquées si vous utilisez un compte SIP tiers.\n\nPour les activer dans un projet commercial, merci de nous contacter.</string>
     <string name="assistant_third_party_sip_account_create_linphone_account">Je préfère créer un compte</string>
     <string name="assistant_third_party_sip_account_warning_ok">J\'ai compris</string>
     <string name="assistant_third_party_sip_account_username_or_identity">Nom d\'utilisateur ou identité SIP*</string>
@@ -126,8 +122,8 @@
     <string name="assistant_permissions_title">Donner les permissions</string>
     <string name="assistant_permissions_grant_all_of_them">OK</string>
     <string name="assistant_permissions_skip_permissions">Plus tard</string>
-    <string name="assistant_permissions_subtitle">Pour vous permettre de vous profitez pleinement de &appName;, nous avons besoin des autorisations suivantes :</string>
-    <string name="assistant_permissions_read_contacts_title"><b>Contacts :</b> Pour vous afficher vos contacts et retrouver qui utilise &appName;.</string>
+    <string name="assistant_permissions_subtitle">Pour vous permettre de vous profitez pleinement de Accelerate Networks, nous avons besoin des autorisations suivantes :</string>
+    <string name="assistant_permissions_read_contacts_title"><b>Contacts :</b> Pour vous afficher vos contacts et retrouver qui utilise Accelerate Networks.</string>
     <string name="assistant_permissions_post_notifications_title"><b>Notifications :</b> Pour vous informer quand vous recevez un message ou un appel.</string>
     <string name="assistant_permissions_record_audio_title"><b>Microphone :</b> Pour permettre à vos correspondants de vous entendre. </string>
     <string name="assistant_permissions_access_camera_title"><b>Caméra :</b> Pour capturer votre vidéo lors des appels et des conférences.</string>
@@ -150,12 +146,12 @@
 
     <!-- Help & troubleshooting related -->
     <string name="help_title">Aide</string>
-    <string name="help_about_title">À propos de &appName;</string>
+    <string name="help_about_title">À propos de Accelerate Networks</string>
     <string name="help_about_privacy_policy_title">Politique de confidentialité</string>
-    <string name="help_about_privacy_policy_subtitle">Quelles informations &appName; collecte et utilise</string>
+    <string name="help_about_privacy_policy_subtitle">Quelles informations Accelerate Networks collecte et utilise</string>
     <string name="help_about_version_title">Version</string>
     <string name="help_about_check_for_update">Vérifier les mises à jour</string>
-    <string name="help_about_contribute_translations_title">Aider à traduire &appName;</string>
+    <string name="help_about_contribute_translations_title">Aider à traduire Accelerate Networks</string>
     <string name="help_about_advanced_title">Avancé</string>
     <string name="help_version_up_to_date_toast_message">Votre version est à jour</string>
     <string name="help_error_checking_version_toast_message">Une erreur est survenue</string>
@@ -277,7 +273,7 @@
     <string name="manage_account_status_progress_summary">Connexion en cours, merci de patienter…</string>
     <string name="manage_account_status_failed_summary">Erreur de connexion, vérifiez vos paramètres.</string>
     <string name="manage_account_international_prefix">Indicatif international</string>
-    <string name="manage_account_dialog_international_prefix_help_message">Choisisez votre pays pour permettre à &appName; de faire le lien avec vos contacts.</string>
+    <string name="manage_account_dialog_international_prefix_help_message">Choisisez votre pays pour permettre à Accelerate Networks de faire le lien avec vos contacts.</string>
     <string name="manage_account_settings">Paramètres de compte</string>
     <string name="manage_account_delete">Se déconnecter</string>
     <string name="manage_account_choose_mode_title">Choisir le mode</string>
@@ -285,7 +281,7 @@
     <string name="manage_account_e2e_encrypted_mode_default_title">Chiffré de bout en bout</string>
     <string name="manage_account_e2e_encrypted_mode_interoperable_title">Intéropérable</string>
     <string name="manage_account_e2e_encrypted_mode_default_summary">Ce mode vous garantit la confidentialité de tous vos échanges. Notre technologie de chiffrement de bout en bout assure un niveau de sécurité maximal pour tous vos échanges.</string>
-    <string name="manage_account_e2e_encrypted_mode_interoperable_summary">Ce mode vous permet de profiter de toutes les fonctionnalités de &appName; tout en restant interopérable avec n’importe qu’elle autre service SIP.</string>
+    <string name="manage_account_e2e_encrypted_mode_interoperable_summary">Ce mode vous permet de profiter de toutes les fonctionnalités de Accelerate Networks tout en restant interopérable avec n’importe qu’elle autre service SIP.</string>
     <string name="manage_account_device_remove">Supprimer</string>
     <string name="manage_account_device_last_connection">Dernière connexion :</string>
     <string name="manage_account_dialog_remove_account_title">Se déconnecter du compte ?</string>
@@ -336,7 +332,7 @@
     <string name="contacts_list_favourites_title">Favoris</string>
     <string name="contacts_list_all_contacts_title">Tous les contacts</string>
     <string name="contacts_list_filter_popup_see_all">Voir tous les contacts</string>
-    <string name="contacts_list_filter_popup_see_linphone_only">Voir les contacts &appName;</string>
+    <string name="contacts_list_filter_popup_see_linphone_only">Voir les contacts Accelerate Networks</string>
     <string name="contacts_list_filter_popup_see_sip_only">Voir les contacts SIP</string>
 
     <string name="contact_new_title">Nouveau contact</string>
@@ -365,7 +361,7 @@
     <string name="contact_details_remove_from_favourites">Enlever des favoris</string>
     <string name="contact_details_share">Partager</string>
     <string name="contact_details_delete">Supprimer</string>
-    <string name="contact_sms_invite_content">Salut, rejoins moi sur &appName; ! Tu peux le télécharger gratuitement sur %s</string>
+    <string name="contact_sms_invite_content">Salut, rejoins moi sur Accelerate Networks ! Tu peux le télécharger gratuitement sur %s</string>
     <string name="contact_deleted_toast">Le contact a été supprimé</string>
     <string name="contact_details_phone_number_copied_to_clipboard_toast">Le numéro de téléphone a été copié</string>
 
@@ -439,7 +435,7 @@
     <string name="conversation_end_to_end_encrypted_event_title">Conversation chiffrée de bout en bout</string>
     <string name="conversation_end_to_end_encrypted_event_subtitle">Les messages de cette conversation sont chiffrés de bout en bout. Seul votre correspondant peut les déchiffrer.</string>
     <string name="conversation_end_to_end_encrypted_bottom_sheet_title">La confidentialité de vos échanges garantie</string>
-    <string name="conversation_end_to_end_encrypted_bottom_sheet_message">Grâce à la technologie de chiffrement de bout en bout de &appName;, la confidentialité de vos messages, appels et réunions avec vos correspondants est garantie. Personne ne pourra déchiffrer vos conversations, pas même &appName;.</string>
+    <string name="conversation_end_to_end_encrypted_bottom_sheet_message">Grâce à la technologie de chiffrement de bout en bout de Accelerate Networks, la confidentialité de vos messages, appels et réunions avec vos correspondants est garantie. Personne ne pourra déchiffrer vos conversations, pas même Accelerate Networks.</string>
     <string name="conversation_warning_disabled_because_not_secured_title">Cette conversation n\'est pas chiffrée !</string>
     <string name="conversation_warning_disabled_because_not_secured_subtitle">Cette conversation a été désactivée pour garantir votre sécurité.</string>
     <string name="conversation_warning_disabled_encrypted_bottom_sheet_title">Chiffrement obligatoire</string>
@@ -450,7 +446,7 @@
     <string name="conversation_dialog_subject_cant_be_empty_error">Un nom est obligatoire</string>
     <string name="conversation_dialog_subject_hint">Nom de la conversation</string>
     <string name="conversation_dialog_open_or_export_file_title">Ouvrir ou sauvegarder le fichier ?</string>
-    <string name="conversation_dialog_open_or_export_file_message">&appName; ne peut ouvrir ce fichier.\n\nVoulez-vous l\'ouvrir dans une autre app (si possible), ou le sauvegarder sur votre appareil ?</string>
+    <string name="conversation_dialog_open_or_export_file_message">Accelerate Networks ne peut ouvrir ce fichier.\n\nVoulez-vous l\'ouvrir dans une autre app (si possible), ou le sauvegarder sur votre appareil ?</string>
     <string name="conversation_dialog_open_file_label">Ouvrir le fichier</string>
     <string name="conversation_dialog_export_file_label">Sauvegarder le fichier</string>
     <string name="conversation_failed_to_play_voice_recording_message">Impossible de lire le message vocal !</string>

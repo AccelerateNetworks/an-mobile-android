@@ -27,7 +27,6 @@
             app:layout_constraintTop_toTopOf="parent"/>
 
         <include
-            android:visibility="@{View.GONE}"
             android:id="@+id/call_media_encryption_info"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

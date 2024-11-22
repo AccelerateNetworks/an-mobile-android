@@ -129,7 +129,7 @@ class CorePreferences
     // This won't be done if bluetooth or wired headset is used
     @get:WorkerThread @set:WorkerThread
     var routeAudioToSpeakerWhenVideoIsEnabled: Boolean
-        get() = config.getBool("app", "route_audio_to_speaker_when_video_enabled", true)
+        get() = config.getBool("app", "route_audio_to_speaker_when_video_enabled", false)
         set(value) {
             config.setBool("app", "route_audio_to_speaker_when_video_enabled", value)
         }

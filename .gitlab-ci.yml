@@ -6,7 +6,7 @@ build:apk:
     - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
     - echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
     - git config --global --add safe.directory "${CI_PROJECT_DIR}"
-    - sudo chown -R $(whoami) $ANDROID_HOME
+    - chown -R $(whoami) $ANDROID_HOME
 
   script:
     - ./gradlew app:dependencies | grep org.linphone

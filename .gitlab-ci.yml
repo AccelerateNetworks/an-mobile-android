@@ -1,12 +1,11 @@
 build:apk:
-  image: registry.git.callpipe.com/acceleratenetworks/an-mobile-android/bc-dev-android-33
+  image: registry.git.callpipe.com/acceleratenetworks/an-mobile-android/bc-dev-android-35
   tags: ["docker"]
   before_script:
     - echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
     - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
     - echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
     - git config --global --add safe.directory "${CI_PROJECT_DIR}"
-    - chown -R $(whoami) $ANDROID_HOME
 
   script:
     - ./gradlew app:dependencies | grep org.linphone

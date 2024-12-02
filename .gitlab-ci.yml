@@ -1,19 +1,25 @@
-#################################################
-# Base configuration
-#################################################
+build:apk:
+  image: registry.git.callpipe.com/acceleratenetworks/an-mobile-android/bc-dev-android-33
+  tags: ["docker"]
+  before_script:
+    - echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
+    - echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
+    - echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
+    - git config --global --add safe.directory "${CI_PROJECT_DIR}"
+  script:
+    - ./gradlew app:dependencies | grep org.linphone
+    - ./gradlew assembleRelease
+    - ./gradlew bundleRelease
+    - cp app/build/outputs/apk/release/*.apk .
+    - cp app/build/outputs/bundle/release/*.aab .
+    - if [[ "${CI_COMMIT_REF_NAME}" == "main" ]]; then python3 upload-app.py --track beta com.acceleratenetworks.mobile "$(./version.sh)"; fi
+    - if [[ "${CI_COMMIT_REF_NAME}" == "testing" ]]; then python3 upload-app.py --track alpha com.acceleratenetworks.mobile "$(./version.sh)"; fi
+  variables:
+    GIT_STRATEGY: clone
+  artifacts:
+    when: always
+    paths:
+      - "*.apk"
+      - "*.aab"
+    expire_in: 1 week
 
-
-
-#################################################
-# Platforms to test
-#################################################
-
-
-include:
-  - '.gitlab-ci-files/job-android.yml'
-  - '.gitlab-ci-files/job-upload.yml'
-
-
-stages:
- - build
- - deploy

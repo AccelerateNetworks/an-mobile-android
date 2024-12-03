@@ -33,7 +33,7 @@ dependencyResolutionManagement {
             maven {
                 println("Using CI built SDK from maven repository at https://linphone.org/maven_repository")
                 name = "linphone.org maven repository"
-                url = uri("https://linphone.org/maven_repository")
+                url = uri("https://download.linphone.org/releases/maven_repository")
                 content {
                     includeGroup("org.linphone")
                 }

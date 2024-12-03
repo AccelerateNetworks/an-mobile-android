@@ -8,7 +8,7 @@ build:apk:
     - git config --global --add safe.directory "${CI_PROJECT_DIR}"
 
   script:
-    - ./gradlew app:dependencies | grep org.linphone
+    - ./gradlew app:dependencies
     - ./gradlew assembleRelease
     - ./gradlew bundleRelease
     - cp app/build/outputs/apk/release/*.apk .

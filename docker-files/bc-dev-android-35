@@ -14,8 +14,8 @@ ENV SHELL=/bin/bash
 ENV ANDROID_HOME=/opt/android-sdk-linux
 
 # Install common general tools
-RUN apt-get update && \
-    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-22-jdk-headless python3 && \
+RUN apt-get update &&  \
+    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-22-jdk-headless python3 python3-googleapi && \
     apt-get clean
 
 # Get latest Android command line tools, otherwise won't work with JDK 17
@@ -30,9 +30,7 @@ RUN wget https://dl.google.com/android/repository/commandlinetools-linux-1107670
 ENV PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$PATH
 
 # Get the Android SDK
-RUN echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools"
-RUN echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35"
-RUN echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0"
+RUN echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-35" "build-tools;34.0.0"
 
 # Accept Android SDK licenses
 RUN yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses

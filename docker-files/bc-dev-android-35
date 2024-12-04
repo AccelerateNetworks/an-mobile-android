@@ -15,7 +15,7 @@ ENV ANDROID_HOME=/opt/android-sdk-linux
 
 # Install common general tools
 RUN apt-get update && \
-    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-17-jdk-headless && \
+    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-17-jdk-headless python3 && \
     apt-get clean
 
 # Get latest Android command line tools, otherwise won't work with JDK 17

@@ -112,6 +112,7 @@
 
     <!-- First screens user see when app is installed and started -->
     <string name="welcome_page_title">Welcome</string>
+    <string name="welcome_page_subtitle">to &appName;</string>
     <string name="welcome_page_1_message">A <b>secure</b>, <b>open source</b> communication app.</string>
     <string name="welcome_page_2_title">Secure</string>
     <string name="welcome_page_2_message">Your communications are safe thanks to our <b>end-to-end encryption</b>.</string>

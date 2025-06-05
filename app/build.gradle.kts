@@ -122,22 +122,27 @@ android {
 
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val keystoreProperties = Properties()
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 
-    signingConfigs {
-        create("release") {
-            val keyStorePath = keystoreProperties["storeFile"] as String
-            val keyStore = project.file(keyStorePath)
-            if (keyStore.exists()) {
-                storeFile = keyStore
-                storePassword = keystoreProperties["storePassword"] as String
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                println("Signing config release is using keystore [$storeFile]")
-            } else {
-                println("Keystore [$storeFile] doesn't exists!")
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+
+        signingConfigs {
+            create("release") {
+                val keyStorePath = keystoreProperties["storeFile"] as String
+                val keyStore = project.file(keyStorePath)
+                if (keyStore.exists()) {
+                    storeFile = keyStore
+                    storePassword = keystoreProperties["storePassword"] as String
+                    keyAlias = keystoreProperties["keyAlias"] as String
+                    keyPassword = keystoreProperties["keyPassword"] as String
+                    println("Signing config release is using keystore [$storeFile]")
+                } else {
+                    println("Keystore [$storeFile] doesn't exists!")
+                }
             }
         }
+    } else {
+        println("Proceeding without singing keys!")
     }
 
     buildTypes {
@@ -173,7 +178,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.getByName("release")
+            if (signingConfigs.asMap.containsKey("release")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
 
             resValue("string", "file_provider", "$packageName.fileprovider")
             resValue("string", "linphone_app_version", gitVersion.trim())

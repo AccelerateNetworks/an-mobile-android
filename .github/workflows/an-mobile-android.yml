@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/acceleratenetworks/bc-dev-android-35
+      options: --user root
     timeout-minutes: 60
     env:
       GIT_STRATEGY: clone

@@ -1,0 +1,49 @@
+name: AccelerateNetworks/an-mobile-android
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+concurrency:
+  group: "${{ github.ref }}"
+  cancel-in-progress: true
+env:
+  ANDROID_KEYSTORE_KEY_ALIAS: key0
+  ANDROID_KEYSTORE_KEY_PASSWORD: "${{ secrets.ANDROID_KEYSTORE_KEY_PASSWORD }}"
+  ANDROID_KEYSTORE_PASSWORD: "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+  APK_SIGNING_KEYSTORE: "${{ secrets.APK_SIGNING_KEYSTORE }}"
+  GOOGLE_SERVICES_JSON: "${{ secrets.GOOGLE_SERVICES_JSON }}"
+  GOOGLE_APPLICATION_CREDENTIALS: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
+  
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/acceleratenetworks/bc-dev-android-35
+    timeout-minutes: 60
+    env:
+      GIT_STRATEGY: clone
+    steps:
+    - uses: actions/checkout@v4.1.0
+      with:
+        fetch-depth: 50
+        lfs: true
+    - run: echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
+    - run: echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
+    - run: echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
+    - run: git config --global --add safe.directory "${{ github.workspace }}"
+    - run: "./gradlew app:dependencies | grep org.linphone"
+    - run: "./gradlew assembleRelease"
+    - run: "./gradlew bundleRelease"
+    - run: cp app/build/outputs/apk/release/*.apk .
+    - run: cp app/build/outputs/bundle/release/*.aab .
+    - run: if [[ "${{ github.ref }}" == "main" ]]; then python3 upload-app.py --track beta com.acceleratenetworks.mobile "$(./version.sh)"; fi
+    - run: if [[ "${{ github.ref }}" == "testing" ]]; then python3 upload-app.py --track alpha com.acceleratenetworks.mobile "$(./version.sh)"; fi
+    - uses: actions/upload-artifact@v4.1.0
+      if: always()
+      with:
+        name: "${{ github.job }}"
+        retention-days: 7
+        path: |-
+          *.apk
+          *.aab

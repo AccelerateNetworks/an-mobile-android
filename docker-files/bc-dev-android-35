@@ -1,5 +1,7 @@
 FROM debian:trixie
 
+LABEL org.opencontainers.image.source=https://github.com/AccelerateNetworks/an-mobile-android
+
 # Configure locale
 RUN apt-get update && \
     apt-get install -y locales && \
@@ -15,7 +17,7 @@ ENV ANDROID_HOME=/opt/android-sdk-linux
 
 # Install common general tools
 RUN apt-get update &&  \
-    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-22-jdk-headless python3 python3-googleapi && \
+    apt-get install -y curl nano sudo unzip vim wget rsync ssh git openjdk-25-jdk-headless python3 python3-googleapi && \
     apt-get clean
 
 # Get latest Android command line tools, otherwise won't work with JDK 17

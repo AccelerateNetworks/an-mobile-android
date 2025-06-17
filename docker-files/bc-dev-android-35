@@ -42,6 +42,6 @@ RUN chmod -R ugo+rwx $ANDROID_HOME
 
 # Consider all git repositories as safe
 RUN git --version
-RUN git config --global --add safe.directory '*'
+RUN git config --system --add safe.directory '*'
 
 CMD bash

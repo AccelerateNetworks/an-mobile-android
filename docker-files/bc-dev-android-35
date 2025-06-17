@@ -44,12 +44,4 @@ RUN chmod -R ugo+rwx $ANDROID_HOME
 RUN git --version
 RUN git config --global --add safe.directory '*'
 
-# Configure user bc
-RUN useradd -ms /bin/bash bc && \
-    echo 'bc:cotcot' | chpasswd && \
-    echo 'bc ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-USER bc
-WORKDIR /home/bc
-ENV PS1='\[\e[34m\]\u@bc-dev-android>\[\e[0m\] '
 CMD bash

@@ -7,13 +7,6 @@ on:
 concurrency:
   group: "${{ github.ref }}"
   cancel-in-progress: true
-env:
-  ANDROID_KEYSTORE_KEY_ALIAS: key0
-  ANDROID_KEYSTORE_KEY_PASSWORD: "${{ secrets.ANDROID_KEYSTORE_KEY_PASSWORD }}"
-  ANDROID_KEYSTORE_PASSWORD: "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
-  APK_SIGNING_KEYSTORE: "${{ secrets.APK_SIGNING_KEYSTORE }}"
-  GOOGLE_SERVICES_JSON: "${{ secrets.GOOGLE_SERVICES_JSON }}"
-  GOOGLE_APPLICATION_CREDENTIALS: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
   
 jobs:
   build-apk:
@@ -23,6 +16,12 @@ jobs:
     timeout-minutes: 60
     env:
       GIT_STRATEGY: clone
+      ANDROID_KEYSTORE_KEY_ALIAS: key0
+      ANDROID_KEYSTORE_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_KEY_PASSWORD }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      APK_SIGNING_KEYSTORE: ${{ secrets.APK_SIGNING_KEYSTORE }}
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
     steps:
     - uses: actions/checkout@v4.1.0
       with:

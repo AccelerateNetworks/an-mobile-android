@@ -28,8 +28,7 @@ jobs:
         fetch-depth: 50
         lfs: true
     - run: echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
-    - run: echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
-    - run: cat keystore.properties
+    - run: echo "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
     - run: echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
     - run: git config --global --add safe.directory "${{ github.workspace }}"
     - run: "./gradlew app:dependencies | grep org.linphone"

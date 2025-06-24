@@ -33,6 +33,7 @@ jobs:
     - run: echo "${APK_SIGNING_KEYSTORE}" | base64 -d > app/keystore.jks
     - run: echo -e "storePassword=${ANDROID_KEYSTORE_PASSWORD}\nkeyPassword=${ANDROID_KEYSTORE_KEY_PASSWORD}\nkeyAlias=${ANDROID_KEYSTORE_KEY_ALIAS}\nstoreFile=keystore.jks" > keystore.properties
     - run: echo "${GOOGLE_SERVICES_JSON}" > app/google-services.json
+    - run: echo "${GOOGLE_APPLICATION_CREDENTIALS}" > google-creds.json
     - run: git config --global --add safe.directory "${{ github.workspace }}"
     - run: "./gradlew app:dependencies | grep org.linphone"
     - run: "./gradlew assembleRelease"
@@ -40,7 +41,7 @@ jobs:
     - run: cp app/build/outputs/apk/release/*.apk .
     - run: cp app/build/outputs/bundle/release/*.aab .
     - run: |
-        export GOOGLE_APPLICATION_CREDENTIALS=./app/google-services.json
+        export GOOGLE_APPLICATION_CREDENTIALS=./app/google-creds.json
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then python3 upload-app.py --track beta com.acceleratenetworks.mobile "$(./version.sh)"; fi
         if [[ "${{ github.ref }}" == "refs/heads/testing" ]]; then python3 upload-app.py --track alpha com.acceleratenetworks.mobile "$(./version.sh)"; fi
     - uses: actions/upload-artifact@v4.1.0

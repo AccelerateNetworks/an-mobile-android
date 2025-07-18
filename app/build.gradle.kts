@@ -32,7 +32,7 @@ if (firebaseCloudMessagingAvailable) {
 }
 
 var gitBranch = ByteArrayOutputStream()
-var gitVersion = "6.0.11"
+var gitVersion = "6.0.12"
 
 task("getGitVersion") {
     val gitVersionStream = ByteArrayOutputStream()

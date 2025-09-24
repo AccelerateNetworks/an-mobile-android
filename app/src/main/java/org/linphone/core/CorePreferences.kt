@@ -258,7 +258,7 @@ class CorePreferences
     // Allows to make screenshots
     @get:WorkerThread @set:WorkerThread
     var enableSecureMode: Boolean
-        get() = config.getBool("ui", "enable_secure_mode", true)
+        get() = config.getBool("ui", "enable_secure_mode", false)
         set(value) {
             config.setBool("ui", "enable_secure_mode", value)
         }

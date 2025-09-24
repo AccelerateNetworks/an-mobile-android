@@ -156,7 +156,7 @@ class ConferenceViewModel
             } else {
                 Log.w("$TAG Notified active speaker participant device is null, using first one that's not us")
                 val firstNotUs = participantDevices.value.orEmpty().find {
-                    it.isMe == false
+                    !it.isMe
                 }
                 if (firstNotUs != null) {
                     Log.i("$TAG Newly active speaker participant is [${firstNotUs.name}]")
@@ -261,6 +261,7 @@ class ConferenceViewModel
                 isPaused.postValue(!isIn)
                 Log.i("$TAG We [${if (isIn) "are" else "aren't"}] in the conference")
 
+                subject.postValue(conference.subjectUtf8.orEmpty())
                 computeParticipants(false)
                 if (conference.participantList.size >= 1) { // we do not count
                     Log.i("$TAG Joined conference already has at least another participant")
@@ -312,7 +313,7 @@ class ConferenceViewModel
         val chatEnabled = conference.currentParams.isChatEnabled
         isConversationAvailable.postValue(chatEnabled)
 
-        val confSubject = conference.subject.orEmpty()
+        val confSubject = conference.subjectUtf8.orEmpty()
         Log.i(
             "$TAG Configuring conference with subject [$confSubject] from call [${call.callLog.callId}]"
         )

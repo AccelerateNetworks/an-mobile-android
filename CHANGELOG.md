@@ -10,6 +10,72 @@ Group changes to describe their impact on the project, as follows:
     Fixed for any bug fixes.
     Security to invite users to upgrade in case of vulnerabilities.
 
+## [6.0.18] - 2025-09-15
+
+### Added
+- Added menu icon next to currently selected account avatar to make the drawer menu easier to understand
+- Added missing dialpad floating action button in the call transfer fragment
+
+### Changed
+- Improved bodyless friendlist presence process when it's received
+
+### Fixed
+- Fixed "End-to-end encrypted call" label while in conference, the call may be end-to-end encrypted but only to the conference server, not to all participants
+- Fixed missing meeting subject when calling the conference SIP URI if the conference info doesn't exist yet
+- Finish CallActivity if no call is found when trying to answer/decline a call from the IncomingCallFragment
+- Prevent empty screen when rotating the device and clicking on the empty part next to the list while in landscape and then rotating the device back to portrait
+
+## [6.0.17] - 2025-09-02
+
+### Changed
+- Portuguese translation updated from Weblate (still not complete)
+
+### Fixed
+- Vibrator not stopped when call is terminated sometimes (SDK fix)
+- Chat conversation not visible sometimes (SDK fix)
+
+## [6.0.16] - 2025-08-25
+
+## Added
+- Access to Help/Troubleshooting pages from Assistant
+
+## Fixed
+- Some Core methods being called from UI thread causing either a crash or a deadlock sometimes
+- Scrolling issue when doing a search in a conversation with only one result
+- Contacts not updated after body less presence notify was received
+- VFS issue due to encrypted.pref file being backed up by Android OS
+
+## [6.0.15] - 2025-08-11
+
+### Fixed
+- Crash due to changes in SDK triggering fatal error if linphone_core_stop() is called from linphone_core_iterate() loop (which was done when scanning QR code)
+
+### Changed
+- Prevent leaving assistant after doing a remote provisioning if there is still no account after it (if there was no account before and no account was provided in downloaded config)
+
+## [6.0.14] - 2025-08-06
+
+### Fixed
+- Fixed ANR due to deadlock caused by method being called from wrong thread
+- Fixed microphone not always recording audio while app in background or if screen is turned off
+- Fixed missing favorites in start call / create conversation views
+- Fixed outgoing call view in full screen
+- Fixed generated avatar for SIP URIs without username
+
+## [6.0.13] - 2025-07-31
+
+### Fixed
+- Missing favourites if contacts list size exceeds magic search max results setting
+- Muted call on some devices due to Telecom Manager quickly muting/unmuting call
+- Full screen without video during outgoing early media call if video has been declined by remote end
+- Removed duplicated week label if "no meeting today" is the first entry for current week
+- Prevent crash during file export if no app on the device can handle it
+- Prevent crash that could happen with chat message notification if sender name (or group chat room subject) is empty
+
+### Changed
+- Back gesture / navigation button will close the numpad bottom sheet if it's open instead of leaving the page directly
+- Updated bell and bell_slash icons
+
 ## [6.0.12] - 2025-07-18
 
 ### Fixed

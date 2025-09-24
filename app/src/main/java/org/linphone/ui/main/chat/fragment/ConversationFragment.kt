@@ -544,8 +544,8 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                     "$TAG Voice record playback finished, looking for voice record in next message"
                 )
                 val list = viewModel.eventsList
-                val model = list.find {
-                    (it.model as? MessageModel)?.id == id
+                val model = list.find { eventLogModel ->
+                    (eventLogModel.model as? MessageModel)?.id == id
                 }
                 if (model != null) {
                     val index = list.indexOf(model)
@@ -770,13 +770,15 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
         viewModel.sipUriToCallEvent.observe(viewLifecycleOwner) {
             it.consume { sipUri ->
-                if (messageLongPressViewModel.visible.value == true) return@consume
-                val address = coreContext.core.interpretUrl(sipUri, false)
-                if (address != null) {
-                    Log.i("$TAG Starting audio call to parsed SIP URI [${address.asStringUriOnly()}]")
-                    coreContext.startAudioCall(address)
-                } else {
-                    Log.w("$TAG Failed to parse [$sipUri] as SIP URI")
+                coreContext.postOnCoreThread {
+                    if (messageLongPressViewModel.visible.value == true) return@postOnCoreThread
+                    val address = coreContext.core.interpretUrl(sipUri, false)
+                    if (address != null) {
+                        Log.i("$TAG Starting audio call to parsed SIP URI [${address.asStringUriOnly()}]")
+                        coreContext.startAudioCall(address)
+                    } else {
+                        Log.w("$TAG Failed to parse [$sipUri] as SIP URI")
+                    }
                 }
             }
         }
@@ -832,9 +834,21 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
         viewModel.itemToScrollTo.observe(viewLifecycleOwner) { position ->
             if (position >= 0) {
-                Log.i("$TAG Scrolling to message/event at position [$position]")
                 val recyclerView = binding.eventsList
-                recyclerView.scrollToPosition(position)
+                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                val firstDisplayedItemPosition = layoutManager.findFirstVisibleItemPosition()
+                val lastDisplayedItemPosition = layoutManager.findLastVisibleItemPosition()
+                Log.i(
+                    "$TAG Scrolling to message/event at position [$position], " +
+                        "display show events between positions [$firstDisplayedItemPosition] and [$lastDisplayedItemPosition]"
+                )
+                if (firstDisplayedItemPosition > position && position > 0) {
+                    recyclerView.scrollToPosition(position - 1)
+                } else if (lastDisplayedItemPosition < position && position < layoutManager.itemCount - 1) {
+                    recyclerView.scrollToPosition(position + 1)
+                } else {
+                    recyclerView.scrollToPosition(position)
+                }
             }
         }
 

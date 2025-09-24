@@ -611,6 +611,7 @@ class CurrentCallViewModel
                 coreContext.answerCall(call)
             } else {
                 Log.e("$TAG No call found in incoming state, can't answer any!")
+                finishActivityEvent.postValue(Event(true))
             }
         }
     }
@@ -622,6 +623,9 @@ class CurrentCallViewModel
                 Log.i("$TAG Terminating call [${currentCall.remoteAddress.asStringUriOnly()}]")
                 terminatedByUser = true
                 coreContext.terminateCall(currentCall)
+            } else {
+                Log.e("$TAG No call to decline!")
+                finishActivityEvent.postValue(Event(true))
             }
         }
     }
@@ -1292,8 +1296,9 @@ class CurrentCallViewModel
             return
         }
 
-        val isSending = direction == MediaDirection.SendRecv || direction == MediaDirection.SendOnly
-        val isReceiving = direction == MediaDirection.SendRecv || direction == MediaDirection.RecvOnly
+        val isConnected = state == Call.State.Connected || state == Call.State.StreamsRunning
+        val isSending = (state == Call.State.OutgoingEarlyMedia || isConnected) && (direction == MediaDirection.SendRecv || direction == MediaDirection.SendOnly)
+        val isReceiving = (state == Call.State.IncomingEarlyMedia || isConnected) && (direction == MediaDirection.SendRecv || direction == MediaDirection.RecvOnly)
 
         val wasSending = isSendingVideo.value == true
         val wasReceiving = isReceivingVideo.value == true

@@ -129,8 +129,9 @@ class ContactNewOrEditViewModel
 
     @AnyThread
     fun getPictureFileName(): String {
-        val name = id.value?.replace(" ", "_") ?: "${firstName.value.orEmpty().trim()}_${lastName.value.orEmpty().trim()}"
-        return "$name.jpg"
+        val name = id.value ?: "${firstName.value.orEmpty().trim()}_${lastName.value.orEmpty().trim()}"
+        val flattenedName = name.replace(" ", "_").replace(":", "")
+        return "$flattenedName.jpg"
     }
 
     @UiThread
@@ -262,10 +263,14 @@ class ContactNewOrEditViewModel
     fun addSipAddress(address: String = "", requestFieldToBeAddedInUi: Boolean = false) {
         val newModel = NewOrEditNumberOrAddressModel(address, true, "", {
             if (address.isEmpty()) {
-                addSipAddress(requestFieldToBeAddedInUi = true)
+                coreContext.postOnCoreThread {
+                    addSipAddress(requestFieldToBeAddedInUi = true)
+                }
             }
         }, { model ->
-            removeModel(model)
+            coreContext.postOnCoreThread {
+                removeModel(model)
+            }
         })
         sipAddresses.add(newModel)
 
@@ -282,10 +287,14 @@ class ContactNewOrEditViewModel
     ) {
         val newModel = NewOrEditNumberOrAddressModel(number, false, label, {
             if (number.isEmpty()) {
-                addPhoneNumber(requestFieldToBeAddedInUi = true)
+                coreContext.postOnCoreThread {
+                    addPhoneNumber(requestFieldToBeAddedInUi = true)
+                }
             }
         }, { model ->
-            removeModel(model)
+            coreContext.postOnCoreThread {
+                removeModel(model)
+            }
         })
         phoneNumbers.add(newModel)
 
@@ -294,14 +303,14 @@ class ContactNewOrEditViewModel
         }
     }
 
-    @UiThread
+    @WorkerThread
     private fun removeModel(model: NewOrEditNumberOrAddressModel) {
         if (model.isSip) {
             sipAddresses.remove(model)
         } else {
             phoneNumbers.remove(model)
         }
-        removeNewNumberOrAddressFieldEvent.value = Event(model)
+        removeNewNumberOrAddressFieldEvent.postValue(Event(model))
     }
 
     @UiThread

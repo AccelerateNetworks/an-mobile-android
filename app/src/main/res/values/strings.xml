@@ -192,6 +192,7 @@
     <!-- Side menu -->
     <string name="drawer_menu_manage_account">Manage the profile</string>
     <string name="drawer_menu_account_connection_status_connected">Connected</string>
+    <string name="drawer_menu_account_connection_status_disconnected">Disconnected</string>
     <string name="drawer_menu_account_connection_status_refreshing">Refreshing</string>
     <string name="drawer_menu_account_connection_status_cleared">Disabled</string>
     <string name="drawer_menu_account_connection_status_progress">Connecting…</string>
@@ -260,6 +261,7 @@
     <string name="settings_conversations_auto_export_media_to_native_gallery_title">Make downloaded media public</string>
     <string name="settings_conversations_mark_as_read_when_dismissing_notif_title">Mark conversation as read when dismissing message notification</string>
     <string name="settings_contacts_title">Contacts</string>
+    <string name="settings_contacts_presence_subscribe_title">Subscribe to presence info</string>
     <string name="settings_contacts_add_ldap_server_title">Add LDAP server</string>
     <string name="settings_contacts_edit_ldap_server_title">Edit LDAP server</string>
     <string name="settings_contacts_add_carddav_server_title">Add CardDAV address book</string>
@@ -279,8 +281,8 @@
     <string name="settings_contacts_ldap_bind_dn_title">Bind DN</string>
     <string name="settings_contacts_ldap_password_title">Password</string>
     <string name="settings_contacts_ldap_use_tls_title">Use TLS</string>
-    <string name="settings_contacts_ldap_search_base_title">Search</string>
-    <string name="settings_contacts_ldap_search_filter_title">Search base (can\'t be empty)</string>
+    <string name="settings_contacts_ldap_search_base_title">Search base (can\'t be empty)</string>
+    <string name="settings_contacts_ldap_search_filter_title">Filter</string>
     <string name="settings_contacts_ldap_max_results_title">Max results</string>
     <string name="settings_contacts_ldap_request_timeout_title">Timeout (in seconds)</string>
     <string name="settings_contacts_ldap_request_delay_title">Delay between two queries (in milliseconds)</string>
@@ -359,6 +361,7 @@
     <string name="manage_account_edit_picture">Edit picture</string>
     <string name="manage_account_remove_picture">Remove picture</string>
     <string name="manage_account_status_connected_summary">This account in online, everybody can call you.</string>
+    <string name="manage_account_status_disconnected_summary">This account in offline, probably because you aren\'t connected to internet right now.</string>
     <string name="manage_account_status_cleared_summary">Account has been disabled, you won\'t receive any call or message.</string>
     <string name="manage_account_status_progress_summary">Account is connecting to the server, please wait…</string>
     <string name="manage_account_status_failed_summary">Account connection failed, check your settings.</string>

@@ -143,6 +143,7 @@
     <!-- Side menu -->
     <string name="drawer_menu_manage_account">Mon compte</string>
     <string name="drawer_menu_account_connection_status_connected">Connecté</string>
+    <string name="drawer_menu_account_connection_status_disconnected">Déconnecté</string>
     <string name="drawer_menu_account_connection_status_refreshing">Rafraîchissement…</string>
     <string name="drawer_menu_account_connection_status_cleared">Désactivé</string>
     <string name="drawer_menu_account_connection_status_progress">Connexion…</string>
@@ -209,6 +210,7 @@
     <string name="settings_conversations_auto_export_media_to_native_gallery_title">Rendre visible dans la galerie les médias téléchargés</string>
     <string name="settings_conversations_mark_as_read_when_dismissing_notif_title">Marquer la conversation comme lue lorsqu\'une notification de message est supprimée</string>
     <string name="settings_contacts_title">Contacts</string>
+    <string name="settings_contacts_presence_subscribe_title">Souscrire aux informations de présence</string>
     <string name="settings_contacts_add_ldap_server_title">Ajouter un serveur LDAP</string>
     <string name="settings_contacts_edit_ldap_server_title">Editer le serveur LDAP</string>
     <string name="settings_contacts_add_carddav_server_title">Ajouter un carnet d\'adresse CardDAV</string>
@@ -305,6 +307,7 @@
     <string name="manage_account_edit_picture">Modifier </string>
     <string name="manage_account_remove_picture">Supprimer</string>
     <string name="manage_account_status_connected_summary">Vous êtes en ligne, on peut vous joindre.</string>
+    <string name="manage_account_status_disconnected_summary">Vous êtes hors ligne, probablement car vous n\'êtes pas actuellement connecté à internet.</string>
     <string name="manage_account_status_cleared_summary">Compte désactivé, vous ne recevrez ni appel ni message.</string>
     <string name="manage_account_status_progress_summary">Connexion en cours, merci de patienter…</string>
     <string name="manage_account_status_failed_summary">Erreur de connexion, vérifiez vos paramètres.</string>
@@ -344,8 +347,8 @@
     <string name="account_settings_cpim_in_basic_conversations_title">Utiliser CPIM dans les conversations \"basiques\"</string>
     <string name="account_settings_voicemail_uri_title">URI de la messagerie vocale</string>
     <string name="account_settings_mwi_uri_title">URI du serveur MWI (Message Waiting Indicator)</string>
-    <string name="account_settings_apply_international_prefix_title">Formatter les numéros en utilisant l\'indicatif international</string>
-    <string name="account_settings_replace_plus_by_00_title">Remplacer + par 00 lors du formattage des numéros de téléphone</string>
+    <string name="account_settings_apply_international_prefix_title">Formater les numéros en utilisant l\'indicatif international</string>
+    <string name="account_settings_replace_plus_by_00_title">Remplacer + par 00 lors du formatage des numéros de téléphone</string>
     <string name="account_settings_update_password_title">Mettre à jour le mot de passe</string>
     <string name="account_settings_dialog_invalid_password_title">Autentification requise</string>
     <string name="account_settings_dialog_invalid_password_message">La connexion a échoué pour le compte \n%s.\n\nVous pouvez renseigner votre mot de passe à nouveau ou bien vérifier les options de configuration de votre compte.</string>

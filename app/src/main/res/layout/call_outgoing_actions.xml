@@ -52,7 +52,7 @@
             android:layout_height="@dimen/call_button_size"
             android:layout_marginEnd="16dp"
             android:padding="@dimen/call_button_icon_padding"
-            android:visibility="@{viewModel.hideVideo ? View.GONE : View.VISIBLE}"
+            android:visibility="@{View.GONE}"
             android:contentDescription="@null"
             android:enabled="@{false}"
             android:src="@{viewModel.isVideoEnabled ? @drawable/video_camera : @drawable/video_camera_slash, default=@drawable/video_camera}"

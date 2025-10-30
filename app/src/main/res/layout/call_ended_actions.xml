@@ -55,7 +55,7 @@
             android:contentDescription="@null"
             android:enabled="@{false}"
             android:background="@drawable/shape_round_in_call_disabled_button_background"
-            android:visibility="@{viewModel.hideVideo ? View.GONE : View.VISIBLE}"
+            android:visibility="@{View.GONE}"
             app:tint="@color/in_call_button_tint_color"
             app:layout_constraintHorizontal_bias="1"
             app:layout_constraintHorizontal_chainStyle="packed"

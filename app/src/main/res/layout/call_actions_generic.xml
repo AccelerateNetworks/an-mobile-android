@@ -4,6 +4,7 @@
 
     <data>
         <import type="android.view.View" />
+        <import type="org.linphone.ui.call.conference.viewmodel.ConferenceViewModel" />
         <variable
             name="viewModel"
             type="org.linphone.ui.call.viewmodel.CurrentCallViewModel" />
@@ -52,8 +53,8 @@
             android:layout_height="@dimen/call_button_size"
             android:layout_marginEnd="16dp"
             android:padding="@dimen/call_button_icon_padding"
-            android:enabled="@{!viewModel.isPaused &amp;&amp; !viewModel.isPausedByRemote &amp;&amp; !viewModel.videoUpdateInProgress}"
-            android:visibility="@{View.GONE}"
+            android:enabled="@{!viewModel.isPaused &amp;&amp; !viewModel.isPausedByRemote &amp;&amp; !viewModel.videoUpdateInProgress &amp;&amp; (!viewModel.conferenceModel.isCurrentCallInConference || viewModel.conferenceModel.conferenceLayout != ConferenceViewModel.AUDIO_ONLY_LAYOUT)}"
+            android:visibility="@{viewModel.hideVideo ? View.GONE : View.VISIBLE}"
             android:src="@{viewModel.isSendingVideo ? @drawable/video_camera : @drawable/video_camera_slash, default=@drawable/video_camera}"
             android:background="@drawable/in_call_button_background_red"
             android:contentDescription="@string/content_description_toggle_video"
@@ -69,7 +70,7 @@
             android:id="@+id/video_update_in_progress"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:visibility="@{View.GONE}"
+            android:visibility="@{viewModel.videoUpdateInProgress ? View.VISIBLE : View.GONE}"
             android:indeterminate="true"
             app:indicatorColor="?attr/color_main1_500"
             app:layout_constraintTop_toTopOf="@id/toggle_video"
@@ -77,16 +78,25 @@
             app:layout_constraintStart_toStartOf="@id/toggle_video"
             app:layout_constraintEnd_toEndOf="@id/toggle_video"/>
 
-        <ImageView
+        <org.linphone.ui.call.view.VuMeterView
+            android:id="@+id/record_volume_vu_meter"
             android:onClick="@{() -> viewModel.toggleMuteMicrophone()}"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/in_call_button_background_red"
+            vuMeterPercentage="@{viewModel.microphoneRecordingVolume}"
+            app:layout_constraintTop_toTopOf="@id/toggle_mute_mic"
+            app:layout_constraintBottom_toBottomOf="@id/toggle_mute_mic"
+            app:layout_constraintStart_toStartOf="@id/toggle_mute_mic"
+            app:layout_constraintEnd_toEndOf="@id/toggle_mute_mic" />
+
+        <ImageView
             android:id="@+id/toggle_mute_mic"
             android:layout_width="@dimen/call_button_size"
             android:layout_height="@dimen/call_button_size"
             android:layout_marginEnd="16dp"
             android:padding="@dimen/call_button_icon_padding"
-            android:selected="@{viewModel.isMicrophoneMuted}"
             android:src="@{viewModel.isMicrophoneMuted ? @drawable/microphone_slash : @drawable/microphone, default=@drawable/microphone}"
-            android:background="@drawable/in_call_button_background_red"
             android:contentDescription="@string/content_description_toggle_microphone"
             app:tint="@color/in_call_button_tint_color"
             app:layout_constraintTop_toBottomOf="@id/call_actions_handle"
@@ -94,15 +104,25 @@
             app:layout_constraintStart_toEndOf="@id/toggle_video"
             app:layout_constraintEnd_toStartOf="@id/change_audio_output" />
 
-        <ImageView
+        <org.linphone.ui.call.view.VuMeterView
+            android:id="@+id/playback_volume_vu_meter"
             android:onClick="@{() -> viewModel.changeAudioOutputDevice()}"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/in_call_button_background_red"
+            vuMeterPercentage="@{viewModel.playbackVolume}"
+            app:layout_constraintTop_toTopOf="@id/change_audio_output"
+            app:layout_constraintBottom_toBottomOf="@id/change_audio_output"
+            app:layout_constraintStart_toStartOf="@id/change_audio_output"
+            app:layout_constraintEnd_toEndOf="@id/change_audio_output" />
+
+        <ImageView
             android:id="@+id/change_audio_output"
             android:layout_width="@dimen/call_button_size"
             android:layout_height="@dimen/call_button_size"
             android:layout_marginEnd="16dp"
             android:padding="@dimen/call_button_icon_padding"
-            android:src="@{viewModel.isHearingAidEnabled ? @drawable/ear : viewModel.isHeadsetEnabled ? @drawable/headset : viewModel.isBluetoothEnabled ? @drawable/bluetooth : viewModel.isSpeakerEnabled ? @drawable/speaker_high : @drawable/speaker_slash, default=@drawable/speaker_slash}"
-            android:background="@drawable/in_call_button_background_red"
+            android:src="@{viewModel.isHdmiEnabled ? @drawable/monitor : viewModel.isHearingAidEnabled ? @drawable/ear : viewModel.isHeadsetEnabled ? @drawable/headset : viewModel.isBluetoothEnabled ? @drawable/bluetooth : viewModel.isSpeakerEnabled ? @drawable/speaker_high : @drawable/speaker_slash, default=@drawable/speaker_slash}"
             android:contentDescription="@string/content_description_change_output_audio_device"
             app:tint="@color/in_call_button_tint_color"
             app:layout_constraintTop_toBottomOf="@id/call_actions_handle"

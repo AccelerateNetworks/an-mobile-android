@@ -19,9 +19,6 @@
  */
 package org.linphone.ui.main.chat.viewmodel
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.view.View
 import androidx.annotation.UiThread
 import androidx.lifecycle.MutableLiveData
@@ -31,6 +28,7 @@ import org.linphone.core.tools.Log
 import org.linphone.databinding.ChatBubbleEmojiPickerBottomSheetBinding
 import org.linphone.ui.GenericViewModel
 import org.linphone.ui.main.chat.model.MessageModel
+import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 
 class ChatMessageLongPressViewModel : GenericViewModel() {
@@ -48,26 +46,36 @@ class ChatMessageLongPressViewModel : GenericViewModel() {
 
     val isChatRoomReadOnly = MutableLiveData<Boolean>()
 
+    val canBeEdited = MutableLiveData<Boolean>()
+
+    val canBeRemotelyDeleted = MutableLiveData<Boolean>()
+
     val messageModel = MutableLiveData<MessageModel>()
 
     val isMessageOutgoing = MutableLiveData<Boolean>()
 
     val isMessageInError = MutableLiveData<Boolean>()
 
+    val hasBeenRetracted = MutableLiveData<Boolean>()
+
     val showImdnInfoEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
+    }
+
+    val editMessageEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData()
     }
 
     val replyToMessageEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val forwardMessageEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val deleteMessageEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val onDismissedEvent = MutableLiveData<Event<Boolean>>()
@@ -76,6 +84,8 @@ class ChatMessageLongPressViewModel : GenericViewModel() {
 
     init {
         visible.value = false
+        canBeEdited.value = false
+        canBeRemotelyDeleted.value = false
     }
 
     @UiThread
@@ -92,6 +102,9 @@ class ChatMessageLongPressViewModel : GenericViewModel() {
         isMessageOutgoing.value = model.isOutgoing
         isMessageInError.value = model.isInError.value == true
         horizontalBias.value = if (model.isOutgoing) 1f else 0f
+        canBeEdited.value = model.chatMessage.isEditable
+        canBeRemotelyDeleted.value = model.chatMessage.isRetractable
+        hasBeenRetracted.value = model.hasBeenRetracted.value == true
         messageModel.value = model
 
         emojiBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
@@ -125,13 +138,20 @@ class ChatMessageLongPressViewModel : GenericViewModel() {
     }
 
     @UiThread
-    fun copyClickListener() {
-        Log.i("$TAG Copying message text into clipboard")
+    fun edit() {
+        Log.i("$TAG Editing message")
+        editMessageEvent.value = Event(true)
+        dismiss()
+    }
 
-        val text = messageModel.value?.text?.value?.toString()
-        val clipboard = coreContext.context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val label = "Message"
-        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+    @UiThread
+    fun copyClickListener() {
+        val text = messageModel.value?.getRawTextContent().orEmpty()
+        if (text.isNotEmpty()) {
+            Log.i("$TAG Copying message text into clipboard")
+            val label = "Message"
+            AppUtils.copyToClipboard(coreContext.context, label, text)
+        }
 
         dismiss()
     }
@@ -147,7 +167,6 @@ class ChatMessageLongPressViewModel : GenericViewModel() {
     fun deleteClickListener() {
         Log.i("$TAG Deleting message")
         deleteMessageEvent.value = Event(true)
-        dismiss()
     }
 
     @UiThread

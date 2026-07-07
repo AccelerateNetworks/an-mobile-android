@@ -32,6 +32,7 @@ import org.linphone.R
 import org.linphone.core.Address
 import org.linphone.core.Conference
 import org.linphone.core.ConferenceListenerStub
+import org.linphone.core.Friend
 import org.linphone.core.MediaDirection
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.history.model.NumpadModel
@@ -61,23 +62,27 @@ class StartCallViewModel
     val operationInProgress = MutableLiveData<Boolean>()
 
     val appendDigitToSearchBarEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val removedCharacterAtCurrentPositionEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val clearSearchBarEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val requestKeyboardVisibilityChangedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val leaveFragmentEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
+    }
+
+    val initiateBlindTransferEvent: MutableLiveData<Event<Pair<Address, String>>> by lazy {
+        MutableLiveData()
     }
 
     val initiateBlindTransferEvent: MutableLiveData<Event<Pair<Address, String>>> by lazy {
@@ -172,6 +177,12 @@ class StartCallViewModel
         }
 
         updateGroupCallButtonVisibility()
+    }
+
+    @WorkerThread
+    override fun onSingleAddressSelected(address: Address, friend: Friend?) {
+        coreContext.startAudioCall(address)
+        leaveFragmentEvent.postValue(Event(true))
     }
 
     @UiThread

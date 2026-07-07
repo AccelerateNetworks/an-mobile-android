@@ -2,4 +2,11 @@
 <resources>
     <dimen name="welcome_icon_size">150dp</dimen>
     <dimen name="text_input_max_width">600dp</dimen>
+    <dimen name="landscape_nav_bar_width">90dp</dimen>
+    <dimen name="sliding_pane_left_fragment_width">500dp</dimen>
+    <dimen name="section_max_width">800dp</dimen>
+
+    <integer name="media_columns">8</integer>
+
+    <dimen name="chat_bubble_big_image_max_size">350dp</dimen>
 </resources>

@@ -15,7 +15,8 @@
         android:onClick="@{() -> model.setAsDefault()}"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@{model.isDefault ? @drawable/color_main2_100 : @drawable/color_main2_000, default=@drawable/color_main2_100}">
+        android:selected="@{model.isDefault}"
+        android:background="@drawable/account_list_background">
 
         <androidx.constraintlayout.widget.Barrier
             android:id="@+id/end_barrier"
@@ -122,14 +123,14 @@
             app:layout_constraintEnd_toStartOf="@id/menu"/>
 
         <ImageView
-            android:onClick="@{() -> model.openMenu(menu)}"
+            style="@style/icon_top_bar_button_style"
+            android:onClick="@{() -> model.openMenu()}"
             android:id="@+id/menu"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
-            android:padding="15dp"
-            android:adjustViewBounds="true"
-            android:contentDescription="@string/content_description_open_drawer_menu_icon"
-            android:src="@drawable/dots_three_vertical"
+            android:contentDescription="@string/drawer_menu_manage_account"
+            android:src="@drawable/user_circle_gear"
+            app:layout_constraintDimensionRatio="1:1"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/name"
             app:layout_constraintBottom_toBottomOf="@id/register_status"
@@ -142,6 +143,7 @@
             android:layout_marginEnd="10dp"
             android:background="?attr/color_separator"
             android:visibility="gone"
+            android:importantForAccessibility="no"
             app:layout_constraintStart_toStartOf="@id/name"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>

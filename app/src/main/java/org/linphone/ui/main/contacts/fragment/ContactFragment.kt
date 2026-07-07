@@ -21,9 +21,6 @@ package org.linphone.ui.main.contacts.fragment
 
 import android.app.Dialog
 import android.content.ActivityNotFoundException
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.ContactsContract
@@ -116,6 +113,24 @@ class ContactFragment : SlidingPaneChildFragment() {
 
         binding.setDeleteClickListener {
             showDeleteConfirmationDialog()
+        }
+
+        binding.setGoToSharedMediaClickListener {
+            if (findNavController().currentDestination?.id == R.id.contactFragment) {
+                val conversationId = viewModel.existingConversationId.value.orEmpty()
+                Log.i("$TAG Going to shared media fragment for conversation [$conversationId]")
+                val action = ContactFragmentDirections.actionContactFragmentToConversationMediaListFragment(conversationId)
+                findNavController().navigate(action)
+            }
+        }
+
+        binding.setGoToSharedDocumentsClickListener {
+            if (findNavController().currentDestination?.id == R.id.contactFragment) {
+                val conversationId = viewModel.existingConversationId.value.orEmpty()
+                Log.i("$TAG Going to shared documents fragment for conversation [$conversationId]")
+                val action = ContactFragmentDirections.actionContactFragmentToConversationDocumentsListFragment(conversationId)
+                findNavController().navigate(action)
+            }
         }
 
         sharedViewModel.isSlidingPaneSlideable.observe(viewLifecycleOwner) { slideable ->
@@ -221,8 +236,8 @@ class ContactFragment : SlidingPaneChildFragment() {
         }
 
         viewModel.startCallToDeviceToIncreaseTrustEvent.observe(viewLifecycleOwner) {
-            it.consume { pair ->
-                callDirectlyOrShowConfirmTrustCallDialog(pair.first, pair.second)
+            it.consume { triple ->
+                callDirectlyOrShowConfirmTrustCallDialog(triple.first, triple.second, triple.third)
             }
         }
 
@@ -252,19 +267,15 @@ class ContactFragment : SlidingPaneChildFragment() {
     }
 
     private fun copyNumberOrAddressToClipboard(value: String, isSip: Boolean) {
-        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val label = if (isSip) "SIP address" else "Phone number"
-        clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
-
-        val message = if (isSip) {
-            getString(R.string.sip_address_copied_to_clipboard_toast)
-        } else {
-            getString(R.string.contact_details_phone_number_copied_to_clipboard_toast)
+        if (AppUtils.copyToClipboard(requireContext(), label, value)) {
+            val message = if (isSip) {
+                getString(R.string.sip_address_copied_to_clipboard_toast)
+            } else {
+                getString(R.string.contact_details_phone_number_copied_to_clipboard_toast)
+            }
+            (requireActivity() as GenericActivity).showGreenToast(message, R.drawable.check)
         }
-        (requireActivity() as GenericActivity).showGreenToast(
-            message,
-            R.drawable.check
-        )
     }
 
     private fun shareContact(name: String, file: File) {
@@ -311,18 +322,18 @@ class ContactFragment : SlidingPaneChildFragment() {
     }
 
     private fun showTrustProcessDialog() {
-        val initials = viewModel.contact.value?.initials?.value ?: "JD"
+        val initials = viewModel.contact.value?.initials?.value.orEmpty()
         val picture = viewModel.contact.value?.picturePath?.value.orEmpty()
         val model = ContactTrustDialogModel(initials, picture)
         val dialog = DialogUtils.getContactTrustProcessExplanationDialog(requireActivity(), model)
         dialog.show()
     }
 
-    private fun callDirectlyOrShowConfirmTrustCallDialog(contactName: String, deviceSipUri: String) {
+    private fun callDirectlyOrShowConfirmTrustCallDialog(contactName: String, deviceName: String, deviceSipUri: String) {
         coreContext.postOnCoreThread {
             if (corePreferences.showDialogWhenCallingDeviceUuidDirectly) {
                 coreContext.postOnMainThread {
-                    showConfirmTrustCallDialog(contactName, deviceSipUri)
+                    showConfirmTrustCallDialog(contactName, deviceName, deviceSipUri)
                 }
             } else {
                 val address = Factory.instance().createAddress(deviceSipUri)
@@ -333,11 +344,11 @@ class ContactFragment : SlidingPaneChildFragment() {
         }
     }
 
-    private fun showConfirmTrustCallDialog(contactName: String, deviceSipUri: String) {
+    private fun showConfirmTrustCallDialog(contactName: String, deviceName: String, deviceSipUri: String) {
         val label = AppUtils.getFormattedString(
             R.string.contact_dialog_increase_trust_level_message,
             contactName,
-            deviceSipUri
+            deviceName
         )
         val model = ConfirmationDialogModel(label)
         val dialog = DialogUtils.getContactTrustCallConfirmationDialog(requireActivity(), model)

@@ -44,7 +44,6 @@ import org.linphone.ui.main.chat.model.EventLogModel
 import org.linphone.ui.main.chat.model.FileModel
 import org.linphone.ui.main.chat.model.MessageModel
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
-import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import org.linphone.utils.LinphoneUtils
@@ -89,6 +88,8 @@ class ConversationViewModel
 
     val composingLabel = MutableLiveData<String>()
 
+    val composingIcon = MutableLiveData<Int>()
+
     val searchBarVisible = MutableLiveData<Boolean>()
 
     val searchFilter = MutableLiveData<String>()
@@ -97,6 +98,8 @@ class ConversationViewModel
 
     val canSearchDown = MutableLiveData<Boolean>()
 
+    val canSearchUp = MutableLiveData<Boolean>()
+
     val itemToScrollTo = MutableLiveData<Int>()
 
     val isUserScrollingUp = MutableLiveData<Boolean>()
@@ -104,43 +107,43 @@ class ConversationViewModel
     val unreadMessagesCount = MutableLiveData<Int>()
 
     val focusSearchBarEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val fileToDisplayEvent: MutableLiveData<Event<FileModel>> by lazy {
-        MutableLiveData<Event<FileModel>>()
+        MutableLiveData()
     }
 
     val sipUriToCallEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val conferenceToJoinEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val openWebBrowserEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val contactToDisplayEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val messageDeletedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val updateEvents: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val forwardMessageEvent: MutableLiveData<Event<MessageModel>> by lazy {
-        MutableLiveData<Event<MessageModel>>()
+        MutableLiveData()
     }
 
     val voiceRecordPlaybackEndedEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     var eventsList = arrayListOf<EventLogModel>()
@@ -148,6 +151,8 @@ class ConversationViewModel
     var pendingForwardMessage: MessageModel? = null
 
     private var latestMatch: EventLog? = null
+
+    private var latestMatchModel: MessageModel? = null
 
     private val chatRoomListener = object : ChatRoomListenerStub() {
         @WorkerThread
@@ -191,17 +196,6 @@ class ConversationViewModel
                 }
             }
             Log.i("$TAG Conversation was marked as read")
-        }
-
-        @WorkerThread
-        override fun onChatMessageSending(chatRoom: ChatRoom, eventLog: EventLog) {
-            val message = eventLog.chatMessage
-            Log.i("$TAG Message [$message] is being sent, marking conversation as read")
-
-            // Prevents auto scroll to go to latest received message
-            chatRoom.markAsRead()
-
-            addEvents(arrayOf(eventLog))
         }
 
         @WorkerThread
@@ -256,7 +250,7 @@ class ConversationViewModel
 
         @WorkerThread
         override fun onSubjectChanged(chatRoom: ChatRoom, eventLog: EventLog) {
-            Log.i("$TAG Conversation subject changed [${chatRoom.subject}]")
+            Log.i("$TAG Conversation subject changed [${chatRoom.subjectUtf8}]")
             addEvents(arrayOf(eventLog))
         }
 
@@ -304,6 +298,22 @@ class ConversationViewModel
                 Log.e("$TAG Failed to find matching message in conversation events list")
             }
         }
+
+        @WorkerThread
+        override fun onMessageRetracted(chatRoom: ChatRoom, message: ChatMessage) {
+            updateRepliesUpTo(message)
+
+            if (message.isOutgoing) {
+                messageDeletedEvent.postValue(Event(true))
+            }
+
+            unreadMessagesCount.postValue(chatRoom.unreadMessagesCount)
+        }
+
+        @WorkerThread
+        override fun onMessageContentEdited(chatRoom: ChatRoom, message: ChatMessage) {
+            updateRepliesUpTo(message)
+        }
     }
 
     private val contactsListener = object : ContactsManager.ContactsListener {
@@ -334,6 +344,7 @@ class ConversationViewModel
         isDisabledBecauseNotSecured.value = false
         searchInProgress.value = false
         canSearchDown.value = false
+        canSearchUp.value = false
         itemToScrollTo.value = -1
     }
 
@@ -365,38 +376,41 @@ class ConversationViewModel
 
     @UiThread
     fun openSearchBar() {
+        canSearchUp.value = true
         searchBarVisible.value = true
         focusSearchBarEvent.value = Event(true)
     }
 
     @UiThread
     fun closeSearchBar() {
+        coreContext.postOnCoreThread {
+            latestMatchModel?.highlightText("")
+            latestMatchModel = null
+        }
+
         searchFilter.value = ""
         searchBarVisible.value = false
         focusSearchBarEvent.value = Event(false)
         latestMatch = null
         canSearchDown.value = false
+        canSearchUp.value = false
+    }
 
-        coreContext.postOnCoreThread {
-            for (eventLog in eventsList) {
-                if ((eventLog.model as? MessageModel)?.isTextHighlighted == true) {
-                    eventLog.model.highlightText("")
-                }
+    @UiThread
+    fun searchUp() {
+        if (canSearchUp.value == true) {
+            coreContext.postOnCoreThread {
+                searchChatMessage(SearchDirection.Up)
             }
         }
     }
 
     @UiThread
-    fun searchUp() {
-        coreContext.postOnCoreThread {
-            searchChatMessage(SearchDirection.Up)
-        }
-    }
-
-    @UiThread
     fun searchDown() {
-        coreContext.postOnCoreThread {
-            searchChatMessage(SearchDirection.Down)
+        if (canSearchDown.value == true) {
+            coreContext.postOnCoreThread {
+                searchChatMessage(SearchDirection.Down)
+            }
         }
     }
 
@@ -439,7 +453,9 @@ class ConversationViewModel
 
                 Log.i("$TAG Removing chat message id [${chatMessageModel.id}] from events list")
                 list.remove(found)
+
                 eventsList = list
+
                 updateEvents.postValue(Event(true))
                 isEmpty.postValue(eventsList.isEmpty())
             } else {
@@ -451,6 +467,17 @@ class ConversationViewModel
             Log.i("$TAG Deleting message id [${chatMessageModel.id}] from database")
             chatRoom.deleteMessage(chatMessageModel.chatMessage)
             messageDeletedEvent.postValue(Event(true))
+
+            updateRepliesUpTo(chatMessageModel.chatMessage)
+        }
+    }
+
+    @UiThread
+    fun deleteChatMessageForEveryone(chatMessageModel: MessageModel) {
+        coreContext.postOnCoreThread {
+            val message = chatMessageModel.chatMessage
+            Log.i("$TAG Sending order to delete contents of message [${message.messageId}] to every participant of the conversation")
+            chatRoom.retractMessage(message)
         }
     }
 
@@ -553,7 +580,7 @@ class ConversationViewModel
         if (!chatRoom.hasCapability(ChatRoom.Capabilities.Encrypted.toInt())) {
             if (LinphoneUtils.getAccountForAddress(chatRoom.localAddress)?.params?.instantMessagingEncryptionMandatory == true) {
                 Log.w(
-                    "$TAG Conversation with subject [${chatRoom.subject}] is considered as read-only because it isn't encrypted and default account is in secure mode"
+                    "$TAG Conversation with subject [${chatRoom.subjectUtf8}] is considered as read-only because it isn't encrypted and default account is in secure mode"
                 )
                 isDisabledBecauseNotSecured.postValue(true)
             } else {
@@ -579,6 +606,19 @@ class ConversationViewModel
                     "$TAG Failed to find event log with message ID [$messageId] in chat room history!"
                 )
                 searchInProgress.postValue(false)
+            }
+        }
+    }
+
+    @UiThread
+    fun addSentMessageToEventsList(message: ChatMessage) {
+        coreContext.postOnCoreThread {
+            val eventLog = message.eventLog
+            if (eventLog != null) {
+                Log.i("$TAG Adding sent message with ID [${message.messageId}] to events list")
+                addEvents(arrayOf(eventLog))
+            } else {
+                Log.e("$TAG Failed to get event log for sent message with ID [${message.messageId}]")
             }
         }
     }
@@ -615,12 +655,12 @@ class ConversationViewModel
         val readOnly = chatRoom.isReadOnly
         isReadOnly.postValue(readOnly)
         if (readOnly) {
-            Log.w("$TAG Conversation with subject [${chatRoom.subject}] is read only!")
+            Log.w("$TAG Conversation with subject [${chatRoom.subjectUtf8}] is read only!")
         }
 
         checkIfConversationShouldBeDisabledForSecurityReasons()
 
-        subject.postValue(chatRoom.subject)
+        subject.postValue(chatRoom.subjectUtf8)
 
         computeParticipantsInfo()
 
@@ -653,7 +693,7 @@ class ConversationViewModel
 
         val avatar = if (LinphoneUtils.isChatRoomAGroup(chatRoom)) {
             val fakeFriend = coreContext.core.createFriend()
-            fakeFriend.name = chatRoom.subject
+            fakeFriend.name = chatRoom.subjectUtf8
             val model = ContactAvatarModel(fakeFriend)
             model.updateSecurityLevelUsingConversation(chatRoom)
             model
@@ -679,7 +719,7 @@ class ConversationViewModel
 
     @WorkerThread
     private fun addEvents(eventLogs: Array<EventLog>) {
-        Log.i("$TAG Adding [${eventLogs.size}] events")
+        Log.i("$TAG Adding [${eventLogs.size}] event(s)")
         // Need to use a new list, otherwise ConversationFragment's dataObserver isn't triggered...
         val list = arrayListOf<EventLogModel>()
         list.addAll(eventsList)
@@ -904,28 +944,29 @@ class ConversationViewModel
     }
 
     @WorkerThread
+    private fun updateRepliesUpTo(chatMessage: ChatMessage) {
+        for (model in eventsList.reversed()) {
+            if (model.model is MessageModel) {
+                if (model.model.replyToMessageId == chatMessage.messageId) {
+                    model.model.computeReplyInfo()
+                }
+
+                if (model.model.timestamp < chatMessage.time) {
+                    break
+                }
+            }
+        }
+    }
+
+    @WorkerThread
     private fun computeComposingLabel() {
         if (!isChatRoomInitialized()) return
-        val composingFriends = arrayListOf<String>()
-        var label = ""
-        for (address in chatRoom.composingAddresses) {
-            val avatar = coreContext.contactsManager.getContactAvatarModelForAddress(address)
-            val name = avatar.name.value ?: LinphoneUtils.getDisplayName(address)
-            composingFriends.add(name)
-            label += "$name, "
-        }
-        if (composingFriends.isNotEmpty()) {
-            label = label.dropLast(2)
 
-            val format = AppUtils.getStringWithPlural(
-                R.plurals.conversation_composing_label,
-                composingFriends.size,
-                label
-            )
-            composingLabel.postValue(format)
-        } else {
-            composingLabel.postValue("")
-        }
+        val pair = LinphoneUtils.getComposingIconAndText(chatRoom)
+        val icon = pair.first
+        composingIcon.postValue(icon)
+        val label = pair.second
+        composingLabel.postValue(label)
     }
 
     @WorkerThread
@@ -976,15 +1017,26 @@ class ConversationViewModel
                     val index = eventsList.indexOf(found)
                     itemToScrollTo.postValue(index)
                 }
+                // Disable button as latest result has been reached
+                if (direction == SearchDirection.Down) {
+                    canSearchDown.postValue(false)
+                } else {
+                    canSearchUp.postValue(false)
+                }
                 R.string.conversation_search_no_more_match
             }
             showRedToast(message, R.drawable.magnifying_glass)
         } else {
+            canSearchDown.postValue(true)
+            canSearchUp.postValue(true)
+
+            // Clear highlight from previous match
+            latestMatchModel?.highlightText("")
+
             Log.i(
                 "$TAG Found result [${match.chatMessage?.messageId}] while looking up for message with text [$textToSearch] in direction [$direction] starting from message [${latestMatch?.chatMessage?.messageId}]"
             )
             latestMatch = match
-
             val found = eventsList.find {
                 it.eventLog == match
             }
@@ -993,13 +1045,12 @@ class ConversationViewModel
                 loadMessagesUpTo(match)
             } else {
                 Log.i("$TAG Found result is already in history, no need to load more history")
-                (found.model as? MessageModel)?.highlightText(textToSearch)
+                latestMatchModel = (found.model as? MessageModel)
+                latestMatchModel?.highlightText(textToSearch)
                 val index = eventsList.indexOf(found)
                 itemToScrollTo.postValue(index)
                 searchInProgress.postValue(false)
             }
-
-            canSearchDown.postValue(true)
         }
     }
 

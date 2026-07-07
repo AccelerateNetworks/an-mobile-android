@@ -21,7 +21,6 @@
     <string name="welcome_page_2_message">Ваше спілкування убезпечене завдяки нашому <b>наскрізному шифруванню</b>.</string>
     <string name="welcome_page_3_title">Відкритий код</string>
     <string name="new_account_configured_toast">Новий обліковий запис налаштовано</string>
-    <string name="default_account_connection_state_error_toast">Помилка підключення!</string>
     <string name="file_successfully_exported_to_documents_toast">Файл завантажено до документів</string>
     <string name="export_file_to_documents_error_toast">Помилка під час спроби завантаження файлу до документів</string>
     <string name="remote_provisioning_config_applied_toast">Конфігурацію успішно застосовано</string>
@@ -50,7 +49,6 @@
     <string name="dialog_accept">Прийняти</string>
     <string name="dialog_cancel">Скасувати</string>
     <string name="dialog_continue">Продовжити</string>
-    <string name="dialog_ok">ОК</string>
     <string name="dialog_call">Виклик</string>
     <string name="dialog_delete">Видалити</string>
     <string name="dialog_install">Встановити</string>
@@ -123,7 +121,6 @@
     <string name="assistant_forgotten_password_message">Ви створили свій обліковий запис, використовуючи:</string>
     <string name="assistant_recover_email_account_label">Електронна пошта</string>
     <string name="assistant_recover_phone_number_account_label">Номер телефону</string>
-    <string name="assistant_recover_phone_number_account_send_code_label">Надіслати код</string>
     <string name="bottom_navigation_contacts_label">Контакти</string>
     <string name="bottom_navigation_calls_label">Дзвінки</string>
     <string name="bottom_navigation_conversations_label">Розмови</string>
@@ -154,7 +151,6 @@
     <string name="assistant_no_account_yet">Ще немає облікового запису?</string>
     <string name="assistant_third_party_sip_account_warning_explanation">Для деяких функцій потрібен обліковий запис &appName;, такі як груповий обмін повідомленнями, відеоконференції…\n\nЦі функції приховані, якщо ви реєструєтесь за допомогою стороннього облікового запису SIP.\n\nЩоб увімкнути їх у комерційному проєкті, зв’яжіться з нами.</string>
     <string name="assistant_permissions_subtitle">Щоб повною мірою користуватися &appName;, вам потрібно надати застосунку наступні дозволи:</string>
-    <string name="assistant_recover_phone_number_account_subtitle">Введіть номер телефону, прив’язаний до вашого облікового запису, ми надішлемо вам код.</string>
     <string name="assistant_recover_phone_number_account_unavailable_no_push_warning">Схоже, push-сповіщення недоступні на вашому пристрої, але вони обов’язкові для відновлення облікового запису номера телефону в мобільному застосунку.</string>
     <string name="drawer_menu_account_connection_status_failed">Помилка</string>
     <string name="drawer_menu_no_account_configured_yet">Обліковий запис ще не налаштовано</string>
@@ -170,10 +166,6 @@
     <string name="settings_tunnel_dual_mode_label">Використовувати два сервери</string>
     <string name="settings_user_interface_auto_theme_label">Авто</string>
     <string name="account_settings_mwi_uri_title">URI сервера MWI (індикатор очікування повідомлення)</string>
-    <string name="green">Зелений</string>
-    <string name="red">Червоний</string>
-    <string name="pink">Рожевий</string>
-    <string name="purple">Фіолетовий</string>
     <string name="multiple_participants_selection_placeholder">Обрані учасники з\'являться тут</string>
     <plurals name="mwi_messages_are_waiting">
         <item quantity="one">%s нове голосове повідомлення</item>
@@ -181,7 +173,6 @@
         <item quantity="many">%s нових голосових повідомлень</item>
         <item quantity="other">%s нових голосових повідомлень</item>
     </plurals>
-    <string name="content_description_chat_removal_in_progress">Розмова видаляється</string>
     <string name="settings_user_interface_color_title">Основний колір</string>
     <string name="content_description_contact_online">Контакт в мережі</string>
     <string name="content_description_show_popup_menu">Відобразити меню</string>
@@ -220,7 +211,6 @@
     <string name="menu_copy_chat_message">Копіювати</string>
     <string name="menu_share_selected_item">Поділитись</string>
     <string name="orange">Помаранчевий</string>
-    <string name="yellow">Жовтий</string>
     <string name="manage_account_status_connected_summary">Цей обліковий запис онлайн, кожен може вам зателефонувати.</string>
     <string name="list_filter_no_result_found">Не знайдено…</string>
     <string name="manage_account_choose_mode_title">Виберіть режим облікового запису</string>
@@ -241,7 +231,6 @@
     <string name="content_description_show_numpad">Показує цифрову клавіатуру</string>
     <string name="content_description_conference_participant_speaking">Учасник говорить</string>
     <string name="history_dialog_delete_all_call_logs_title">Ви справді хочете видалити всю історію дзвінків?</string>
-    <string name="conversation_warning_disabled_encrypted_bottom_sheet_message">Ви ввімкнули обов’язкове шифрування. Незашифровані розмови вимкнено для вашої безпеки. Ви можете повторно створити цю розмову або вимкнути обов’язкове шифрування в параметрах свого облікового запису.</string>
     <string name="conversation_info_dialog_delete_all_call_logs_title">Ви дійсно хочете видалити всі повідомлення?</string>
     <string name="conversation_event_security_event_man_in_the_middle_detected">Виявлено атаку типу «людина посередині» для %s</string>
     <string name="conversation_message_forwarded_toast">Повідомлення було перенаправлено</string>
@@ -270,7 +259,6 @@
     <string name="help_troubleshooting_debug_logs_cleaned_toast_message">Журнали налагодження очищено</string>
     <string name="help_troubleshooting_debug_logs_upload_error_toast_message">Не вдалося завантажити логи налагодження</string>
     <string name="help_troubleshooting_show_config_file">Показати конфігурацію</string>
-    <string name="help_troubleshooting_clear_native_friends_in_database">Очистити імпортовані контакти з власної адресної книги</string>
     <string name="settings_title">Налаштування</string>
     <string name="settings_security_title">Безпека</string>
     <string name="settings_security_enable_vfs_title">Зашифрувати все</string>
@@ -283,7 +271,6 @@
     <string name="settings_calls_calibrate_echo_canceller_done">%s мс</string>
     <string name="settings_calls_calibrate_echo_canceller_failed">Калібрування не вдалося</string>
     <string name="settings_calls_adaptive_rate_control_title">Адаптивне керування швидкістю</string>
-    <string name="settings_calls_enable_video_title">Увімкнути відео</string>
     <string name="settings_calls_enable_fec_title">Увімкнути FEC відео</string>
     <string name="settings_calls_vibrate_while_ringing_title">Вібрація під час вхідного дзвінка</string>
     <string name="settings_calls_auto_record_title">Автоматично починати запис дзвінків</string>
@@ -325,7 +312,6 @@
     <string name="settings_contacts_ldap_sip_attributes_title">Атрибути SIP</string>
     <string name="settings_contacts_ldap_sip_domain_title">SIP-домен</string>
     <string name="settings_contacts_ldap_error_toast">Сталася помилка, LDAP-сервер не збережено!</string>
-    <string name="settings_contacts_ldap_empty_server_error_toast">URL-адреса сервера не може бути порожньою</string>
     <string name="settings_meetings_title">Наради</string>
     <string name="settings_meetings_default_layout_title">Відображати за замовчуванням</string>
     <string name="settings_meetings_layout_active_speaker_label">Активний промовець</string>
@@ -418,7 +404,6 @@
     <string name="account_settings_dialog_invalid_password_message">З’єднання не вдалося, оскільки автентифікація відсутня або недійсна для облікового запису\n%s.\n\nВи можете ввести пароль ще раз або перевірити конфігурацію облікового запису в налаштуваннях.</string>
     <string name="account_settings_dialog_invalid_password_hint">Пароль</string>
     <string name="account_failed_to_find_identity_toast">Не вдалося знайти відповідний обліковий запис!</string>
-    <string name="history_title">Історія дзвінків</string>
     <string name="history_call_start_title">Новий дзвінок</string>
     <string name="history_call_start_search_bar_filter_hint">Пошук контакту або історії дзвінків</string>
     <string name="history_group_call_start_dialog_set_subject">Встановити назву групового дзвінка</string>
@@ -514,7 +499,6 @@
     <string name="conversation_end_to_end_encrypted_bottom_sheet_title">Гарантована конфіденційність</string>
     <string name="conversation_warning_disabled_because_not_secured_title">Ця розмова не зашифрована!</string>
     <string name="conversation_warning_disabled_because_not_secured_subtitle">Заради вашої безпеки цю розмову було вимкнено.</string>
-    <string name="conversation_warning_disabled_encrypted_bottom_sheet_title">Обов\'язкове шифрування</string>
     <string name="conversation_maximum_number_of_attachments_reached">Досягнуто максимальної кількості вкладень!</string>
     <string name="conversation_dialog_set_subject">Встановити назву розмови</string>
     <string name="conversation_dialog_edit_subject">Редагувати назву розмови</string>
@@ -542,7 +526,6 @@
     <string name="conversation_take_picture_label">Зробити фото</string>
     <string name="conversation_pick_file_from_gallery_label">Відкрити галерею</string>
     <string name="conversation_pick_any_file_label">Вибрати файл</string>
-    <string name="conversation_pdf_file_cant_be_opened_error_toast">Поки що не вдається відкрити PDF-файли, захищені паролем</string>
     <string name="conversation_info_participants_list_title">Учасники групи (%s)</string>
     <string name="conversation_info_add_participants_label">Додати учасників</string>
     <string name="conversation_info_participant_is_admin_label">Адмін</string>
@@ -608,10 +591,7 @@
     <string name="meeting_info_not_found_toast">Нараду не знайдено!</string>
     <string name="meeting_schedule_description_title">Опис</string>
     <string name="meeting_schedule_edit_title">Редагувати нараду</string>
-    <string name="meeting_schedule_cancel_dialog_title">Скасувати нараду?</string>
     <string name="meeting_cancel_action_label">Скасувати нараду</string>
-    <string name="meeting_schedule_delete_dialog_title">Видалити нараду?</string>
-    <string name="meeting_schedule_delete_dialog_message">Ви хочете видалити нараду?</string>
     <string name="meeting_delete_action_label">Видалити нараду</string>
     <string name="meeting_info_created_toast">Нараду створено</string>
     <string name="meeting_info_updated_toast">Нараду оновлено</string>
@@ -714,7 +694,6 @@
     <string name="meeting_waiting_room_joining_subtitle">Ви приєднаєтеся незабаром</string>
     <string name="call_remotely_ended">Співрозмовник завершив дзвінок</string>
     <string name="call_dialog_zrtp_validate_trust_message">Для вашої безпеки нам потрібно автентифікувати пристрій вашого співрозмовника.\nБудь ласка, обміняйтеся кодами:</string>
-    <string name="meeting_schedule_cancel_dialog_message">Ви хочете скасувати нараду та надіслати сповіщення усім учасникам?</string>
     <string name="meeting_schedule_mandatory_field_not_filled_toast">Будь ласка, введіть назву та виберіть хоча б одного учасника</string>
     <string name="calls_list_dialog_merge_into_conference_title">Об\'єднати всі дзвінки в конференцію?</string>
     <string name="call_dialog_zrtp_security_alert_message">Конфіденційність цього дзвінка може бути скомпрометована!</string>
@@ -839,7 +818,6 @@
     <string name="call_stats_fec_lost_packets_label">Втрачені пакети: %s</string>
     <string name="call_stats_media_encryption_zrtp_post_quantum">Постквантовий ZRTP</string>
     <string name="call_history_deleted_toast">Історію видалено</string>
-    <string name="blue">Синій</string>
     <string name="call_transfer_successful_toast">Виклик успішно перенаправлено</string>
     <string name="call_error_io_error_toast">Сервіс недоступний або помилка мережі</string>
     <string name="menu_add_address_to_contacts">Додати до контактів</string>
@@ -865,4 +843,42 @@
     <string name="help_troubleshooting_subtitle">Надсилайте свої діагностичні журнали для полегшення вирішення помилок.</string>
     <string name="content_description_cancel_files_or_text_pending_sharing">Натисніть, щоб скасувати обмін файлами або текстом, що очікує надсилання</string>
     <string name="settings_contacts_ldap_enabled_title">Увімкнуто</string>
+    <string name="search">Пошук</string>
+    <string name="conversation_pdf_password_protected_file_cant_be_opened_error_toast">Поки що не вдається відкрити PDF-файли, захищені паролем</string>
+    <string name="conversation_participants_list_header">Учасники</string>
+    <string name="settings_developer_clear_native_friends_in_database_title">Очистити імпортовані контакти з власної адресної книги</string>
+    <string name="menu_edit_chat_message">Редагувати</string>
+    <string name="notification_chat_message_hidden_content">&lt;відредаговано&gt;</string>
+    <string name="settings_contacts_presence_subscribe_title">Підписатися на інформацію про присутність</string>
+    <string name="dialog_do_not_cancel">Не скасовувати</string>
+    <string name="notification_enable_speaker_for_call">Увімкнути динамік</string>
+    <string name="notification_disable_speaker_for_call">Вимкнути динамік</string>
+    <string name="notification_account_registration_error_message">Відкрийте &appName; щоб оновити реєстрацію</string>
+    <string name="assistant_dialog_phone_number_validation_not_available_title">Перевірка номера телефону недоступна</string>
+    <string name="assistant_dialog_phone_number_validation_not_available_register_button_label">Зареєструватися за допомогою електронної пошти</string>
+    <string name="assistant_sip_account_lime_algorithm">Алгоритм(и) LIME (розділені комами)</string>
+    <string name="drawer_menu_account_connection_status_disconnected">Відключено</string>
+    <string name="settings_contacts_sort_by_first_name_title">Сортувати контакти за</string>
+    <string name="settings_contacts_edit_native_contacts_in_linphone_title">Використовуйте редактор контактів &appName; для рідних контактів</string>
+    <string name="settings_contacts_hide_empty_contacts_title">Приховати контакти без SIP-адреси та номера телефону</string>
+    <string name="settings_contacts_carddav_read_only_label">Ця адресна книга доступна лише для читання</string>
+    <string name="settings_contacts_ldap_verbose_mode_title">Додати логи LDAP до журналів &appName;</string>
+    <string name="settings_contacts_ldap_empty_field_error_toast">Усі поля мають бути заповнені</string>
+    <string name="settings_advanced_enable_auto_answer_video_send_receive">Автоматична відповідь з увімкненим відео в обох напрямках</string>
+    <string name="settings_developer_one_more_click_required_toast">Натисніть ще 1 раз, щоб увімкнути налаштування розробника</string>
+    <string name="settings_developer_enable_vu_meters_title">Увімкнути індикатори гучності запису/відтворення під час дзвінка</string>
+    <string name="settings_developer_enable_advanced_call_stats_title">Показати розширену статистику викликів</string>
+    <string name="dialog_understood">Зрозуміло</string>
+    <string name="notification_channel_account_error_name">Сповіщення про помилки облікового запису</string>
+    <string name="notification_in_call_foreground_service_error_message">Натисніть на це сповіщення, щоб виправити це</string>
+    <string name="notification_in_call_foreground_service_error_title">Ваш співрозмовник вас не чує!</string>
+    <string name="settings_calls_change_ringtone_picker_unavailable_toast">Вибір мелодії дзвінка недоступний!</string>
+    <string name="settings_conversations_hide_message_content_in_notif_title">Не показувати вміст повідомлення в сповіщеннях Android</string>
+    <string name="settings_advanced_calls">Розширені налаштування дзвінків</string>
+    <string name="settings_advanced_auto_answer_title">Автоматична відповідь</string>
+    <string name="settings_developer_two_more_clicks_required_toast">Натисніть ще 2 рази, щоб увімкнути налаштування розробника</string>
+    <string name="notification_account_registration_error_title">Реєстрація облікового запису %s не вдалася!</string>
+    <string name="assistant_sip_account_lime_algorithm_hint">Допустимі значення: c25519, c448, c25519k512, c25519mlk512 та c448mlk1024</string>
+    <string name="assistant_dialog_phone_number_validation_not_available_message">Перевірка номера телефону недоступна, будь ласка, скористайтеся електронну пошту для створення облікового запису.</string>
+    <string name="settings_meetings_show_past_meetings_title">Показати минулі зустрічі</string>
 </resources>

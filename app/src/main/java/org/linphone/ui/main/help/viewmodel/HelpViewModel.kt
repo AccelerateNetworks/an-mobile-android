@@ -29,9 +29,9 @@ import org.linphone.BuildConfig
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
-import org.linphone.contacts.ContactLoader.Companion.NATIVE_ADDRESS_BOOK_FRIEND_LIST
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
+import org.linphone.core.Factory
 import org.linphone.core.VersionUpdateCheckResult
 import org.linphone.core.tools.Log
 import org.linphone.ui.GenericViewModel
@@ -44,6 +44,8 @@ class HelpViewModel
     constructor() : GenericViewModel() {
     companion object {
         private const val TAG = "[Help ViewModel]"
+
+        private const val NUMBER_OF_CLICK_TO_ENABLE_DEVELOPER_MODE = 6
     }
 
     val version = MutableLiveData<String>()
@@ -60,37 +62,41 @@ class HelpViewModel
 
     val logsUploadInProgress = MutableLiveData<Boolean>()
 
-    val versionClickCount = MutableLiveData<Int>()
+    val printLogsInLogcat = MutableLiveData<Boolean>()
+
+    val developerSettingsEnabled = MutableLiveData<Boolean>()
 
     val canConfigFileBeViewed = MutableLiveData<Boolean>()
 
     val newVersionAvailableEvent: MutableLiveData<Event<Pair<String, String>>> by lazy {
-        MutableLiveData<Event<Pair<String, String>>>()
+        MutableLiveData()
     }
 
     val versionUpToDateEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val errorEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val debugLogsCleanedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val uploadDebugLogsFinishedEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val uploadDebugLogsErrorEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val showConfigFileEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
+
+    private var versionClickCount: Int = 0
 
     private val coreListener = object : CoreListenerStub() {
         @WorkerThread
@@ -138,7 +144,6 @@ class HelpViewModel
     init {
         val currentVersion = BuildConfig.VERSION_NAME
         version.value = currentVersion
-        versionClickCount.value = 0
 
         val versionCode = BuildConfig.VERSION_CODE
         val appGitDescribe = AppUtils.getString(R.string.linphone_app_version)
@@ -155,9 +160,18 @@ class HelpViewModel
             firebaseProjectId.value = "unknown"
         }
 
+        versionClickCount = if (corePreferences.showDeveloperSettings) {
+            Log.i("$TAG Developer settings are already enabled")
+            NUMBER_OF_CLICK_TO_ENABLE_DEVELOPER_MODE
+        } else {
+            0
+        }
+
         coreContext.postOnCoreThread { core ->
             core.addListener(coreListener)
 
+            printLogsInLogcat.postValue(corePreferences.printLogsInLogcat)
+            developerSettingsEnabled.postValue(corePreferences.showDeveloperSettings)
             checkUpdateAvailable.postValue(corePreferences.checkForUpdateServerUrl.isNotEmpty())
             uploadLogsAvailable.postValue(!core.logCollectionUploadServerUrl.isNullOrEmpty())
         }
@@ -174,19 +188,27 @@ class HelpViewModel
 
     @UiThread
     fun versionClicked() {
-        if (corePreferences.showDeveloperSettings == true) {
-            showRedToast(R.string.settings_developer_already_enabled_toast, R.drawable.warning_circle)
-            return
-        }
-
-        versionClickCount.value = (versionClickCount.value ?: 0) + 1
-        if (versionClickCount.value == 7) {
-            coreContext.postOnCoreThread {
-                Log.w("$TAG Version was clicked seven times, enabling developer settings")
-                corePreferences.showDeveloperSettings = true
-
-                showGreenToast(R.string.settings_developer_enabled_toast, R.drawable.gear)
+        versionClickCount += 1
+        Log.i("$TAG Version was clicked [$versionClickCount] times")
+        when (versionClickCount) {
+            NUMBER_OF_CLICK_TO_ENABLE_DEVELOPER_MODE - 2 -> {
+                showGreenToast(R.string.settings_developer_two_more_clicks_required_toast, R.drawable.gear)
             }
+            NUMBER_OF_CLICK_TO_ENABLE_DEVELOPER_MODE - 1 -> {
+                showGreenToast(R.string.settings_developer_one_more_click_required_toast, R.drawable.gear)
+            }
+            NUMBER_OF_CLICK_TO_ENABLE_DEVELOPER_MODE -> {
+                showGreenToast(R.string.settings_developer_enabled_toast, R.drawable.gear)
+                coreContext.postOnCoreThread {
+                    Log.w("$TAG Enabling developer settings")
+                    corePreferences.showDeveloperSettings = true
+                    developerSettingsEnabled.postValue(true)
+                }
+            }
+            NUMBER_OF_CLICK_TO_ENABLE_DEVELOPER_MODE + 1 -> {
+                showGreenToast(R.string.settings_developer_already_enabled_toast, R.drawable.gear)
+            }
+            else -> { }
         }
     }
 
@@ -218,6 +240,17 @@ class HelpViewModel
     }
 
     @UiThread
+    fun toggleLogcat() {
+        val newValue = printLogsInLogcat.value == false
+        coreContext.postOnCoreThread {
+            corePreferences.printLogsInLogcat = newValue
+            coreContext.updateLogcatEnabledSetting(newValue)
+            Factory.instance().enableLogcatLogs(newValue)
+            printLogsInLogcat.postValue(newValue)
+        }
+    }
+
+    @UiThread
     fun showConfigFile() {
         coreContext.postOnCoreThread { core ->
             Log.i("$TAG Dumping & displaying Core's config")
@@ -233,22 +266,6 @@ class HelpViewModel
                 } else {
                     Log.e("$TAG Failed to save .linphonerc string as file in cache folder")
                 }
-            }
-        }
-    }
-
-    @UiThread
-    fun clearNativeFriendsDatabase() {
-        coreContext.postOnCoreThread { core ->
-            val list = core.getFriendListByName(NATIVE_ADDRESS_BOOK_FRIEND_LIST)
-            if (list != null) {
-                val friends = list.friends
-                Log.i("$TAG Friend list to remove found with [${friends.size}] friends")
-                for (friend in friends) {
-                    list.removeFriend(friend)
-                }
-                core.removeFriendList(list)
-                Log.i("$TAG Friend list [$NATIVE_ADDRESS_BOOK_FRIEND_LIST] removed")
             }
         }
     }

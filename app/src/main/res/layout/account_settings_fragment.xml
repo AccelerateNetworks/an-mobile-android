@@ -12,6 +12,9 @@
             name="updatePasswordClickListener"
             type="View.OnClickListener" />
         <variable
+            name="outboundProxyTooltipClickListener"
+            type="View.OnClickListener" />
+        <variable
             name="viewModel"
             type="org.linphone.ui.main.settings.viewmodel.AccountSettingsViewModel" />
     </data>
@@ -22,12 +25,11 @@
         android:background="?attr/color_background_contrast_in_dark_mode">
 
             <ImageView
+                style="@style/icon_top_bar_button_style"
                 android:id="@+id/back"
                 android:onClick="@{backClickListener}"
                 android:layout_width="wrap_content"
                 android:layout_height="0dp"
-                android:adjustViewBounds="true"
-                android:padding="15dp"
                 android:src="@drawable/caret_left"
                 android:contentDescription="@string/content_description_go_back_icon"
                 app:tint="?attr/color_main1_500"
@@ -60,18 +62,23 @@
                 app:layout_constraintTop_toBottomOf="@id/title"
                 app:layout_constraintBottom_toBottomOf="parent">
 
-                <LinearLayout
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:paddingBottom="@dimen/screen_bottom_margin">
 
                     <androidx.constraintlayout.widget.ConstraintLayout
-                        android:layout_width="match_parent"
+                        android:id="@+id/account_settings"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="20dp"
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
-                        android:background="@drawable/shape_squircle_white_background">
+                        android:background="@drawable/shape_squircle_white_background"
+                        app:layout_constraintWidth_max="@dimen/section_max_width"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
 
                         <com.google.android.material.materialswitch.MaterialSwitch
                             style="@style/material_switch_style"
@@ -97,6 +104,7 @@
                             android:text="@{viewModel.pushNotificationsAvailable ? @string/account_settings_push_notification_title : @string/account_settings_push_notification_not_available_title, default=@string/account_settings_push_notification_title}"
                             android:maxLines="2"
                             android:ellipsize="end"
+                            android:labelFor="@id/push_notifications_switch"
                             android:visibility="@{viewModel.isDomainInPushNotificationCompatibleList ? View.VISIBLE : View.GONE}"
                             app:layout_constraintTop_toTopOf="parent"
                             app:layout_constraintBottom_toBottomOf="@id/push_notifications_switch"
@@ -108,7 +116,7 @@
                             android:id="@+id/im_encryption_mandatory_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="20dp"
                             android:layout_marginEnd="16dp"
                             android:checked="@={viewModel.imEncryptionMandatory}"
                             android:visibility="@{viewModel.imEncryptionMandatoryAvailable ? View.VISIBLE : View.GONE}"
@@ -125,6 +133,7 @@
                             android:text="@string/account_settings_im_encryption_mandatory_title"
                             android:maxLines="2"
                             android:ellipsize="end"
+                            android:labelFor="@id/im_encryption_mandatory_switch"
                             android:visibility="@{viewModel.imEncryptionMandatoryAvailable ? View.VISIBLE : View.GONE}"
                             app:layout_constraintTop_toTopOf="@id/im_encryption_mandatory_switch"
                             app:layout_constraintBottom_toBottomOf="@id/im_encryption_mandatory_switch"
@@ -132,7 +141,7 @@
                             app:layout_constraintEnd_toStartOf="@id/im_encryption_mandatory_switch"/>
 
                         <androidx.appcompat.widget.AppCompatTextView
-                            style="@style/settings_title_style"
+                            style="@style/settings_title_padding_style"
                             android:id="@+id/voicemail_uri_title"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -142,6 +151,7 @@
                             android:text="@string/account_settings_voicemail_uri_title"
                             android:maxLines="2"
                             android:ellipsize="end"
+                            android:labelFor="@id/voicemail_uri"
                             app:layout_constraintTop_toBottomOf="@id/im_encryption_mandatory_switch"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"/>
@@ -160,12 +170,14 @@
                             android:text="@={viewModel.voicemailUri}"
                             android:inputType="text|textUri"
                             android:hint="@string/account_settings_voicemail_uri_title"
+                            app:layout_constraintHorizontal_bias="0"
+                            app:layout_constraintWidth_max="@dimen/text_input_max_width"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toBottomOf="@id/voicemail_uri_title" />
 
                         <androidx.appcompat.widget.AppCompatTextView
-                            style="@style/settings_title_style"
+                            style="@style/settings_title_padding_style"
                             android:id="@+id/mwi_uri_title"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -175,6 +187,7 @@
                             android:text="@string/account_settings_mwi_uri_title"
                             android:maxLines="2"
                             android:ellipsize="end"
+                            android:labelFor="@id/mwi_uri"
                             app:layout_constraintTop_toBottomOf="@id/voicemail_uri"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"/>
@@ -192,6 +205,8 @@
                             android:text="@={viewModel.mwiUri}"
                             android:inputType="text|textUri"
                             android:hint="@string/account_settings_mwi_uri_title"
+                            app:layout_constraintHorizontal_bias="0"
+                            app:layout_constraintWidth_max="@dimen/text_input_max_width"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toBottomOf="@id/mwi_uri_title"
@@ -207,6 +222,7 @@
                             android:text="@string/account_settings_apply_international_prefix_title"
                             android:maxLines="2"
                             android:ellipsize="end"
+                            android:labelFor="@id/apply_international_switch"
                             app:layout_constraintTop_toTopOf="@id/apply_international_switch"
                             app:layout_constraintBottom_toBottomOf="@id/apply_international_switch"
                             app:layout_constraintStart_toStartOf="parent"
@@ -217,7 +233,7 @@
                             android:id="@+id/apply_international_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="20dp"
                             android:layout_marginEnd="16dp"
                             android:checked="@={viewModel.applyPrefix}"
                             app:layout_constraintTop_toBottomOf="@id/mwi_uri"
@@ -234,6 +250,7 @@
                             android:text="@string/account_settings_replace_plus_by_00_title"
                             android:maxLines="2"
                             android:ellipsize="end"
+                            android:labelFor="@id/replace_plus_by_00_switch"
                             app:layout_constraintTop_toTopOf="@id/replace_plus_by_00_switch"
                             app:layout_constraintBottom_toBottomOf="@id/replace_plus_by_00_switch"
                             app:layout_constraintStart_toStartOf="parent"
@@ -244,7 +261,7 @@
                             android:id="@+id/replace_plus_by_00_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="20dp"
                             android:layout_marginEnd="16dp"
                             android:layout_marginBottom="20dp"
                             android:checked="@={viewModel.replacePlusBy00}"
@@ -258,56 +275,71 @@
                         style="@style/section_header_style"
                         android:id="@+id/nat_policy_settings_header"
                         android:onClick="@{() -> viewModel.toggleNatPolicySettingsExpand()}"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:layout_marginStart="26dp"
-                        android:layout_marginEnd="26dp"
+                        android:padding="10dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
                         android:layout_marginTop="16dp"
-                        android:layout_marginBottom="10dp"
                         android:text="@string/account_settings_nat_policy_title"
                         android:drawableEnd="@{viewModel.expandNatPolicySettings ? @drawable/caret_up : @drawable/caret_down, default=@drawable/caret_up}"
-                        android:drawableTint="?attr/color_main2_600"/>
+                        android:drawableTint="?attr/color_main2_600"
+                        android:background="@drawable/squircle_transparent_button_background"
+                        app:layout_constraintWidth_max="@dimen/section_max_width"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/account_settings" />
 
                     <include
                         android:id="@+id/nat_policy_settings"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
-                        android:layout_marginBottom="@dimen/screen_bottom_margin"
                         android:visibility="@{viewModel.expandNatPolicySettings ? View.VISIBLE : View.GONE}"
                         layout="@layout/account_nat_policy_settings"
-                        bind:viewModel="@{viewModel}"/>
+                        bind:viewModel="@{viewModel}"
+                        app:layout_constraintWidth_max="@dimen/section_max_width"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/nat_policy_settings_header"/>
 
                     <androidx.appcompat.widget.AppCompatTextView
                         style="@style/section_header_style"
                         android:id="@+id/advanced_settings_header"
                         android:onClick="@{() -> viewModel.toggleAdvancedSettingsExpand()}"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:layout_marginStart="26dp"
-                        android:layout_marginEnd="26dp"
+                        android:padding="10dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
                         android:layout_marginTop="16dp"
-                        android:layout_marginBottom="10dp"
                         android:text="@string/settings_advanced_title"
                         android:drawableEnd="@{viewModel.expandAdvancedSettings ? @drawable/caret_up : @drawable/caret_down, default=@drawable/caret_up}"
-                        android:drawableTint="?attr/color_main2_600"/>
+                        android:drawableTint="?attr/color_main2_600"
+                        android:background="@drawable/squircle_transparent_button_background"
+                        app:layout_constraintWidth_max="@dimen/section_max_width"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/nat_policy_settings" />
 
                     <include
                         android:id="@+id/account_advanced_settings"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
-                        android:layout_marginBottom="@dimen/screen_bottom_margin"
                         android:visibility="@{viewModel.expandAdvancedSettings ? View.VISIBLE : View.GONE}"
                         layout="@layout/account_advanced_settings"
                         bind:updatePasswordClickListener="@{updatePasswordClickListener}"
-                        bind:viewModel="@{viewModel}"/>
+                        bind:outboundProxyTooltipClickListener="@{outboundProxyTooltipClickListener}"
+                        bind:viewModel="@{viewModel}"
+                        app:layout_constraintWidth_max="@dimen/section_max_width"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/advanced_settings_header"/>
 
-                </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
 
             </ScrollView>
 

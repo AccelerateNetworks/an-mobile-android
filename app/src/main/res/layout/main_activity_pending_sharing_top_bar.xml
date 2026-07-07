@@ -16,7 +16,7 @@
         android:background="@drawable/color_main_activity_top_bar">
 
         <ImageView
-            android:id="@+id/icon"
+            android:id="@+id/file_sharing_alert_icon"
             android:layout_width="@dimen/icon_size"
             android:layout_height="@dimen/icon_size"
             android:layout_marginStart="16dp"
@@ -31,7 +31,7 @@
 
         <androidx.appcompat.widget.AppCompatTextView
             style="@style/default_text_style_300"
-            android:id="@+id/label"
+            android:id="@+id/file_sharing_alert_label"
             android:layout_width="0dp"
             android:layout_height="30dp"
             android:layout_marginStart="5dp"
@@ -44,18 +44,20 @@
             android:textSize="16sp"
             android:maxLines="1"
             android:ellipsize="end"
-            app:layout_constraintEnd_toStartOf="@id/close_notif"
-            app:layout_constraintStart_toEndOf="@id/icon"
+            app:layout_constraintEnd_toStartOf="@id/file_sharing_alert_close"
+            app:layout_constraintStart_toEndOf="@id/file_sharing_alert_icon"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"/>
 
         <ImageView
-            android:id="@+id/close_notif"
+            android:id="@+id/file_sharing_alert_close"
             android:onClick="@{() -> viewModel.cancelFileOrTextSharing()}"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:adjustViewBounds="true"
             android:layout_marginEnd="16dp"
             android:src="@drawable/x"
+            android:background="@drawable/circle_transparent_button_background"
             app:tint="@color/bc_white"
             android:contentDescription="@string/content_description_cancel_files_or_text_pending_sharing"
             app:layout_constraintEnd_toEndOf="parent"

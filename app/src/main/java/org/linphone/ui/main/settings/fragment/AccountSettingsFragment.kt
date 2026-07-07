@@ -23,16 +23,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import androidx.annotation.UiThread
 import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import java.util.Locale
 import org.linphone.R
-import org.linphone.core.TransportType
 import org.linphone.core.tools.Log
 import org.linphone.databinding.AccountSettingsFragmentBinding
 import org.linphone.ui.GenericActivity
@@ -53,22 +49,6 @@ class AccountSettingsFragment : GenericMainFragment() {
     private val args: AccountSettingsFragmentArgs by navArgs()
 
     private lateinit var viewModel: AccountSettingsViewModel
-
-    private val dropdownListener = object : AdapterView.OnItemSelectedListener {
-        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-            val transport = viewModel.availableTransports[position]
-            val transportType = when (transport) {
-                TransportType.Tcp.name.uppercase(Locale.getDefault()) -> TransportType.Tcp
-                TransportType.Tls.name.uppercase(Locale.getDefault()) -> TransportType.Tls
-                else -> TransportType.Udp
-            }
-            Log.i("$TAG Selected transport updated [$transport] -> [${transportType.name}]")
-            viewModel.selectedTransport.value = transportType
-        }
-
-        override fun onNothingSelected(parent: AdapterView<*>?) {
-        }
-    }
 
     override fun goBack(): Boolean {
         try {
@@ -110,26 +90,15 @@ class AccountSettingsFragment : GenericMainFragment() {
             showUpdatePasswordDialog()
         }
 
+        binding.setOutboundProxyTooltipClickListener {
+            showOutboundProxyInfoDialog()
+        }
+
         viewModel.accountFoundEvent.observe(viewLifecycleOwner) {
             it.consume { found ->
                 if (found) {
                     (view.parent as? ViewGroup)?.doOnPreDraw {
                         startPostponedEnterTransition()
-
-                        val adapter = ArrayAdapter(
-                            requireContext(),
-                            R.layout.drop_down_item,
-                            viewModel.availableTransports
-                        )
-                        adapter.setDropDownViewResource(R.layout.generic_dropdown_cell)
-                        val currentTransport = viewModel.selectedTransport.value?.name?.uppercase(
-                            Locale.getDefault()
-                        )
-                        binding.accountAdvancedSettings.transportSpinner.adapter = adapter
-                        binding.accountAdvancedSettings.transportSpinner.setSelection(
-                            viewModel.availableTransports.indexOf(currentTransport)
-                        )
-                        binding.accountAdvancedSettings.transportSpinner.onItemSelectedListener = dropdownListener
                     }
                 } else {
                     Log.e(
@@ -169,6 +138,11 @@ class AccountSettingsFragment : GenericMainFragment() {
             }
         }
 
+        dialog.show()
+    }
+
+    private fun showOutboundProxyInfoDialog() {
+        val dialog = DialogUtils.getAccountOutboundProxyHelpDialog(requireActivity())
         dialog.show()
     }
 }

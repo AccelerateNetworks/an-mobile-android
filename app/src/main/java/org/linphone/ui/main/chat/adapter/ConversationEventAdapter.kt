@@ -36,6 +36,7 @@ import org.linphone.databinding.ChatBubbleIncomingBinding
 import org.linphone.databinding.ChatBubbleOutgoingBinding
 import org.linphone.databinding.ChatConversationEventBinding
 import org.linphone.databinding.ChatConversationE2eEncryptedFirstEventBinding
+import org.linphone.databinding.ChatConversationUnsafeFirstEventBinding
 import org.linphone.ui.main.chat.model.EventLogModel
 import org.linphone.ui.main.chat.model.EventModel
 import org.linphone.ui.main.chat.model.MessageModel
@@ -59,15 +60,15 @@ class ConversationEventAdapter :
     val chatMessageLongPressEvent = MutableLiveData<Event<MessageModel>>()
 
     val showDeliveryForChatMessageModelEvent: MutableLiveData<Event<MessageModel>> by lazy {
-        MutableLiveData<Event<MessageModel>>()
+        MutableLiveData()
     }
 
     val showReactionForChatMessageModelEvent: MutableLiveData<Event<MessageModel>> by lazy {
-        MutableLiveData<Event<MessageModel>>()
+        MutableLiveData()
     }
 
     val scrollToRepliedMessageEvent: MutableLiveData<Event<MessageModel>> by lazy {
-        MutableLiveData<Event<MessageModel>>()
+        MutableLiveData()
     }
 
     private var isConversationSecured: Boolean = false
@@ -82,7 +83,11 @@ class ConversationEventAdapter :
     }
 
     override fun getHeaderViewForPosition(context: Context, position: Int): View {
-        val binding = ChatConversationE2eEncryptedFirstEventBinding.inflate(LayoutInflater.from(context))
+        val binding = if (isConversationSecured) {
+            ChatConversationE2eEncryptedFirstEventBinding.inflate(LayoutInflater.from(context))
+        } else {
+            ChatConversationUnsafeFirstEventBinding.inflate(LayoutInflater.from(context))
+        }
         return binding.root
     }
 
@@ -197,7 +202,7 @@ class ConversationEventAdapter :
         }
     }
 
-    inner class IncomingBubbleViewHolder(
+    class IncomingBubbleViewHolder(
         val binding: ChatBubbleIncomingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: MessageModel) {
@@ -212,7 +217,7 @@ class ConversationEventAdapter :
         }
     }
 
-    inner class OutgoingBubbleViewHolder(
+    class OutgoingBubbleViewHolder(
         val binding: ChatBubbleOutgoingBinding
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(message: MessageModel) {
@@ -227,7 +232,7 @@ class ConversationEventAdapter :
         }
     }
 
-    inner class EventViewHolder(
+    class EventViewHolder(
         val binding: ChatConversationEventBinding
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(event: EventModel) {

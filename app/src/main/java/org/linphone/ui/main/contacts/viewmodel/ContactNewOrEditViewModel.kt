@@ -42,6 +42,7 @@ import org.linphone.ui.main.contacts.model.NewOrEditNumberOrAddressModel
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import androidx.core.net.toUri
+import org.linphone.utils.LinphoneUtils
 
 class ContactNewOrEditViewModel
     @UiThread
@@ -66,6 +67,8 @@ class ContactNewOrEditViewModel
 
     val sipAddresses = ArrayList<NewOrEditNumberOrAddressModel>()
 
+    val hideSipAddresses = MutableLiveData<Boolean>()
+
     val phoneNumbers = ArrayList<NewOrEditNumberOrAddressModel>()
 
     val company = MutableLiveData<String>()
@@ -73,7 +76,7 @@ class ContactNewOrEditViewModel
     val jobTitle = MutableLiveData<String>()
 
     val saveChangesEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val friendFoundEvent = MutableLiveData<Event<Boolean>>()
@@ -81,6 +84,16 @@ class ContactNewOrEditViewModel
     val addNewNumberOrAddressFieldEvent = MutableLiveData<Event<NewOrEditNumberOrAddressModel>>()
 
     val removeNewNumberOrAddressFieldEvent = MutableLiveData<Event<NewOrEditNumberOrAddressModel>>()
+
+    private val sipAddressesBeforeEdit = arrayListOf<String>()
+
+    private val phoneNumbersBeforeEdit = arrayListOf<String>()
+
+    private val sipAddressesLinkedToPresence = arrayListOf<String>()
+
+    init {
+        hideSipAddresses.postValue(corePreferences.hideSipAddresses)
+    }
 
     @UiThread
     fun findFriendByRefKey(refKey: String?) {
@@ -108,9 +121,18 @@ class ContactNewOrEditViewModel
                 }
 
                 for (address in friend.addresses) {
-                    addSipAddress(address.asStringUriOnly())
+                    val sipAddress = address.asStringUriOnly()
+                    // Prevents showing presence address as editable when in fact it's not
+                    if (!LinphoneUtils.isSipAddressLinkedToPhoneNumberByPresence(friend, sipAddress)) {
+                        addSipAddress(sipAddress)
+                        sipAddressesBeforeEdit.add(sipAddress)
+                    } else {
+                        sipAddressesLinkedToPresence.add(sipAddress)
+                    }
                 }
+
                 for (number in friend.phoneNumbersWithLabel) {
+                    phoneNumbersBeforeEdit.add(number.phoneNumber)
                     addPhoneNumber(number.phoneNumber, number.label)
                 }
 
@@ -153,14 +175,14 @@ class ContactNewOrEditViewModel
             }
             val name = if (fn.isNotEmpty() && ln.isNotEmpty()) {
                 "$fn $ln"
-            } else if (fn.isNotEmpty()) {
-                fn
-            } else if (ln.isNotEmpty()) {
-                ln
-            } else if (organization.isNotEmpty()) {
-                organization
             } else {
-                "<Unknown>"
+                fn.ifEmpty {
+                    ln.ifEmpty {
+                        organization.ifEmpty {
+                            "<Unknown>"
+                        }
+                    }
+                }
             }
 
             friend.edit()
@@ -323,32 +345,39 @@ class ContactNewOrEditViewModel
         phoneNumbers.clear()
         company.value = ""
         jobTitle.value = ""
+        sipAddressesBeforeEdit.clear()
+        phoneNumbersBeforeEdit.clear()
+        sipAddressesLinkedToPresence.clear()
     }
 
     @UiThread
     fun isPendingChanges(): Boolean {
         if (isEdit.value == true) {
+            Log.i("$TAG Contact is being edited, checking if at least one field has changed")
             if (firstName.value.orEmpty() != friend.firstName.orEmpty()) return true
             if (lastName.value.orEmpty() != friend.lastName.orEmpty()) return true
             if (picturePath.value.orEmpty() != friend.photo.orEmpty()) return true
             if (company.value.orEmpty() != friend.organization.orEmpty()) return true
             if (jobTitle.value.orEmpty() != friend.jobTitle.orEmpty()) return true
 
-            for (address in friend.addresses) {
+            for (sipAddress in sipAddressesBeforeEdit) {
+                if (sipAddressesLinkedToPresence.contains(sipAddress)) continue
+
                 val found = sipAddresses.find {
-                    it.isSip && it.value.value.orEmpty() == address.asStringUriOnly()
+                    it.isSip && it.value.value.orEmpty() == sipAddress
                 }
                 if (found == null) return true
             }
             for (address in sipAddresses) {
-                if (address.value.value.orEmpty().isEmpty()) continue
+                val sipAddress = address.value.value.orEmpty()
+                if (sipAddress.isEmpty()) continue
 
-                val found = friend.addresses.find {
-                    it.asStringUriOnly() == address.value.value.orEmpty()
+                val found = sipAddressesBeforeEdit.find {
+                    it == sipAddress
                 }
                 if (found == null) return true
             }
-            for (number in friend.phoneNumbers) {
+            for (number in phoneNumbersBeforeEdit) {
                 val found = phoneNumbers.find {
                     !it.isSip && it.value.value.orEmpty() == number
                 }
@@ -357,7 +386,7 @@ class ContactNewOrEditViewModel
             for (number in phoneNumbers) {
                 if (number.value.value.orEmpty().isEmpty()) continue
 
-                val found = friend.phoneNumbers.find {
+                val found = phoneNumbersBeforeEdit.find {
                     it == number.value.value.orEmpty()
                 }
                 if (found == null) return true
@@ -366,6 +395,7 @@ class ContactNewOrEditViewModel
             return false
         }
 
+        Log.i("$TAG Checking if at least a field of the new contact form has been filled")
         return !picturePath.value.isNullOrEmpty() ||
             !firstName.value.isNullOrEmpty() ||
             !lastName.value.isNullOrEmpty() ||

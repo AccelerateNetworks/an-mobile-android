@@ -63,26 +63,24 @@ class HistoryViewModel
 
     val isChatRoomAvailable = MutableLiveData<Boolean>()
 
+    val hideSipAddresses = MutableLiveData<Boolean>()
+
     val callLogFoundEvent = MutableLiveData<Event<Boolean>>()
 
-    val chatRoomCreationErrorEvent: MutableLiveData<Event<Int>> by lazy {
-        MutableLiveData<Event<Int>>()
-    }
-
     val goToMeetingConversationEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val goToConversationEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val conferenceToJoinEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val historyDeletedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     private lateinit var address: Address
@@ -112,7 +110,7 @@ class HistoryViewModel
             if (state == ChatRoom.State.Instantiated) return
 
             val id = LinphoneUtils.getConversationId(chatRoom)
-            Log.i("$TAG Conversation [$id] (${chatRoom.subject}) state changed: [$state]")
+            Log.i("$TAG Conversation [$id] (${chatRoom.subjectUtf8}) state changed: [$state]")
 
             if (state == ChatRoom.State.Created) {
                 Log.i("$TAG Conversation [$id] successfully created")
@@ -123,9 +121,7 @@ class HistoryViewModel
                 Log.e("$TAG Conversation [$id] creation has failed!")
                 chatRoom.removeListener(this)
                 operationInProgress.postValue(false)
-                chatRoomCreationErrorEvent.postValue(
-                    Event(R.string.conversation_failed_to_create_toast)
-                )
+                showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
             }
         }
     }
@@ -135,6 +131,7 @@ class HistoryViewModel
             core.addListener(coreListener)
             chatDisabled.postValue(corePreferences.disableChat)
             videoCallDisabled.postValue(!core.isVideoEnabled)
+            hideSipAddresses.postValue(corePreferences.hideSipAddresses)
         }
     }
 
@@ -304,9 +301,7 @@ class HistoryViewModel
                             "$TAG Failed to create 1-1 conversation with [${remote.asStringUriOnly()}]!"
                         )
                         operationInProgress.postValue(false)
-                        chatRoomCreationErrorEvent.postValue(
-                            Event(R.string.conversation_failed_to_create_toast)
-                        )
+                        showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
                     }
                 }
             }

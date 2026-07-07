@@ -57,11 +57,11 @@
                     app:constraint_referenced_ids="create_email_account_label, no_push_label" />
 
                 <ImageView
-                    android:onClick="@{backClickListener}"
+                    style="@style/icon_top_bar_button_style"
                     android:id="@+id/back"
+                    android:onClick="@{backClickListener}"
                     android:layout_width="@dimen/top_bar_height"
                     android:layout_height="@dimen/top_bar_height"
-                    android:padding="15dp"
                     android:src="@drawable/caret_left"
                     android:contentDescription="@string/content_description_go_back_icon"
                     app:tint="?attr/color_main2_500"
@@ -115,6 +115,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="48dp"
                     android:layout_marginEnd="16dp"
+                    android:labelFor="@id/username"
                     android:text="@{@string/username + `*`}"
                     app:layout_constraintTop_toBottomOf="@id/title"
                     app:layout_constraintStart_toStartOf="@id/username"/>
@@ -160,6 +161,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="16dp"
                     android:layout_marginTop="16dp"
+                    android:labelFor="@id/phone_number"
                     android:text="@{@string/phone_number + `*`}"
                     app:layout_constraintTop_toBottomOf="@id/username_error"
                     app:layout_constraintStart_toStartOf="@id/prefix"/>
@@ -247,6 +249,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="16dp"
                     android:layout_marginTop="16dp"
+                    android:labelFor="@id/password"
                     android:text="@{@string/password + `*`}"
                     app:layout_constraintTop_toBottomOf="@id/phone_number_error"
                     app:layout_constraintStart_toStartOf="@id/password"/>
@@ -374,8 +377,6 @@
                     android:layout_marginTop="34dp"
                     android:layout_marginStart="20dp"
                     android:layout_marginBottom="@dimen/screen_bottom_margin"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="20dp"
                     android:text="@string/assistant_account_login"
                     app:layout_constraintVertical_bias="1"
                     app:layout_constraintEnd_toEndOf="parent"

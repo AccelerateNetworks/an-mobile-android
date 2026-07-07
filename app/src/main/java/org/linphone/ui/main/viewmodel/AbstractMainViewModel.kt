@@ -70,32 +70,34 @@ open class AbstractMainViewModel
 
     val isFilterEmpty = MutableLiveData<Boolean>()
 
+    val moreThanOneAccount = MutableLiveData<Boolean>()
+
     val focusSearchBarEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val openDrawerMenuEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val navigateToHistoryEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val navigateToContactsEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val navigateToConversationsEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val navigateToMeetingsEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val defaultAccountChangedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     protected var currentFilter = ""
@@ -139,11 +141,26 @@ open class AbstractMainViewModel
         }
 
         @WorkerThread
+        override fun onMessageRetracted(core: Core, chatRoom: ChatRoom, message: ChatMessage) {
+            computeUnreadMessagesCount()
+        }
+
+        @WorkerThread
         override fun onGlobalStateChanged(core: Core, state: GlobalState?, message: String) {
             if (core.globalState == GlobalState.On) {
                 Log.i("$TAG Global state is [${core.globalState}], reload account info")
                 configure()
             }
+        }
+
+        @WorkerThread
+        override fun onAccountAdded(core: Core, account: Account) {
+            moreThanOneAccount.postValue(core.accountList.size > 1)
+        }
+
+        @WorkerThread
+        override fun onAccountRemoved(core: Core, account: Account) {
+            moreThanOneAccount.postValue(core.accountList.size > 1)
         }
 
         @WorkerThread
@@ -175,6 +192,7 @@ open class AbstractMainViewModel
         hideMeetings.value = !coreContext.defaultAccountHasVideoConferenceFactoryUri
 
         coreContext.postOnCoreThread { core ->
+            moreThanOneAccount.postValue(core.accountList.size > 1)
             core.addListener(coreListener)
             configure()
         }
@@ -223,10 +241,12 @@ open class AbstractMainViewModel
 
     @UiThread
     fun applyFilter(filter: String = currentFilter) {
-        Log.i("$TAG New filter set by user [$filter]")
-        currentFilter = filter
-        isFilterEmpty.postValue(filter.isEmpty())
-        filter()
+        if (currentFilter != filter) {
+            Log.i("$TAG New filter set by user [$filter]")
+            currentFilter = filter
+            isFilterEmpty.postValue(filter.isEmpty())
+            filter()
+        }
     }
 
     @UiThread

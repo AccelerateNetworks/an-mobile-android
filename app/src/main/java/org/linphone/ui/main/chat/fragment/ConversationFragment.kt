@@ -69,7 +69,7 @@ import org.linphone.core.tools.Log
 import org.linphone.databinding.ChatConversationFragmentBinding
 import org.linphone.databinding.ChatConversationPopupMenuBinding
 import org.linphone.ui.GenericActivity
-import org.linphone.ui.main.chat.ConversationScrollListener
+import org.linphone.ui.main.chat.RecyclerViewScrollListener
 import org.linphone.ui.main.chat.adapter.ConversationEventAdapter
 import org.linphone.ui.main.chat.adapter.MessageBottomSheetAdapter
 import org.linphone.ui.main.chat.model.FileModel
@@ -94,6 +94,9 @@ import org.linphone.utils.hideKeyboard
 import org.linphone.utils.setKeyboardInsetListener
 import org.linphone.utils.showKeyboard
 import androidx.core.net.toUri
+import org.linphone.ui.main.chat.adapter.ConversationParticipantsAdapter
+import org.linphone.utils.ShortcutUtils
+import kotlin.collections.arrayListOf
 
 @UiThread
 open class ConversationFragment : SlidingPaneChildFragment() {
@@ -112,6 +115,8 @@ open class ConversationFragment : SlidingPaneChildFragment() {
     private lateinit var messageLongPressViewModel: ChatMessageLongPressViewModel
 
     private lateinit var adapter: ConversationEventAdapter
+
+    private lateinit var participantsAdapter: ConversationParticipantsAdapter
 
     private lateinit var bottomSheetAdapter: MessageBottomSheetAdapter
 
@@ -280,26 +285,33 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
         }
 
-        override fun afterTextChanged(p0: Editable?) {
+        override fun afterTextChanged(editable: Editable?) {
             if (viewModel.isGroup.value == true) {
-                sendMessageViewModel.closeParticipantsList()
+                val split = editable.toString().split(" ")
+                if (split.isNotEmpty()) {
+                    val lastPart = split.last()
+                    if (lastPart.isNotEmpty() && lastPart.startsWith("@")) {
+                        coreContext.postOnCoreThread {
+                            val filter = if (lastPart.length > 1) lastPart.substring(1) else ""
+                            sendMessageViewModel.filterParticipantsList(filter)
+                        }
 
-                val split = p0.toString().split(" ")
-                for (part in split) {
-                    if (part == "@") {
-                        Log.i("$TAG '@' found, opening participants list")
-                        sendMessageViewModel.openParticipantsList()
+                        if (sendMessageViewModel.isParticipantsListOpen.value == false) {
+                            Log.i("$TAG '@' found, opening participants list")
+                            sendMessageViewModel.openParticipantsList()
+                        }
+                    } else if (sendMessageViewModel.isParticipantsListOpen.value == true) {
+                        Log.i("$TAG Closing participants list")
+                        sendMessageViewModel.closeParticipantsList()
                     }
                 }
             }
 
-            if (p0.toString().isNotEmpty()) {
-                sendMessageViewModel.notifyChatMessageIsBeingComposed()
-            }
+            sendMessageViewModel.notifyComposing(editable.toString().isNotEmpty())
         }
     }
 
-    private lateinit var scrollListener: ConversationScrollListener
+    private lateinit var scrollListener: RecyclerViewScrollListener
 
     private lateinit var headerItemDecoration: RecyclerViewHeaderDecoration
 
@@ -315,6 +327,8 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                         if (e.y >= 0 && e.y <= headerItemDecoration.getDecorationHeight(0)) {
                             if (viewModel.isEndToEndEncrypted.value == true) {
                                 showEndToEndEncryptionDetailsBottomSheet()
+                            } else {
+                                showUnsafeConversationDisabledDetailsBottomSheet()
                             }
                             return true
                         }
@@ -385,6 +399,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         super.onCreate(savedInstanceState)
 
         adapter = ConversationEventAdapter()
+        participantsAdapter = ConversationParticipantsAdapter()
         headerItemDecoration = RecyclerViewHeaderDecoration(
             requireContext(),
             adapter,
@@ -456,6 +471,10 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         layoutManager.stackFromEnd = true
         binding.eventsList.layoutManager = layoutManager
 
+        binding.sendArea.participants.participantsList.setHasFixedSize(true)
+        val participantsLayoutManager = LinearLayoutManager(requireContext())
+        binding.sendArea.participants.participantsList.layoutManager = participantsLayoutManager
+
         val callbacks = RecyclerViewSwipeUtilsCallback(
             R.drawable.reply,
             ConversationEventAdapter.EventViewHolder::class.java
@@ -473,9 +492,14 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                 val chatMessageEventLog = adapter.currentList[index]
                 val chatMessageModel = (chatMessageEventLog.model as? MessageModel)
                 if (chatMessageModel != null) {
-                    sendMessageViewModel.replyToMessage(chatMessageModel)
-                    // Open keyboard & focus edit text
-                    binding.sendArea.messageToSend.showKeyboard()
+                    if (chatMessageModel.hasBeenRetracted.value == true) { // Don't allow to reply to retracted messages
+                        // TODO: notify user?
+                    } else {
+                        viewModel.closeSearchBar()
+                        sendMessageViewModel.replyToMessage(chatMessageModel)
+                        // Open keyboard & focus edit text
+                        binding.sendArea.messageToSend.showKeyboard()
+                    }
                 } else {
                     Log.e(
                         "$TAG Can't reply, failed to get a ChatMessageModel from adapter item #[$index]"
@@ -505,6 +529,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                     }
                 } else {
                     sharedViewModel.displayedChatRoom = viewModel.chatRoom
+                    ShortcutUtils.reportChatRoomShortcutHasBeenUsed(requireContext(), viewModel.conversationId)
 
                     sendMessageViewModel.configureChatRoom(viewModel.chatRoom)
                     adapter.setIsConversationSecured(viewModel.isEndToEndEncrypted.value == true)
@@ -521,6 +546,26 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                             } else {
                                 sendMessageViewModel.forwardMessage(toForward)
                             }
+                        }
+                    }
+
+                    sharedViewModel.textToShareFromIntent.observe(viewLifecycleOwner) { text ->
+                        if (text.isNotEmpty() && sharedViewModel.displayedChatRoom != null) {
+                            Log.i("$TAG Found text to share from intent")
+                            sendMessageViewModel.textToSend.value = text
+
+                            sharedViewModel.textToShareFromIntent.value = ""
+                        }
+                    }
+
+                    sharedViewModel.filesToShareFromIntent.observe(viewLifecycleOwner) { files ->
+                        if (files.isNotEmpty() && sharedViewModel.displayedChatRoom != null) {
+                            Log.i("$TAG Found [${files.size}] files to share from intent")
+                            for (path in files) {
+                                sendMessageViewModel.addAttachments(arrayListOf(path))
+                            }
+
+                            sharedViewModel.filesToShareFromIntent.value = arrayListOf()
                         }
                     }
                 }
@@ -590,8 +635,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
         viewModel.isEndToEndEncrypted.observe(viewLifecycleOwner) { encrypted ->
             adapter.setIsConversationSecured(encrypted)
-
-            if (encrypted) {
+            if (encrypted || (!encrypted && viewModel.isEndToEndEncryptionAvailable.value == true)) {
                 binding.eventsList.addItemDecoration(headerItemDecoration)
                 binding.eventsList.addOnItemTouchListener(listItemTouchListener)
             }
@@ -649,14 +693,22 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
         binding.setOpenFilePickerClickListener {
             Log.i("$TAG Opening file picker")
-            pickDocument.launch(arrayOf("*/*"))
+            try {
+                pickDocument.launch(arrayOf("*/*"))
+            } catch (anfe: ActivityNotFoundException) {
+                Log.e("$TAG Failed to start file picker: $anfe")
+            }
         }
 
         binding.setOpenMediaPickerClickListener {
             Log.i("$TAG Opening media picker")
-            pickMedia.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-            )
+            try {
+                pickMedia.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                )
+            } catch (anfe: ActivityNotFoundException) {
+                Log.e("$TAG Failed to start media picker: $anfe")
+            }
         }
 
         binding.setOpenCameraClickListener {
@@ -718,6 +770,12 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             false
         }
 
+        sendMessageViewModel.messageSentEvent.observe(viewLifecycleOwner) {
+            it.consume { message ->
+                viewModel.addSentMessageToEventsList(message)
+            }
+        }
+
         sendMessageViewModel.emojiToAddEvent.observe(viewLifecycleOwner) {
             it.consume { emoji ->
                 binding.sendArea.messageToSend.addCharacterAtPosition(emoji)
@@ -748,6 +806,14 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                     Log.i("$TAG Permission request for RECORD_AUDIO will be automatically denied, go to android app settings instead")
                     (requireActivity() as GenericActivity).goToAndroidPermissionSettings()
                 }
+            }
+        }
+
+        sendMessageViewModel.participants.observe(viewLifecycleOwner) {
+            participantsAdapter.submitList(it)
+
+            if (binding.sendArea.participants.participantsList.adapter != participantsAdapter) {
+                binding.sendArea.participants.participantsList.adapter = participantsAdapter
             }
         }
 
@@ -847,7 +913,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
                     "$TAG Scrolling to message/event at position [$position], " +
                         "display show events between positions [$firstDisplayedItemPosition] and [$lastDisplayedItemPosition]"
                 )
-                if (firstDisplayedItemPosition > position && position > 0) {
+                if (position in 1..<firstDisplayedItemPosition) {
                     recyclerView.scrollToPosition(position - 1)
                 } else if (lastDisplayedItemPosition < position && position < layoutManager.itemCount - 1) {
                     recyclerView.scrollToPosition(position + 1)
@@ -866,10 +932,28 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
 
+        messageLongPressViewModel.editMessageEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                val model = messageLongPressViewModel.messageModel.value
+                if (model != null) {
+                    viewModel.closeSearchBar()
+                    sendMessageViewModel.editMessage(model)
+
+                    // Open keyboard & focus edit text
+                    binding.sendArea.messageToSend.showKeyboard()
+                    // Put cursor at the end
+                    coreContext.postOnMainThread {
+                        binding.sendArea.messageToSend.setSelection(binding.sendArea.messageToSend.length())
+                    }
+                }
+            }
+        }
+
         messageLongPressViewModel.replyToMessageEvent.observe(viewLifecycleOwner) {
             it.consume {
                 val model = messageLongPressViewModel.messageModel.value
                 if (model != null) {
+                    viewModel.closeSearchBar()
                     sendMessageViewModel.replyToMessage(model)
                     // Open keyboard & focus edit text
                     binding.sendArea.messageToSend.showKeyboard()
@@ -881,7 +965,14 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             it.consume {
                 val model = messageLongPressViewModel.messageModel.value
                 if (model != null) {
-                    viewModel.deleteChatMessage(model)
+                    if (model.isOutgoing && !(model.hasBeenRetracted.value ?: false)) {
+                        // For sent messages let user choose between delete locally / delete for everyone
+                        showHowToDeleteMessageMenu(model)
+                    } else {
+                        // For received messages or retracted sent ones you can only delete locally
+                        viewModel.deleteChatMessage(model)
+                        messageLongPressViewModel.dismiss()
+                    }
                 }
             }
         }
@@ -890,6 +981,9 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             it.consume {
                 val model = messageLongPressViewModel.messageModel.value
                 if (model != null) {
+                    viewModel.closeSearchBar()
+                    sendMessageViewModel.cancelReply()
+
                     // Remove observer before setting the message to forward
                     // as we don't want to forward it in this chat room
                     sharedViewModel.messageToForwardEvent.removeObservers(viewLifecycleOwner)
@@ -935,26 +1029,6 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
 
-        sharedViewModel.textToShareFromIntent.observe(viewLifecycleOwner) { text ->
-            if (text.isNotEmpty()) {
-                Log.i("$TAG Found text to share from intent")
-                sendMessageViewModel.textToSend.value = text
-
-                sharedViewModel.textToShareFromIntent.value = ""
-            }
-        }
-
-        sharedViewModel.filesToShareFromIntent.observe(viewLifecycleOwner) { files ->
-            if (files.isNotEmpty()) {
-                Log.i("$TAG Found [${files.size}] files to share from intent")
-                for (path in files) {
-                    sendMessageViewModel.addAttachments(arrayListOf(path))
-                }
-
-                sharedViewModel.filesToShareFromIntent.value = arrayListOf()
-            }
-        }
-
         sharedViewModel.forceRefreshConversationInfoEvent.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG Force refreshing conversation info")
@@ -988,7 +1062,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
 
         binding.sendArea.messageToSend.addTextChangedListener(textObserver)
 
-        scrollListener = object : ConversationScrollListener(layoutManager) {
+        scrollListener = object : RecyclerViewScrollListener(layoutManager, 5, false) {
             @UiThread
             override fun onLoadMore(totalItemsCount: Int) {
                 if (viewModel.searchInProgress.value == false) {
@@ -1363,49 +1437,59 @@ open class ConversationFragment : SlidingPaneChildFragment() {
     private fun displayDeliveryStatuses(model: MessageDeliveryModel) {
         val tabs = binding.messageBottomSheet.tabs
         tabs.removeAllTabs()
-        tabs.addTab(
-            tabs.newTab().setText(model.readLabel.value).setId(
-                ChatMessage.State.Displayed.toInt()
-            )
+
+        val displayedTab = tabs.newTab().setText(model.readLabel.value).setId(
+            ChatMessage.State.Displayed.toInt()
         )
-        tabs.addTab(
-            tabs.newTab().setText(
-                model.receivedLabel.value
-            ).setId(
-                ChatMessage.State.DeliveredToUser.toInt()
-            )
+        val deliveredTab = tabs.newTab().setText(model.receivedLabel.value).setId(
+            ChatMessage.State.DeliveredToUser.toInt()
         )
-        tabs.addTab(
-            tabs.newTab().setText(model.sentLabel.value).setId(
-                ChatMessage.State.Delivered.toInt()
-            )
+        val sentTab = tabs.newTab().setText(model.sentLabel.value).setId(
+            ChatMessage.State.Delivered.toInt()
         )
-        tabs.addTab(
-            tabs.newTab().setText(
-                model.errorLabel.value
-            ).setId(
-                ChatMessage.State.NotDelivered.toInt()
-            )
+        val errorTab = tabs.newTab().setText(model.errorLabel.value).setId(
+            ChatMessage.State.NotDelivered.toInt()
         )
+        // Tabs must be added first otherwise select() will do nothing
+        tabs.addTab(displayedTab)
+        tabs.addTab(deliveredTab)
+        tabs.addTab(sentTab)
+        tabs.addTab(errorTab)
+
+        if (model.displayedModels.isNotEmpty()) {
+            bottomSheetAdapter.submitList(model.displayedModels)
+            displayedTab.select()
+        } else {
+            if (model.deliveredModels.isNotEmpty()) {
+                bottomSheetAdapter.submitList(model.deliveredModels)
+                deliveredTab.select()
+            } else {
+                if (model.sentModels.isNotEmpty()) {
+                    bottomSheetAdapter.submitList(model.sentModels)
+                    sentTab.select()
+                } else {
+                    if (model.errorModels.isNotEmpty()) {
+                        bottomSheetAdapter.submitList(model.errorModels)
+                        errorTab.select()
+                    } else {
+                        // TODO FIXME: remove all tabs and show error message?
+                    }
+                }
+            }
+        }
 
         tabs.setOnTabSelectedListener(object : OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 val state = tab?.id ?: ChatMessage.State.Displayed.toInt()
                 bottomSheetAdapter.submitList(
-                    model.computeListForState(ChatMessage.State.fromInt(state))
+                    model.getListForState(ChatMessage.State.fromInt(state))
                 )
             }
 
-            override fun onTabUnselected(tab: TabLayout.Tab?) {
-            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) { }
 
-            override fun onTabReselected(tab: TabLayout.Tab?) {
-            }
+            override fun onTabReselected(tab: TabLayout.Tab?) { }
         })
-
-        val initialList = model.displayedModels
-        bottomSheetAdapter.submitList(initialList)
-        Log.i("$TAG Submitted [${initialList.size}] items for default delivery status list")
     }
 
     @UiThread
@@ -1486,7 +1570,7 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
 
-        model.cancelEvent.observe(viewLifecycleOwner) {
+        model.alternativeChoiceEvent.observe(viewLifecycleOwner) {
             it.consume {
                 openFileInAnotherApp(path, mime, bundle)
                 dialog.dismiss()
@@ -1554,12 +1638,6 @@ open class ConversationFragment : SlidingPaneChildFragment() {
             }
         }
 
-        model.cancelEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                dialog.dismiss()
-            }
-        }
-
         model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
                 sharedViewModel.displayFileEvent.value = Event(bundle)
@@ -1585,5 +1663,27 @@ open class ConversationFragment : SlidingPaneChildFragment() {
         } catch (exception: ActivityNotFoundException) {
             Log.e("$TAG No activity found to handle intent ACTION_CREATE_DOCUMENT: $exception")
         }
+    }
+
+    private fun showHowToDeleteMessageMenu(model: MessageModel) {
+        val canBeRetracted = messageLongPressViewModel.canBeRemotelyDeleted.value == true
+        val modalBottomSheet = MessageDialogFragment(
+            canBeRetracted,
+            { // onDismiss
+                messageLongPressViewModel.dismiss()
+            },
+            { // onMarkConversationAsRead
+                Log.i("$TAG Deleting chat message locally")
+                viewModel.deleteChatMessage(model)
+                messageLongPressViewModel.dismiss()
+            },
+            { // onToggleMute
+                Log.i("$TAG Deleting chat message (content) for everyone")
+                viewModel.deleteChatMessageForEveryone(model)
+                messageLongPressViewModel.dismiss()
+            }
+        )
+        modalBottomSheet.show(parentFragmentManager, MessageDialogFragment.TAG)
+        bottomSheetDialog = modalBottomSheet
     }
 }

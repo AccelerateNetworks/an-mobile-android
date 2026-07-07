@@ -20,6 +20,7 @@
 package org.linphone.ui.assistant.fragment
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.view.LayoutInflater
@@ -40,7 +41,8 @@ import org.linphone.databinding.AssistantThirdPartySipAccountLoginFragmentBindin
 import org.linphone.ui.GenericActivity
 import org.linphone.ui.GenericFragment
 import org.linphone.ui.assistant.viewmodel.ThirdPartySipAccountLoginViewModel
-import org.linphone.ui.main.sso.fragment.SingleSignOnFragmentDirections
+import org.linphone.ui.sso.SingleSignOnActivity
+import org.linphone.utils.DialogUtils
 import org.linphone.utils.PhoneNumberUtils
 
 @UiThread
@@ -98,6 +100,10 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
             goBack()
         }
 
+        binding.setOutboundProxyTooltipClickListener {
+            showOutboundProxyInfoDialog()
+        }
+
         viewModel.showPassword.observe(viewLifecycleOwner) {
             lifecycleScope.launch {
                 delay(50)
@@ -133,15 +139,12 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
                 val username = pair.second
 
                 Log.i(
-                    "$TAG Navigating to Single Sign On Fragment with server URL [$serverUrl] and username [$username]"
+                    "$TAG Bearer auth request, navigating to Single Sign On Fragment with server URL [$serverUrl] and username [$username]"
                 )
-                if (findNavController().currentDestination?.id == R.id.thirdPartySipAccountLoginFragment) {
-                    val action = SingleSignOnFragmentDirections.actionGlobalSingleSignOnFragment(
-                        serverUrl,
-                        username
-                    )
-                    findNavController().navigate(action)
-                }
+                val intent = Intent(requireContext(), SingleSignOnActivity::class.java)
+                intent.putExtra(SingleSignOnActivity.INTENT_EXTRA_USERNAME, username)
+                intent.putExtra(SingleSignOnActivity.INTENT_EXTRA_SERVER_URL, serverUrl)
+                startActivity(intent)
             }
         }
 
@@ -158,5 +161,10 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
 
     private fun goBack() {
         findNavController().popBackStack()
+    }
+
+    private fun showOutboundProxyInfoDialog() {
+        val dialog = DialogUtils.getAccountOutboundProxyHelpDialog(requireActivity())
+        dialog.show()
     }
 }

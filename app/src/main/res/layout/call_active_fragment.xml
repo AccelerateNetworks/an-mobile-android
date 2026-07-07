@@ -92,13 +92,13 @@
             <androidx.appcompat.widget.AppCompatTextView
                 style="@style/default_text_style"
                 android:id="@+id/address"
-                android:visibility="@{View.GONE}"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="5dp"
                 android:text="@{viewModel.displayedAddress, default=`sip:johndoe@sip.linphone.org`}"
                 android:textColor="@color/bc_white"
                 android:textSize="14sp"
+                android:visibility="@{viewModel.hideSipAddresses || viewModel.pipMode || viewModel.halfOpenedFolded ? View.GONE : View.VISIBLE}"
                 app:layout_constraintTop_toBottomOf="@id/display_name"
                 app:layout_constraintBottom_toBottomOf="@id/hinge_bottom"
                 app:layout_constraintStart_toStartOf="parent"
@@ -132,6 +132,7 @@
                 android:adjustViewBounds="true"
                 android:padding="15dp"
                 android:src="@drawable/caret_left"
+                android:background="@drawable/circle_transparent_dark_button_background"
                 android:contentDescription="@string/content_description_go_back_icon"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/hinge_top"
@@ -152,7 +153,7 @@
                 app:layout_constraintStart_toEndOf="@id/back"
                 app:layout_constraintEnd_toStartOf="@id/separator"
                 app:layout_constraintTop_toTopOf="@id/back"
-                app:layout_constraintBottom_toBottomOf="@id/back"/>
+                app:layout_constraintBottom_toTopOf="@id/call_media_encryption_info"/>
 
             <androidx.appcompat.widget.AppCompatTextView
                 style="@style/call_header_style"
@@ -161,6 +162,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:text="@string/vertical_separator"
+                android:importantForAccessibility="no"
                 app:layout_constraintTop_toTopOf="@id/name"
                 app:layout_constraintStart_toEndOf="@id/name"
                 app:layout_constraintEnd_toStartOf="@id/chronometer"/>
@@ -200,8 +202,11 @@
                 android:layout_marginStart="5dp"
                 android:layout_marginEnd="5dp"
                 android:src="@drawable/camera_rotate"
+                android:adjustViewBounds="true"
+                android:background="@drawable/circle_transparent_dark_button_background"
                 android:contentDescription="@string/content_description_change_camera"
                 android:visibility="@{!viewModel.fullScreenMode &amp;&amp; !viewModel.pipMode &amp;&amp; viewModel.isSendingVideo &amp;&amp; viewModel.showSwitchCamera ? View.VISIBLE : View.GONE}"
+                app:layout_constraintDimensionRatio="1:1"
                 app:tint="@color/bc_white"
                 app:layout_constraintTop_toTopOf="@id/back"
                 app:layout_constraintBottom_toBottomOf="@id/back"
@@ -212,10 +217,14 @@
                 android:layout_width="@dimen/big_icon_size"
                 android:layout_height="0dp"
                 android:padding="10dp"
+                android:layout_marginStart="5dp"
+                android:layout_marginEnd="5dp"
                 android:src="@drawable/pause"
+                android:adjustViewBounds="true"
                 android:contentDescription="@string/content_description_paused_call"
                 android:visibility="@{!viewModel.fullScreenMode &amp;&amp; !viewModel.pipMode &amp;&amp; (viewModel.isPaused || viewModel.isPausedByRemote) ? View.VISIBLE : View.GONE, default=gone}"
                 app:tint="?attr/color_main1_500"
+                app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintTop_toTopOf="@id/back"
                 app:layout_constraintBottom_toBottomOf="@id/back"
                 app:layout_constraintEnd_toStartOf="@id/stats" />
@@ -227,23 +236,27 @@
                 android:layout_height="0dp"
                 android:padding="10dp"
                 android:src="@{viewModel.qualityIcon, default=@drawable/cell_signal_full}"
+                android:adjustViewBounds="true"
                 android:contentDescription="@string/content_description_show_call_statistics"
+                android:background="@drawable/circle_transparent_dark_button_background"
                 android:visibility="@{!viewModel.fullScreenMode &amp;&amp; !viewModel.pipMode &amp;&amp; !(viewModel.isPaused || viewModel.isPausedByRemote) ? View.VISIBLE : View.GONE}"
                 android:tint="@{viewModel.qualityValue >= 2 ? @color/bc_white : viewModel.qualityValue >= 1 ? @color/orange_warning_600 : @color/red_danger_500, default=@color/bc_white}"
+                app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintTop_toTopOf="@id/back"
                 app:layout_constraintBottom_toBottomOf="@id/back"
                 app:layout_constraintEnd_toEndOf="parent"
                 bind:ignore="UseAppTint" />
 
             <include
-                android:visibility="@{View.GONE}"
                 android:id="@+id/call_media_encryption_info"
+                android:visibility="@{View.GONE}"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 layout="@layout/call_media_encryption_info"
                 bind:viewModel="@{viewModel}"
                 bind:callMediaEncryptionStatisticsClickListener="@{callMediaEncryptionStatisticsClickListener}"
                 app:layout_constraintTop_toBottomOf="@id/name"
+                app:layout_constraintBottom_toBottomOf="@id/back"
                 app:layout_constraintStart_toStartOf="@id/name"
                 app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -289,11 +302,12 @@
         <include
             android:id="@+id/call_numpad"
             layout="@layout/call_numpad_bottom_sheet"
+            bind:viewModel="@{viewModel}"
             bind:model="@{numpadModel}"/>
 
         <include
-            android:visibility="@{View.GONE}"
             android:id="@+id/call_media_encryption_stats"
+            android:visibility="@{View.GONE}"
             layout="@layout/call_media_encryption_stats_bottom_sheet"
             bind:viewModel="@{viewModel}"
             bind:model="@{viewModel.callMediaEncryptionModel}"/>

@@ -18,11 +18,10 @@
         android:background="?attr/color_background_contrast_in_dark_mode">
 
         <ImageView
+            style="@style/icon_top_bar_button_style"
             android:id="@+id/back"
             android:layout_width="wrap_content"
             android:layout_height="0dp"
-            android:adjustViewBounds="true"
-            android:padding="15dp"
             android:onClick="@{backClickListener}"
             android:src="@drawable/caret_left"
             android:contentDescription="@string/content_description_go_back_icon"
@@ -90,6 +89,8 @@
                     android:layout_marginTop="25dp"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:background="@drawable/shape_squircle_white_background"
                     app:layout_constraintTop_toBottomOf="@id/subtitle">
 
@@ -98,8 +99,6 @@
                         android:onClick="@{() -> viewModel.onValueSelected(60)}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
                         android:checked="@{viewModel.currentlySelectedValue == 60}"
@@ -107,23 +106,21 @@
                         android:textSize="17sp"
                         android:textColor="?attr/color_main2_500"
                         android:textAlignment="textStart"
+                        android:background="@drawable/action_background_middle"
                         app:useMaterialThemeColors="false"
                         app:buttonTint="?attr/color_main1_500" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:background="?attr/color_separator"/>
+                        android:background="?attr/color_separator"
+                        android:importantForAccessibility="no"/>
 
                     <RadioButton
                         style="@style/default_text_style"
                         android:onClick="@{() -> viewModel.onValueSelected(3600)}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
                         android:checked="@{viewModel.currentlySelectedValue == 3600}"
@@ -131,23 +128,21 @@
                         android:textSize="17sp"
                         android:textColor="?attr/color_main2_500"
                         android:textAlignment="textStart"
+                        android:background="@drawable/action_background_middle"
                         app:useMaterialThemeColors="false"
                         app:buttonTint="?attr/color_main1_500" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:background="?attr/color_separator"/>
+                        android:background="?attr/color_separator"
+                        android:importantForAccessibility="no"/>
 
                     <RadioButton
                         style="@style/default_text_style"
                         android:onClick="@{() -> viewModel.onValueSelected(86400)}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
                         android:checked="@{viewModel.currentlySelectedValue == 86400}"
@@ -155,23 +150,21 @@
                         android:textSize="17sp"
                         android:textColor="?attr/color_main2_500"
                         android:textAlignment="textStart"
+                        android:background="@drawable/action_background_middle"
                         app:useMaterialThemeColors="false"
                         app:buttonTint="?attr/color_main1_500" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:background="?attr/color_separator"/>
+                        android:background="?attr/color_separator"
+                        android:importantForAccessibility="no"/>
 
                     <RadioButton
                         style="@style/default_text_style"
                         android:onClick="@{() -> viewModel.onValueSelected(259200)}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
                         android:checked="@{viewModel.currentlySelectedValue == 259200}"
@@ -179,23 +172,21 @@
                         android:textSize="17sp"
                         android:textColor="?attr/color_main2_500"
                         android:textAlignment="textStart"
+                        android:background="@drawable/action_background_middle"
                         app:useMaterialThemeColors="false"
                         app:buttonTint="?attr/color_main1_500" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:background="?attr/color_separator"/>
+                        android:background="?attr/color_separator"
+                        android:importantForAccessibility="no"/>
 
                     <RadioButton
                         style="@style/default_text_style"
                         android:onClick="@{() -> viewModel.onValueSelected(604800)}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
                         android:checked="@{viewModel.currentlySelectedValue == 604800}"
@@ -203,23 +194,21 @@
                         android:textSize="17sp"
                         android:textColor="?attr/color_main2_500"
                         android:textAlignment="textStart"
+                        android:background="@drawable/action_background_middle"
                         app:useMaterialThemeColors="false"
                         app:buttonTint="?attr/color_main1_500" />
 
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:background="?attr/color_separator"/>
+                        android:background="?attr/color_separator"
+                        android:importantForAccessibility="no"/>
 
                     <RadioButton
                         style="@style/default_text_style"
                         android:onClick="@{() -> viewModel.onValueSelected(0)}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
                         android:paddingTop="10dp"
                         android:paddingBottom="10dp"
                         android:checked="@{viewModel.currentlySelectedValue == 0}"
@@ -227,6 +216,7 @@
                         android:textSize="17sp"
                         android:textColor="?attr/color_main2_500"
                         android:textAlignment="textStart"
+                        android:background="@drawable/action_background_middle"
                         app:useMaterialThemeColors="false"
                         app:buttonTint="?attr/color_main1_500" />
 

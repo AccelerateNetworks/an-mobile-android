@@ -103,7 +103,6 @@
     <string name="dialog_accept">Aceitar</string>
     <string name="dialog_cancel">Cancelar</string>
     <string name="dialog_continue">Continuar</string>
-    <string name="dialog_ok">OK</string>
     <string name="dialog_call">Chamar</string>
     <string name="dialog_delete">Excluir</string>
     <string name="dialog_install">Instalar</string>
@@ -133,7 +132,6 @@
     <string name="welcome_page_3_message">Um aplicativo <b>gratuito</b> e de código aberto desde <b>2001</b> .</string>
     <string name="sip_address_copied_to_clipboard_toast">Endereço SIP copiado para a área de transferência</string>
     <string name="new_account_configured_toast">Nova conta configurada</string>
-    <string name="default_account_connection_state_error_toast">Erro de conexão!</string>
     <string name="file_successfully_exported_to_media_store_toast">O arquivo foi exportado para a galeria nativa</string>
     <string name="export_file_to_media_store_error_toast">Erro ao tentar exportar o arquivo para a galeria nativa</string>
     <string name="export_file_to_documents_error_toast">Erro ao tentar exportar o arquivo para documentos</string>
@@ -177,8 +175,6 @@
     <string name="assistant_forgotten_password_message">Você criou sua conta usando:</string>
     <string name="assistant_recover_email_account_label">Um e-mail</string>
     <string name="assistant_recover_phone_number_account_label">Um número de telefone</string>
-    <string name="assistant_recover_phone_number_account_subtitle">Digite o número de telefone vinculado à sua conta, enviaremos um código.</string>
-    <string name="assistant_recover_phone_number_account_send_code_label">Enviar o código</string>
     <string name="bottom_navigation_contacts_label">Contatos</string>
     <string name="bottom_navigation_calls_label">Chamadas</string>
     <string name="bottom_navigation_conversations_label">Conversas</string>
@@ -211,7 +207,6 @@
     <string name="help_troubleshooting_share_logs_dialog_title">Compartilhar link de logs de depuração usando…</string>
     <string name="help_troubleshooting_debug_logs_cleaned_toast_message">Logs de depuração foram limpos</string>
     <string name="help_troubleshooting_show_config_file">Mostrar configuração</string>
-    <string name="help_troubleshooting_clear_native_friends_in_database">Limpar contatos importados da agenda nativa</string>
     <string name="settings_title">Configurações</string>
     <string name="settings_security_title">Segurança</string>
     <string name="settings_security_enable_vfs_title">Criptografar tudo</string>
@@ -227,7 +222,6 @@
     <string name="settings_calls_calibrate_echo_canceller_done_no_echo">sem eco</string>
     <string name="settings_calls_calibrate_echo_canceller_done">%s ms</string>
     <string name="settings_calls_calibrate_echo_canceller_failed">falhou</string>
-    <string name="settings_calls_enable_video_title">Ativar vídeo</string>
     <string name="settings_calls_enable_fec_title">Ativar FEC de vídeo</string>
     <string name="settings_calls_auto_record_title">Iniciar gravação de chamadas automaticamente</string>
     <string name="settings_calls_change_ringtone_title">Alterar toque</string>
@@ -261,7 +255,6 @@
     <string name="settings_contacts_ldap_name_attributes_title">Atributos de nome</string>
     <string name="settings_contacts_ldap_sip_domain_title">Domínio SIP</string>
     <string name="settings_contacts_ldap_error_toast">Ocorreu um erro, servidor LDAP não salvo!</string>
-    <string name="settings_contacts_ldap_empty_server_error_toast">A URL do servidor não pode ficar em branco</string>
     <string name="settings_meetings_title">Reuniões</string>
     <string name="settings_meetings_default_layout_title">Layout padrão</string>
     <string name="settings_meetings_layout_active_speaker_label">Orador ativo</string>
@@ -288,7 +281,6 @@
     <string name="contact_details_remove_from_favourites">Remover dos favoritos</string>
     <string name="contact_details_share">Compartilhar</string>
     <string name="contact_details_delete">Excluir</string>
-    <string name="history_title">Histórico de chamadas</string>
     <string name="history_call_start_title">Nova chamada</string>
     <string name="history_call_start_search_bar_filter_hint">Pesquisar contato ou histórico de chamadas</string>
     <string name="history_list_empty_history">Nenhuma chamada no momento…</string>
@@ -417,7 +409,6 @@
     <string name="conversation_end_to_end_encrypted_bottom_sheet_message">Graças à tecnologia de criptografia de ponta a ponta no &appName;, a confidencialidade de mensagens, chamadas e reuniões é garantida. Ninguém pode descriptografar os dados trocados, nem mesmo nós.</string>
     <string name="conversation_warning_disabled_because_not_secured_title">Esta conversa não está criptografada!</string>
     <string name="conversation_warning_disabled_because_not_secured_subtitle">Para sua segurança, esta conversa foi desativada.</string>
-    <string name="conversation_warning_disabled_encrypted_bottom_sheet_title">Criptografia obrigatória</string>
     <string name="conversation_dialog_subject_cant_be_empty_error">O assunto é obrigatório</string>
     <string name="conversation_dialog_subject_hint">Assunto da conversa</string>
     <string name="conversation_dialog_open_or_export_file_title">Abrir ou exportar arquivo?</string>
@@ -442,7 +433,6 @@
     <string name="conversation_pick_file_from_gallery_label">Abrir galeria</string>
     <string name="conversation_pick_any_file_label">Escolher arquivo</string>
     <string name="conversation_file_cant_be_opened_error_toast">O arquivo não pode ser aberto!</string>
-    <string name="conversation_pdf_file_cant_be_opened_error_toast">Não é possível abrir PDFs protegidos por senha ainda</string>
     <string name="conversation_info_participants_list_title">Membros do grupo (%s)</string>
     <string name="conversation_info_add_participants_label">Adicionar participantes</string>
     <string name="conversation_info_participant_is_admin_label">Admin</string>
@@ -512,11 +502,7 @@
     <string name="meeting_info_not_found_toast">A reunião não pode ser encontrada!</string>
     <string name="meeting_schedule_description_title">Descrição</string>
     <string name="meeting_schedule_edit_title">Editar reunião</string>
-    <string name="meeting_schedule_cancel_dialog_title">Cancelar a reunião?</string>
-    <string name="meeting_schedule_cancel_dialog_message">Você quer cancelar a reunião e enviar uma notificação para todos os participantes?</string>
     <string name="meeting_cancel_action_label">Cancelar reunião</string>
-    <string name="meeting_schedule_delete_dialog_title">Excluir a reunião?</string>
-    <string name="meeting_schedule_delete_dialog_message">Você quer excluir a reunião?</string>
     <string name="meeting_delete_action_label">Excluir reunião</string>
     <string name="meeting_info_created_toast">A reunião foi criada</string>
     <string name="meeting_info_updated_toast">A reunião foi atualizada</string>
@@ -583,11 +569,6 @@
     <string name="menu_export_selected_item">Baixar</string>
     <string name="menu_share_selected_item">Compartilhar</string>
     <string name="orange">Laranja</string>
-    <string name="yellow">Amarelo</string>
-    <string name="blue">Azul</string>
-    <string name="red">Vermelho</string>
-    <string name="pink">Rosa</string>
-    <string name="purple">Roxo</string>
     <string name="list_filter_no_result_found">Nenhum resultado encontrado…</string>
     <string name="multiple_participants_selection_placeholder">Os participantes selecionados aparecerão aqui</string>
     <string name="connection_error_for_non_default_account">Erro de conexão da(s) conta(s)</string>
@@ -656,7 +637,6 @@
     <string name="content_description_chat_open_attach_file">Abre o seletor de arquivos</string>
     <string name="content_description_chat_edit_conversation_subject">Clique para editar o assunto desta conversa</string>
     <string name="content_description_chat_toggle_mute">Silencia/reativa o som desta conversa</string>
-    <string name="content_description_chat_removal_in_progress">A conversa está sendo removida</string>
     <string name="content_description_chat_unsecured">Esta conversa não é segura</string>
     <string name="content_description_chat_search_message_down">Pesquisar abaixo</string>
     <string name="content_description_meeting_today">Rolar para hoje</string>
@@ -709,7 +689,6 @@
     <string name="new_conversation_title">Nova conversa</string>
     <string name="new_group_conversation_title">Nova conversa em grupo</string>
     <string name="conversation_invalid_empty_subject_toast">Por favor, insira um nome para a conversa</string>
-    <string name="conversation_warning_disabled_encrypted_bottom_sheet_message">Você ativou a criptografia obrigatória. Conversas não criptografadas estão desativadas para sua segurança. Você pode recriar esta conversa ou desativar a criptografia obrigatória nos parâmetros da sua conta.</string>
     <string name="conversation_maximum_number_of_attachments_reached">Número máximo de anexos atingido!</string>
     <string name="conversation_dialog_set_subject">Definir assunto da conversa</string>
     <string name="conversation_dialog_edit_subject">Editar assunto da conversa</string>
@@ -739,7 +718,6 @@
         <item quantity="many">%s de novas mensagens de voz</item>
         <item quantity="other">%s novas mensagens de voz</item>
     </plurals>
-    <string name="green">Verde</string>
     <plurals name="conversations_files_waiting_to_be_shared_toast">
         <item quantity="one">%s arquivo esperando para ser compartilhado</item>
         <item quantity="many">%s de arquivos esperando para ser compartilhados</item>
@@ -860,4 +838,19 @@
     <string name="content_description_voicemail_available">Mensagens de voz estão disponíveis</string>
     <string name="content_description_call_voicemail">Pressione e segure para ligar para o correio de voz</string>
     <string name="manage_account_delete">Sair</string>
+    <string name="search">Pesquisar</string>
+    <string name="conversation_participants_list_header">Participantes</string>
+    <string name="settings_developer_clear_native_friends_in_database_title">Limpar contatos importados da agenda nativa</string>
+    <string name="conversation_pdf_password_protected_file_cant_be_opened_error_toast">Não é possível abrir PDFs protegidos por senha ainda</string>
+    <string name="menu_edit_chat_message">Editar</string>
+    <string name="dialog_understood">Entendido</string>
+    <string name="notification_channel_account_error_name">&appName; notificações de erro da conta</string>
+    <string name="notification_in_call_foreground_service_error_message">Clique nesta notificação para corrigí-la</string>
+    <string name="dialog_do_not_cancel">Não cancele</string>
+    <string name="notification_keep_app_alive_description">Essa notificação mantém o aplicativo em execução em segundo plano</string>
+    <string name="notification_disable_speaker_for_call">Desligue o alto-falante</string>
+    <string name="notification_enable_speaker_for_call">Ligue o alto-falante</string>
+    <string name="notification_in_call_foreground_service_error_title">Seu interlocutor não o ouve!</string>
+    <string name="notification_account_registration_error_title">Falha no registro da conta %s!</string>
+    <string name="notification_account_registration_error_message">Abra &appName; para atualizar o registro</string>
 </resources>

@@ -20,6 +20,7 @@
 package org.linphone.ui.main.contacts.model
 
 import android.net.Uri
+import androidx.annotation.AnyThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
 import org.linphone.LinphoneApplication.Companion.coreContext
@@ -36,6 +37,7 @@ import org.linphone.core.tools.Log
 import org.linphone.utils.AppUtils
 import org.linphone.utils.TimestampUtils
 import androidx.core.net.toUri
+import org.linphone.LinphoneApplication.Companion.corePreferences
 
 class ContactAvatarModel
     @WorkerThread
@@ -50,13 +52,19 @@ class ContactAvatarModel
 
     val isStored = friend.inList()
 
+    val isReadOnly = friend.isReadOnly
+
+    val isNative = !friend.nativeUri.isNullOrEmpty()
+
     val isFavourite = MutableLiveData<Boolean>()
 
     val lastPresenceInfo = MutableLiveData<String>()
 
     val name = MutableLiveData<String>()
 
-    val firstLetter: String = AppUtils.getFirstLetter(friend.name.orEmpty())
+    var sortingName: String? = null
+
+    var firstLetter: String? = null
 
     private val friendListener = object : FriendListenerStub() {
         @WorkerThread
@@ -76,6 +84,32 @@ class ContactAvatarModel
         }
 
         update(address)
+        refreshSortingName()
+    }
+
+    @AnyThread
+    fun compare(other: ContactAvatarModel?): Boolean {
+        if (other == null) return false
+
+        val picture = picturePath.value
+        val otherPicture = other.picturePath.value
+        if (picture != null && otherPicture != null && picture != otherPicture) {
+            return false
+        }
+
+        if (contactName != other.contactName) {
+            return false
+        }
+
+        if (id != other.id) {
+            return false
+        }
+
+        if (isFavourite.value != other.isFavourite.value) {
+            return false
+        }
+
+        return true
     }
 
     @WorkerThread
@@ -83,6 +117,12 @@ class ContactAvatarModel
         if (friend.addresses.isNotEmpty()) {
             friend.removeListener(friendListener)
         }
+    }
+
+    @WorkerThread
+    fun refreshSortingName() {
+        sortingName = getNameToUseForSorting()
+        firstLetter = AppUtils.getFirstLetter(getNameToUseForSorting().orEmpty())
     }
 
     @WorkerThread
@@ -146,6 +186,13 @@ class ContactAvatarModel
         } else {
             trust.postValue(friend.getSecurityLevelForAddress(address))
         }
+    }
+
+    @WorkerThread
+    fun getNameToUseForSorting(): String? {
+        val sortByFirstName = corePreferences.sortContactsByFirstName
+        val firstOrLastName = if (sortByFirstName) friend.firstName else friend.lastName
+        return firstOrLastName ?: friend.name ?: friend.organization ?: friend.vcard?.fullName
     }
 
     @WorkerThread

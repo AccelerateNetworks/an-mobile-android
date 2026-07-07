@@ -30,6 +30,7 @@ import org.linphone.core.Address
 import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
 import org.linphone.core.Conference
+import org.linphone.core.Friend
 import org.linphone.core.tools.Log
 import org.linphone.ui.main.viewmodel.AddressSelectionViewModel
 import org.linphone.utils.AppUtils
@@ -51,12 +52,8 @@ class StartConversationViewModel
 
     val operationInProgress = MutableLiveData<Boolean>()
 
-    val chatRoomCreationErrorEvent: MutableLiveData<Event<Int>> by lazy {
-        MutableLiveData<Event<Int>>()
-    }
-
     val chatRoomCreatedEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     private val chatRoomListener = object : ChatRoomListenerStub() {
@@ -66,7 +63,7 @@ class StartConversationViewModel
             if (state == ChatRoom.State.Instantiated) return
 
             val id = LinphoneUtils.getConversationId(chatRoom)
-            Log.i("$TAG Conversation [$id] (${chatRoom.subject}) state changed: [$state]")
+            Log.i("$TAG Conversation [$id] (${chatRoom.subjectUtf8}) state changed: [$state]")
 
             if (state == ChatRoom.State.Created) {
                 Log.i("$TAG Conversation [$id] successfully created")
@@ -77,9 +74,7 @@ class StartConversationViewModel
                 Log.e("$TAG Conversation [$id] creation has failed!")
                 chatRoom.removeListener(this)
                 operationInProgress.postValue(false)
-                chatRoomCreationErrorEvent.postValue(
-                    Event(R.string.conversation_failed_to_create_toast)
-                )
+                showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
             }
         }
     }
@@ -91,6 +86,11 @@ class StartConversationViewModel
         }
 
         updateGroupChatButtonVisibility()
+    }
+
+    @WorkerThread
+    override fun onSingleAddressSelected(address: Address, friend: Friend?) {
+        createOneToOneChatRoomWith(address)
     }
 
     @UiThread
@@ -153,9 +153,7 @@ class StartConversationViewModel
             } else {
                 Log.e("$TAG Failed to create group conversation [$groupChatRoomSubject]!")
                 operationInProgress.postValue(false)
-                chatRoomCreationErrorEvent.postValue(
-                    Event(R.string.conversation_failed_to_create_toast)
-                )
+                showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
             }
         }
     }
@@ -206,9 +204,7 @@ class StartConversationViewModel
                 "$TAG Account is in secure mode, can't chat with SIP address of different domain [${remote.asStringUriOnly()}]"
             )
             operationInProgress.postValue(false)
-            chatRoomCreationErrorEvent.postValue(
-                Event(R.string.conversation_invalid_participant_due_to_security_mode_toast)
-            )
+            showRedToast(R.string.conversation_invalid_participant_due_to_security_mode_toast, R.drawable.warning_circle)
             return
         }
 
@@ -241,9 +237,7 @@ class StartConversationViewModel
             } else {
                 Log.e("$TAG Failed to create 1-1 conversation with [${remote.asStringUriOnly()}]!")
                 operationInProgress.postValue(false)
-                chatRoomCreationErrorEvent.postValue(
-                    Event(R.string.conversation_failed_to_create_toast)
-                )
+                showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
             }
         } else {
             Log.w(

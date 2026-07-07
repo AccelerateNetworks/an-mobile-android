@@ -41,12 +41,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import org.linphone.LinphoneApplication.Companion.coreContext
 import java.io.File
 import org.linphone.R
+import org.linphone.core.FriendList
 import org.linphone.core.tools.Log
 import org.linphone.databinding.ContactsListFilterPopupMenuBinding
 import org.linphone.databinding.ContactsListFragmentBinding
+import org.linphone.ui.fileviewer.FileViewerActivity
+import org.linphone.ui.fileviewer.MediaViewerActivity
 import org.linphone.ui.main.MainActivity
 import org.linphone.ui.main.contacts.adapter.ContactsListAdapter
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
@@ -80,6 +85,11 @@ class ContactsListFragment : AbstractMainFragment() {
         } else {
             Log.w("$TAG READ_CONTACTS permission has been denied")
         }
+    }
+
+    private val swipeToRefreshListener = SwipeRefreshLayout.OnRefreshListener {
+        Log.i("$TAG Swipe to refresh triggered, updating CardDAV friend lists")
+        listViewModel.refreshCardDavContacts()
     }
 
     override fun onDefaultAccountChanged() {
@@ -123,8 +133,13 @@ class ContactsListFragment : AbstractMainFragment() {
         binding.viewModel = listViewModel
         observeToastEvents(listViewModel)
 
+        // Disabled by default, may be enabled in onResume()
+        binding.contactsListSwipeRefresh.isEnabled = false
+        binding.contactsListSwipeRefresh.setOnRefreshListener(swipeToRefreshListener)
+
         binding.contactsList.setHasFixedSize(true)
         binding.contactsList.layoutManager = LinearLayoutManager(requireContext())
+        binding.contactsList.outlineProvider = outlineProvider
 
         binding.favouritesContactsList.setHasFixedSize(true)
         val favouritesLayoutManager = LinearLayoutManager(requireContext())
@@ -133,6 +148,10 @@ class ContactsListFragment : AbstractMainFragment() {
 
         configureAdapter(adapter)
         configureAdapter(favouritesAdapter)
+
+        listViewModel.isListFiltered.observe(viewLifecycleOwner) { filtered ->
+            binding.contactsList.clipToOutline = filtered
+        }
 
         listViewModel.contactsList.observe(
             viewLifecycleOwner
@@ -174,6 +193,13 @@ class ContactsListFragment : AbstractMainFragment() {
             }
         }
 
+        listViewModel.cardDavSynchronizationCompletedEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                Log.i("$TAG CardDAV synchronization has completed")
+                binding.contactsListSwipeRefresh.isRefreshing = false
+            }
+        }
+
         binding.setOnNewContactClicked {
             sharedViewModel.showNewContactEvent.value = Event(true)
         }
@@ -182,9 +208,7 @@ class ContactsListFragment : AbstractMainFragment() {
             showFilterPopupMenu(binding.topBar.extraAction)
         }
 
-        sharedViewModel.showContactEvent.observe(
-            viewLifecycleOwner
-        ) {
+        sharedViewModel.showContactEvent.observe(viewLifecycleOwner) {
             it.consume { refKey ->
                 Log.i("$TAG Displaying contact with ref key [$refKey]")
                 val navController = binding.contactsNavContainer.findNavController()
@@ -195,15 +219,45 @@ class ContactsListFragment : AbstractMainFragment() {
             }
         }
 
-        sharedViewModel.showNewContactEvent.observe(
-            viewLifecycleOwner
-        ) {
+        sharedViewModel.showNewContactEvent.observe(viewLifecycleOwner) {
             it.consume {
                 if (findNavController().currentDestination?.id == R.id.contactsListFragment) {
                     Log.i("$TAG Opening contact editor for creating new contact")
                     val action =
                         ContactsListFragmentDirections.actionContactsListFragmentToNewContactFragment()
                     findNavController().navigate(action)
+                }
+            }
+        }
+
+        sharedViewModel.forceRefreshContactsList.observe(viewLifecycleOwner) {
+            it.consume {
+                listViewModel.filter()
+            }
+        }
+
+        sharedViewModel.displayFileEvent.observe(viewLifecycleOwner) {
+            it.consume { bundle ->
+                if (findNavController().currentDestination?.id == R.id.contactsListFragment) {
+                    val path = bundle.getString("path", "")
+                    val isMedia = bundle.getBoolean("isMedia", false)
+                    if (path.isEmpty()) {
+                        Log.e("$TAG Can't navigate to file viewer for empty path!")
+                        return@consume
+                    }
+
+                    Log.i(
+                        "$TAG Navigating to [${if (isMedia) "media" else "file"}] viewer fragment with path [$path]"
+                    )
+                    if (isMedia) {
+                        val intent = Intent(requireActivity(), MediaViewerActivity::class.java)
+                        intent.putExtras(bundle)
+                        startActivity(intent)
+                    } else {
+                        val intent = Intent(requireActivity(), FileViewerActivity::class.java)
+                        intent.putExtras(bundle)
+                        startActivity(intent)
+                    }
                 }
             }
         }
@@ -236,12 +290,33 @@ class ContactsListFragment : AbstractMainFragment() {
         bottomSheetDialog = null
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        coreContext.postOnCoreThread { core ->
+            val cardDavFriendList = core.friendsLists.find {
+                it.type == FriendList.Type.CardDAV
+            }
+            val cardDavFriendListFound = cardDavFriendList != null
+            if (cardDavFriendListFound) {
+                Log.i("$TAG CardDAV friend list [${cardDavFriendList.displayName}] found, enabling swipe to refresh")
+            } else {
+                Log.i("$TAG No CardDAV friend list was found, disabling swipe to refresh")
+            }
+            coreContext.postOnMainThread {
+                binding.contactsListSwipeRefresh.isEnabled = cardDavFriendListFound
+            }
+        }
+    }
+
     private fun configureAdapter(adapter: ContactsListAdapter) {
         adapter.contactLongClickedEvent.observe(viewLifecycleOwner) {
             it.consume { model ->
                 val modalBottomSheet = ContactsListMenuDialogFragment(
                     model.isFavourite.value == true,
                     model.isStored,
+                    isReadOnly = model.isReadOnly,
+                    isNative = model.isNative,
                     { // onDismiss
                         adapter.resetSelection()
                     },

@@ -17,7 +17,7 @@
         android:background="@drawable/shape_squircle_white_background">
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/stun_server_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -27,6 +27,7 @@
             android:text="@string/account_settings_stun_server_url_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/stun_server"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -44,6 +45,8 @@
             android:text="@={viewModel.stunServer}"
             android:inputType="text|textUri"
             android:hint="@string/account_settings_stun_server_url_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/stun_server_title"/>
@@ -69,6 +72,7 @@
             android:text="@string/account_settings_enable_ice_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/ice_switch"
             app:layout_constraintTop_toTopOf="@id/ice_switch"
             app:layout_constraintBottom_toBottomOf="@id/ice_switch"
             app:layout_constraintStart_toStartOf="parent"
@@ -95,13 +99,14 @@
             android:text="@string/account_settings_enable_turn_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/turn_switch"
             app:layout_constraintTop_toTopOf="@id/turn_switch"
             app:layout_constraintBottom_toBottomOf="@id/turn_switch"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/turn_switch"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/turn_username_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -111,7 +116,8 @@
             android:text="@string/account_settings_turn_username_title"
             android:maxLines="2"
             android:ellipsize="end"
-            app:layout_constraintTop_toBottomOf="@id/turn_title"
+            android:labelFor="@id/turn_username"
+            app:layout_constraintTop_toBottomOf="@id/turn_switch"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -127,14 +133,16 @@
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:text="@={viewModel.turnUsername}"
-            android:inputType="text|textPersonName"
+            android:inputType="text|textUri|textNoSuggestions"
             android:hint="@string/account_settings_turn_username_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/turn_username_title" />
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/turn_password_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -144,6 +152,7 @@
             android:text="@string/account_settings_turn_password_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/turn_password"
             app:layout_constraintTop_toBottomOf="@id/turn_username"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -162,6 +171,8 @@
             android:text="@={viewModel.turnPassword}"
             android:hint="@string/account_settings_turn_password_title"
             android:inputType="@{viewModel.showTurnPassword ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD : InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD, default=textPassword}"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/turn_password_title"

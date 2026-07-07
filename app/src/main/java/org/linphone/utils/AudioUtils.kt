@@ -56,11 +56,35 @@ class AudioUtils {
         }
 
         @WorkerThread
+        fun routeAudioBluetoothOrHearingAid(call: Call? = null) {
+            routeAudioTo(
+                call,
+                arrayListOf(AudioDevice.Type.Bluetooth, AudioDevice.Type.HearingAid)
+            )
+        }
+
+        @WorkerThread
+        fun routeAudioToAnyConnectedAudioDeviceOtherThanEarpieceAndSpeaker(call: Call? = null) {
+            routeAudioTo(
+                call,
+                arrayListOf(
+                    AudioDevice.Type.Bluetooth, AudioDevice.Type.HearingAid,
+                    AudioDevice.Type.Headphones, AudioDevice.Type.Headset
+                )
+            )
+        }
+
+        @WorkerThread
         fun routeAudioToHeadset(call: Call? = null) {
             routeAudioTo(
                 call,
                 arrayListOf(AudioDevice.Type.Headphones, AudioDevice.Type.Headset)
             )
+        }
+
+        @WorkerThread
+        fun routeAudioToHdmi(call: Call? = null) {
+            routeAudioTo(call, arrayListOf(AudioDevice.Type.Hdmi))
         }
 
         @WorkerThread
@@ -80,8 +104,7 @@ class AudioUtils {
         private fun applyAudioRouteChange(
             call: Call?,
             types: List<AudioDevice.Type>,
-            output: Boolean = true,
-            skipTelecom: Boolean = false
+            output: Boolean = true
         ) {
             val currentCall = if (coreContext.core.callsNb > 0) {
                 call ?: coreContext.core.currentCall ?: coreContext.core.calls[0]
@@ -89,22 +112,7 @@ class AudioUtils {
                 Log.w("$TAG No call found, setting audio route on Core")
                 null
             }
-
-            if (!skipTelecom) {
-                val callId = currentCall?.callLog?.callId.orEmpty()
-                Log.i("$TAG Trying to change audio endpoint using Telecom Manager APIs")
-                val success = coreContext.telecomManager.applyAudioRouteToCallWithId(types, callId)
-                if (!success) {
-                    Log.w("$TAG Failed to change audio endpoint to [$types] for call ID [$callId]")
-                    applyAudioRouteChange(currentCall, types, output, skipTelecom = true)
-                } else {
-                    Log.i("$TAG It seems audio endpoint update using Telecom Manager was successful")
-                    return
-                }
-            } else {
-                Log.i("$TAG Trying to change audio endpoint directly in Linphone SDK")
-                applyAudioRouteChangeInLinphone(currentCall, types, output)
-            }
+            applyAudioRouteChangeInLinphone(currentCall, types, output)
         }
 
         fun applyAudioRouteChangeInLinphone(
@@ -219,16 +227,12 @@ class AudioUtils {
             // In case no headset/hearing aid/bluetooth is connected, use microphone sound card
             // If none are available, default one will be used
             var headsetCard: AudioDevice? = null
-            var bluetoothCard: AudioDevice? = null
             var microphoneCard: AudioDevice? = null
             for (device in coreContext.core.audioDevices) {
                 if (device.hasCapability(AudioDevice.Capabilities.CapabilityRecord)) {
                     when (device.type) {
                         AudioDevice.Type.Headphones, AudioDevice.Type.Headset -> {
                             headsetCard = device
-                        }
-                        AudioDevice.Type.Bluetooth, AudioDevice.Type.HearingAid -> {
-                            bluetoothCard = device
                         }
                         AudioDevice.Type.Microphone -> {
                             microphoneCard = device
@@ -238,9 +242,9 @@ class AudioUtils {
                 }
             }
             Log.i(
-                "$TAG Found headset/headphones sound card [$headsetCard], bluetooth/hearingAid sound card [$bluetoothCard] and microphone card [$microphoneCard]"
+                "$TAG Found headset/headphones sound card [$headsetCard] and microphone card [$microphoneCard]"
             )
-            return headsetCard ?: bluetoothCard ?: microphoneCard
+            return headsetCard ?: microphoneCard
         }
 
         @AnyThread

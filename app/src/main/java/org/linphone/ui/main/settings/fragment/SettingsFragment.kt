@@ -30,17 +30,19 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.annotation.UiThread
-import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels
 import org.linphone.R
 import org.linphone.compatibility.Compatibility
 import org.linphone.core.tools.Log
 import org.linphone.databinding.SettingsFragmentBinding
+import org.linphone.ui.GenericActivity
 import org.linphone.ui.main.fragment.GenericMainFragment
 import org.linphone.utils.ConfirmationDialogModel
 import org.linphone.ui.main.settings.viewmodel.SettingsViewModel
 import org.linphone.utils.AppUtils
 import org.linphone.utils.DialogUtils
+import org.linphone.utils.Event
 import java.lang.Exception
 
 @UiThread
@@ -53,7 +55,23 @@ class SettingsFragment : GenericMainFragment() {
 
     private lateinit var binding: SettingsFragmentBinding
 
-    private lateinit var viewModel: SettingsViewModel
+    private val viewModel: SettingsViewModel by navGraphViewModels(
+        R.id.main_nav_graph
+    )
+
+    private val sortContactsByListener = object : AdapterView.OnItemSelectedListener {
+        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            val label = viewModel.sortContactsByNames[position]
+            val value = viewModel.sortContactsByValues[position]
+            Log.i("$TAG Selected contact sorting is now [$label] ($value)")
+            viewModel.setContactSorting(value)
+
+            sharedViewModel.forceRefreshContactsList.postValue(Event(true))
+        }
+
+        override fun onNothingSelected(parent: AdapterView<*>?) {
+        }
+    }
 
     private val layoutListener = object : AdapterView.OnItemSelectedListener {
         override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
@@ -123,14 +141,19 @@ class SettingsFragment : GenericMainFragment() {
         postponeEnterTransition()
         super.onViewCreated(view, savedInstanceState)
 
-        viewModel = ViewModelProvider(this)[SettingsViewModel::class.java]
-
         binding.lifecycleOwner = viewLifecycleOwner
         binding.viewModel = viewModel
         observeToastEvents(viewModel)
 
         binding.setBackClickListener {
             goBack()
+        }
+
+        binding.setAdvancedCallSettingsClickListener {
+            if (findNavController().currentDestination?.id == R.id.settingsFragment) {
+                val action = SettingsFragmentDirections.actionSettingsFragmentToSettingsAdvancedCallFragment()
+                findNavController().navigate(action)
+            }
         }
 
         binding.setAdvancedSettingsClickListener {
@@ -154,35 +177,43 @@ class SettingsFragment : GenericMainFragment() {
             }
         }
 
-        viewModel.goToIncomingCallNotificationChannelSettingsEvent.observe(viewLifecycleOwner) {
+        viewModel.showRingtonePickerEvent.observe(viewLifecycleOwner) {
             it.consume { currentRingtone ->
                 try {
-                    /*
-                    Log.w("$TAG Going to incoming call channel settings")
-                    val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
-                        putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName)
-                        putExtra(
-                            Settings.EXTRA_CHANNEL_ID,
-                            getString(R.string.notification_channel_without_ringtone_incoming_call_id)
-                        )
-                    }
-                    startActivity(intent)
-                    */
                     val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                         putExtra(
                             RingtoneManager.EXTRA_RINGTONE_TYPE,
                             RingtoneManager.TYPE_RINGTONE
                         )
-                        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, currentRingtone)
+                        if (currentRingtone != null) {
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, currentRingtone)
+                        }
                         putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, AppUtils.getString(R.string.settings_calls_change_ringtone_pick_title))
                     }
                     startActivityForResult(intent, RINGTONE_PICKER_INTENT_ID)
                 } catch (e: Exception) {
                     Log.e("$TAG Failed start ringtone picker: $e")
-                    // TODO: show error to user
+                    val toastMessage = getString(R.string.settings_calls_change_ringtone_picker_unavailable_toast)
+                    (requireActivity() as GenericActivity).showRedToast(toastMessage, R.drawable.warning_circle)
                 }
             }
         }
+
+        // Setup sort contacts by spinner
+        val sortContactsByAdapter = ArrayAdapter(
+            requireContext(),
+            R.layout.drop_down_item,
+            viewModel.sortContactsByNames
+        )
+        sortContactsByAdapter.setDropDownViewResource(R.layout.generic_dropdown_cell)
+        binding.contactsSettings.sortContactsByFirstNameSpinner.adapter = sortContactsByAdapter
+
+        viewModel.sortContactsBy.observe(viewLifecycleOwner) { sort ->
+            binding.contactsSettings.sortContactsByFirstNameSpinner.setSelection(
+                viewModel.sortContactsByValues.indexOf(sort)
+            )
+        }
+        binding.contactsSettings.sortContactsByFirstNameSpinner.onItemSelectedListener = sortContactsByListener
 
         viewModel.addLdapServerEvent.observe(viewLifecycleOwner) {
             it.consume {
@@ -294,6 +325,12 @@ class SettingsFragment : GenericMainFragment() {
             binding.tunnelSettings.tunnelModeSpinner.setSelection(index)
         }
 
+        viewModel.forceRefreshMeetingsListEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                sharedViewModel.forceRefreshMeetingsListEvent.postValue(Event(true))
+            }
+        }
+
         binding.setTurnOnVfsClickListener {
             showConfirmVfsDialog()
         }
@@ -338,7 +375,7 @@ class SettingsFragment : GenericMainFragment() {
             model
         )
 
-        model.cancelEvent.observe(viewLifecycleOwner) {
+        model.dismissEvent.observe(viewLifecycleOwner) {
             it.consume {
                 viewModel.isVfsEnabled.value = false
                 dialog.dismiss()

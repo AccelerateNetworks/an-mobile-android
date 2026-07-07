@@ -29,7 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.linphone.LinphoneApplication.Companion.coreContext
-import org.linphone.core.AudioDevice
 import org.linphone.core.Call
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
@@ -78,20 +77,14 @@ class TelecomManager
         Log.i(
             "$TAG Feature is [${if (hasTelecomFeature) "available" else "not available"}]"
         )
-        try {
-            callsManager.registerAppWithTelecom(
-                CallsManager.CAPABILITY_BASELINE or
-                    CallsManager.CAPABILITY_SUPPORTS_VIDEO_CALLING
-            )
-            Log.i("$TAG App has been registered with Telecom")
-        } catch (e: Exception) {
-            Log.e("$TAG Can't init TelecomManager: $e")
+        if (hasTelecomFeature) {
+            try {
+                callsManager.registerAppWithTelecom(CallsManager.CAPABILITY_SUPPORTS_VIDEO_CALLING)
+                Log.i("$TAG App has been registered with Telecom")
+            } catch (e: Exception) {
+                Log.e("$TAG Can't init TelecomManager: $e")
+            }
         }
-    }
-
-    @WorkerThread
-    fun getCurrentlyFollowedCalls(): Int {
-        return currentlyFollowedCalls
     }
 
     @WorkerThread
@@ -117,11 +110,12 @@ class TelecomManager
             friend?.name ?: LinphoneUtils.getDisplayName(address)
         }
 
-        val isVideo = LinphoneUtils.isVideoEnabled(call)
-        val type = if (isVideo) {
-            CallAttributesCompat.CALL_TYPE_VIDEO_CALL
-        } else {
+        // Always set type to video (if enabled in Core) as it indicates that video is supported, not that it's being used at the time
+        // https://developer.android.com/reference/kotlin/androidx/core/telecom/CallAttributesCompat#CALL_TYPE_VIDEO_CALL()
+        val type = if (!call.core.isVideoEnabled) {
             CallAttributesCompat.CALL_TYPE_AUDIO_CALL
+        } else {
+            CallAttributesCompat.CALL_TYPE_VIDEO_CALL
         }
 
         scope.launch {
@@ -131,7 +125,8 @@ class TelecomManager
                     uri,
                     direction,
                     type,
-                    capabilities
+                    capabilities,
+                    isLogExcluded = true
                 )
                 Log.i("$TAG Adding call to Telecom's CallsManager with attributes [$callAttributes]")
 
@@ -216,19 +211,5 @@ class TelecomManager
         if (hasTelecomFeature) {
             core.removeListener(coreListener)
         }
-    }
-
-    @WorkerThread
-    fun applyAudioRouteToCallWithId(routes: List<AudioDevice.Type>, callId: String): Boolean {
-        Log.i(
-            "$TAG Looking for audio endpoint with type [${routes.first()}] for call with ID [$callId]"
-        )
-        val callControlCallback = map[callId]
-        if (callControlCallback == null) {
-            Log.w("$TAG Failed to find callbacks for call with ID [$callId]")
-            return false
-        }
-
-        return callControlCallback.applyAudioRouteToCallWithId(routes)
     }
 }

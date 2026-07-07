@@ -40,10 +40,11 @@
                     android:id="@+id/top_bar"
                     layout="@layout/main_activity_top_bar"
                     bind:viewModel="@{viewModel}"
-                    bind:enableExtraAction="@{viewModel.showFilter}"
+                    bind:showExtraAction="@{viewModel.showFilter}"
                     bind:extraActionIcon="@{@drawable/funnel}"
                     bind:extraActionClickListener="@{filterClickListener}"
                     bind:extraActionContentDescription="@{@string/content_description_contacts_list_filters}"
+                    bind:extraActionEnabled="@{true}"
                     android:layout_width="0dp"
                     android:layout_height="@dimen/top_bar_height"
                     app:layout_constraintTop_toTopOf="parent"
@@ -77,11 +78,13 @@
                         onClickListener="@{() -> viewModel.toggleFavouritesVisibility()}"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:layout_marginTop="16dp"
+                        android:padding="10dp"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="10dp"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginBottom="4dp"
                         android:text="@string/contacts_list_favourites_title"
+                        android:background="@drawable/squircle_transparent_button_background"
                         android:drawableEnd="@{viewModel.showFavourites ? @drawable/caret_up : @drawable/caret_down, default=@drawable/caret_up}"
                         android:drawableTint="?attr/color_main2_600" />
 
@@ -89,8 +92,7 @@
                         android:id="@+id/favourites_contacts_list"
                         android:visibility="@{viewModel.showFavourites &amp;&amp; !viewModel.isListFiltered &amp;&amp; viewModel.favouritesList.size() > 0 ? View.VISIBLE : View.GONE}"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" />
+                        android:layout_height="wrap_content" />
 
                     <androidx.appcompat.widget.AppCompatTextView
                         style="@style/section_header_style"
@@ -102,13 +104,34 @@
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
                         android:layout_marginTop="16dp"
+                        android:layout_marginBottom="4dp"
                         android:text="@string/contacts_list_all_contacts_title" />
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/contactsList"
+                    <androidx.appcompat.widget.AppCompatTextView
+                        style="@style/default_text_style_300"
+                        android:id="@+id/results_limit_reached"
                         android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:layout_marginTop="8dp" />
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:text="@string/contacts_list_search_results_limit_reached_label"
+                        android:textColor="?attr/color_main2_600"
+                        android:textSize="12sp"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:visibility="@{viewModel.showResultsLimitReached ? View.VISIBLE : View.GONE, default=gone}"/>
+
+                    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                        android:id="@+id/contactsListSwipeRefresh"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/contactsList"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
                 </LinearLayout>
 
@@ -129,9 +152,10 @@
                 <androidx.appcompat.widget.AppCompatTextView
                     style="@style/section_header_style"
                     android:id="@+id/no_contacts_label"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="@{viewModel.isFilterEmpty ? (viewModel.areAllContactsDisplayed ? @string/contacts_list_empty : @string/contacts_list_sip_empty) : @string/list_filter_no_result_found, default=@string/contacts_list_sip_empty}"
+                    android:textAlignment="center"
                     app:layout_constraintBottom_toTopOf="@id/lists"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -187,6 +211,7 @@
                     android:layout_margin="16dp"
                     android:src="@drawable/user_plus"
                     android:contentDescription="@string/content_description_contact_create"
+                    android:visibility="@{viewModel.disableAddContact ? View.GONE : View.VISIBLE}"
                     app:tint="?attr/color_on_main"
                     app:backgroundTint="?attr/color_main1_500"
                     app:shapeAppearanceOverlay="@style/rounded"

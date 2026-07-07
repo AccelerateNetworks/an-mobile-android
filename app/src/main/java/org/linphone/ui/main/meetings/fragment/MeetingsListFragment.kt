@@ -77,7 +77,7 @@ class MeetingsListFragment : AbstractMainFragment() {
             Log.i(
                 "$TAG Default account changed, updating avatar in top bar & re-computing meetings list"
             )
-            listViewModel.applyFilter()
+            listViewModel.filter()
         }
     }
 
@@ -166,7 +166,7 @@ class MeetingsListFragment : AbstractMainFragment() {
             listViewModel.fetchInProgress.value = false
         }
 
-        listViewModel.conferenceCancelledEvent.observe(viewLifecycleOwner) {
+        listViewModel.cancelMeetingViewModel.conferenceCancelledEvent.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG Meeting has been cancelled successfully, deleting it")
                 (requireActivity() as GenericActivity).showGreenToast(
@@ -176,7 +176,7 @@ class MeetingsListFragment : AbstractMainFragment() {
 
                 meetingViewModelBeingCancelled?.delete()
                 meetingViewModelBeingCancelled = null
-                listViewModel.applyFilter()
+                listViewModel.filter()
 
                 (requireActivity() as GenericActivity).showGreenToast(
                     getString(R.string.meeting_info_deleted_toast),
@@ -188,24 +188,18 @@ class MeetingsListFragment : AbstractMainFragment() {
         adapter.meetingLongClickedEvent.observe(viewLifecycleOwner) {
             it.consume { model ->
                 val isUserOrganizer = model.isMyselfOrganizer && !model.isCancelled
+                val showCancelActionInsteadOfDelete = isUserOrganizer && model.hasNotStartedYet
                 val modalBottomSheet = MeetingsMenuDialogFragment(
-                    isUserOrganizer,
+                    showCancelActionInsteadOfDelete,
                     { // onDismiss
                         adapter.resetSelection()
                     },
                     { // onDelete
-                        if (isUserOrganizer) {
+                        if (showCancelActionInsteadOfDelete) {
+                            Log.i("$TAG Meeting start hasn't started yet and we are the organizer, asking user if it should be cancelled")
                             showCancelMeetingDialog(model)
                         } else {
                             showDeleteMeetingDialog(model)
-                            /*Log.i("$TAG Deleting meeting [${model.id}]")
-                            model.delete()
-                            listViewModel.applyFilter()
-
-                            (requireActivity() as GenericActivity).showGreenToast(
-                                getString(R.string.meeting_info_deleted_toast),
-                                R.drawable.trash_simple
-                            )*/
                         }
                     }
                 )
@@ -217,7 +211,7 @@ class MeetingsListFragment : AbstractMainFragment() {
         sharedViewModel.forceRefreshMeetingsListEvent.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG We were asked to refresh the meetings list, doing it now")
-                listViewModel.applyFilter()
+                listViewModel.filter()
             }
         }
 
@@ -312,7 +306,7 @@ class MeetingsListFragment : AbstractMainFragment() {
         }
         val index = listViewModel.meetings.value.orEmpty().indexOf(todayMeeting)
         Log.i("$TAG 'Today' is at position [$index]")
-        if (index > 0) {
+        if (index >= 0) {
             binding.meetingsList.smoothScrollToPosition(index) // Workaround to have header decoration visible at top
             (binding.meetingsList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
                 index,
@@ -333,17 +327,20 @@ class MeetingsListFragment : AbstractMainFragment() {
             }
         }
 
-        model.cancelEvent.observe(viewLifecycleOwner) {
+        model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
+                Log.i("$TAG Cancelling meeting [${meetingModel.id}] and sending notification to participants")
+                meetingViewModelBeingCancelled = meetingModel
+                listViewModel.cancelMeetingViewModel.cancelMeeting(meetingModel.conferenceInfo, true)
                 dialog.dismiss()
             }
         }
 
-        model.confirmEvent.observe(viewLifecycleOwner) {
+        model.alternativeChoiceEvent.observe(viewLifecycleOwner) {
             it.consume {
-                Log.i("$TAG Cancelling meeting [${meetingModel.id}]")
+                Log.i("$TAG Cancelling meeting [${meetingModel.id}] without notifying participants")
                 meetingViewModelBeingCancelled = meetingModel
-                listViewModel.cancelMeeting(meetingModel.conferenceInfo)
+                listViewModel.cancelMeetingViewModel.cancelMeeting(meetingModel.conferenceInfo, false)
                 dialog.dismiss()
             }
         }
@@ -352,8 +349,6 @@ class MeetingsListFragment : AbstractMainFragment() {
     }
 
     private fun showDeleteMeetingDialog(meetingModel: MeetingModel) {
-        Log.i("$TAG Meeting is not editable or already cancelled, asking whether to deleting it or not")
-
         val model = ConfirmationDialogModel()
         val dialog = DialogUtils.getDeleteMeetingDialog(requireContext(), model)
 
@@ -363,23 +358,12 @@ class MeetingsListFragment : AbstractMainFragment() {
             }
         }
 
-        model.cancelEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                dialog.dismiss()
-            }
-        }
-
         model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG Deleting meeting [${meetingModel.id}]")
                 meetingModel.delete()
-                listViewModel.applyFilter()
-
+                listViewModel.filter()
                 dialog.dismiss()
-                (requireActivity() as GenericActivity).showGreenToast(
-                    getString(R.string.meeting_info_deleted_toast),
-                    R.drawable.trash_simple
-                )
             }
         }
 

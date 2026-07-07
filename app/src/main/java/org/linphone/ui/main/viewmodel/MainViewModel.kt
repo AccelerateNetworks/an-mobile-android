@@ -83,35 +83,35 @@ class MainViewModel
     val filesOrTextPendingSharingLabel = MutableLiveData<String>()
 
     val goBackToCallEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val openDrawerEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val askPostNotificationsPermissionEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val askFullScreenIntentPermissionEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val showNewAccountToastEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val startLoadingContactsEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val lastAccountRemovedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val clearFilesOrTextPendingSharingEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     private var accountsFound = -1
@@ -125,6 +125,8 @@ class MainViewModel
     private var monitorAccount = false
 
     private var nonDefaultAccountNotificationsCount = 0
+
+    private var mwiNewMessages = false
 
     private val coreListener = object : CoreListenerStub() {
         @WorkerThread
@@ -191,6 +193,14 @@ class MainViewModel
             messages: Array<out ChatMessage>
         ) {
             Log.i("$TAG Message(s) received, updating notifications count if needed")
+            val account = LinphoneUtils.getAccountForAddress(chatRoom.localAddress)
+            if (account != null && account != core.defaultAccount) {
+                computeNonDefaultAccountNotificationsCount()
+            }
+        }
+
+        @WorkerThread
+        override fun onMessageRetracted(core: Core, chatRoom: ChatRoom, message: ChatMessage) {
             val account = LinphoneUtils.getAccountForAddress(chatRoom.localAddress)
             if (account != null && account != core.defaultAccount) {
                 computeNonDefaultAccountNotificationsCount()
@@ -294,6 +304,14 @@ class MainViewModel
                     )
                     addAlert(DEFAULT_ACCOUNT_DISABLED, label)
                 }
+
+                val mwi = account.latestReceivedMessageWaitingIndication
+                if (mwi != null) {
+                    parseMwiEvent(mwi)
+                } else {
+                    removeAlert(MWI_MESSAGES_WAITING)
+                    mwiNewMessages = false
+                }
             }
 
             computeNonDefaultAccountNotificationsCount()
@@ -326,23 +344,10 @@ class MainViewModel
             event: org.linphone.core.Event,
             mwi: MessageWaitingIndication
         ) {
-            if (mwi.hasMessageWaiting()) {
-                val summaries = mwi.summaries
-                Log.i(
-                    "$TAG MWI NOTIFY received, messages are waiting ([${summaries.size}] summaries)"
-                )
-                if (summaries.isNotEmpty()) {
-                    val summary = summaries.first()
-                    val label = AppUtils.getStringWithPlural(
-                        R.plurals.mwi_messages_are_waiting,
-                        summary.nbNew,
-                        summary.nbNew.toString()
-                    )
-                    addAlert(MWI_MESSAGES_WAITING, label)
-                }
-            } else {
-                Log.i("$TAG MWI NOTIFY received, no message is waiting")
-                removeAlert(MWI_MESSAGES_WAITING)
+            val address = mwi.accountAddress
+            val defaultAccountAddress = core.defaultAccount?.params?.identityAddress
+            if (defaultAccountAddress != null && address?.weakEqual(defaultAccountAddress) == true) {
+                parseMwiEvent(mwi)
             }
         }
     }
@@ -386,6 +391,12 @@ class MainViewModel
                 if (defaultAccount.state == RegistrationState.Ok && !firstAccountRegistered) {
                     triggerNativeAddressBookImport()
                 }
+
+                mwiNewMessages = false
+                val mwi = defaultAccount.latestReceivedMessageWaitingIndication
+                if (mwi != null) {
+                    parseMwiEvent(mwi)
+                }
             }
         }
 
@@ -415,13 +426,6 @@ class MainViewModel
     }
 
     @UiThread
-    fun updateNetworkReachability() {
-        coreContext.postOnCoreThread {
-            checkNetworkReachability()
-        }
-    }
-
-    @UiThread
     fun updateMissingPermissionAlert() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             coreContext.postOnCoreThread {
@@ -436,13 +440,25 @@ class MainViewModel
     }
 
     @UiThread
-    fun checkForNewAccount() {
+    fun updateAccountsAndNetworkReachability() {
         coreContext.postOnCoreThread { core ->
-            val count = core.accountList.size
+            val accounts = core.accountList
+            val count = accounts.size
             if (count > accountsFound) {
+                Log.i("$TAG Newly added account detected!")
                 showNewAccountToastEvent.postValue(Event(true))
             }
             accountsFound = count
+
+            checkNetworkReachability()
+
+            for (account in accounts) {
+                if (account.state == RegistrationState.Failed) {
+                    val identity = account.params.identityAddress?.asStringUriOnly().orEmpty()
+                    Log.i("$TAG Account [$identity] registration state is failed, refreshing REGISTER")
+                    account.refreshRegister()
+                }
+            }
         }
     }
 
@@ -466,6 +482,10 @@ class MainViewModel
             askFullScreenIntentPermissionEvent.value = Event(true)
         } else if (!Compatibility.isPostNotificationsPermissionGranted(coreContext.context)) {
             askPostNotificationsPermissionEvent.value = Event(true)
+        } else if (mwiNewMessages) {
+            coreContext.postOnCoreThread {
+                callVoiceMail()
+            }
         } else {
             openDrawerEvent.value = Event(true)
         }
@@ -700,6 +720,47 @@ class MainViewModel
             }
         } else {
             removeAlert(SEND_NOTIFICATIONS_PERMISSION_NOT_GRANTED)
+        }
+    }
+
+    @WorkerThread
+    private fun parseMwiEvent(mwi: MessageWaitingIndication) {
+        if (mwi.hasMessageWaiting()) {
+            val summaries = mwi.summaries
+            Log.i(
+                "$TAG [MWI] Messages are waiting ([${summaries.size}] summaries)"
+            )
+            if (summaries.isNotEmpty()) {
+                val summary = summaries.first()
+                val label = AppUtils.getStringWithPlural(
+                    R.plurals.mwi_messages_are_waiting,
+                    summary.nbNew,
+                    summary.nbNew.toString()
+                )
+                Log.i("$TAG [MWI] Showing alert with [${summary.nbNew}] new message(s)")
+                addAlert(MWI_MESSAGES_WAITING, label)
+                mwiNewMessages = true
+            }
+        } else {
+            Log.i("$TAG [MWI] No message is waiting")
+            removeAlert(MWI_MESSAGES_WAITING)
+            mwiNewMessages = false
+        }
+    }
+
+    @WorkerThread
+    private fun callVoiceMail() {
+        val defaultAccount = LinphoneUtils.getDefaultAccount()
+        if (defaultAccount != null) {
+            val voiceMailUri = defaultAccount.params.voicemailAddress
+            if (voiceMailUri != null) {
+                Log.i("$TAG [MWI] Starting call to voicemail address [${voiceMailUri.asStringUriOnly()}]")
+                coreContext.startCall(voiceMailUri)
+            } else {
+                Log.e("$TAG [MWI] Can't call voicemail, no URI configured in account params!")
+            }
+        } else {
+            Log.e("$TAG [MWI] Can't call voicemail, no default account found!")
         }
     }
 }

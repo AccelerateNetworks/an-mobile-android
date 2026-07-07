@@ -59,14 +59,16 @@ class CardDavViewModel
 
     val storeNewContactsInIt = MutableLiveData<Boolean>()
 
+    val isReadOnly = MutableLiveData<Boolean>()
+
     var pendingAuthInfo: AuthInfo? = null
 
     val syncSuccessfulEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val friendListRemovedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     private lateinit var friendList: FriendList
@@ -85,6 +87,21 @@ class CardDavViewModel
                 FriendList.SyncStatus.Successful -> {
                     syncInProgress.postValue(false)
                     showGreenToast(R.string.settings_contacts_carddav_sync_successful_toast, R.drawable.check)
+
+                    val name = displayName.value.orEmpty().trim()
+                    if (storeNewContactsInIt.value == true) {
+                        val previous = corePreferences.friendListInWhichStoreNewlyCreatedFriends
+                        if (friendList.isReadOnly) {
+                            Log.w("$TAG User asked to add newly created contacts in this friend list but it is read only, keep currently default friend list [$previous]")
+                            storeNewContactsInIt.postValue(false)
+                        } else {
+                            Log.i(
+                                "$TAG Updating default friend list to store newly created contacts from [$previous] to [$name]"
+                            )
+                            corePreferences.friendListInWhichStoreNewlyCreatedFriends = name
+                        }
+                        isReadOnly.postValue(friendList.isReadOnly)
+                    }
 
                     Log.i("$TAG Notifying contacts manager that contacts have changed")
                     coreContext.contactsManager.notifyContactsListChanged()
@@ -139,6 +156,7 @@ class CardDavViewModel
             isEdit.postValue(true)
             friendList = found
             friendList.addListener(friendListListener)
+            isReadOnly.postValue(friendList.isReadOnly)
             pendingAuthInfo = null
 
             displayName.postValue(name)
@@ -230,6 +248,13 @@ class CardDavViewModel
             }
 
             if (isEdit.value == true && ::friendList.isInitialized) {
+                friendList.displayName = name
+                friendList.uri = if (server.startsWith("http://") || server.startsWith("https://")) {
+                    server
+                } else {
+                    "https://$server"
+                }
+
                 Log.i(
                     "$TAG Changes were made to CardDAV friend list [$name], synchronizing it"
                 )
@@ -251,13 +276,7 @@ class CardDavViewModel
                 )
             }
 
-            if (storeNewContactsInIt.value == true) {
-                val previous = corePreferences.friendListInWhichStoreNewlyCreatedFriends
-                Log.i(
-                    "$TAG Updating default friend list to store newly created contacts from [$previous] to [$name]"
-                )
-                corePreferences.friendListInWhichStoreNewlyCreatedFriends = name
-            } else if (storeNewContactsInIt.value == false) {
+            if (storeNewContactsInIt.value == false && corePreferences.friendListInWhichStoreNewlyCreatedFriends == name) {
                 Log.i(
                     "$TAG No longer using friend list [$name] as default friend list, switching back to [$LINPHONE_ADDRESS_BOOK_FRIEND_LIST]"
                 )

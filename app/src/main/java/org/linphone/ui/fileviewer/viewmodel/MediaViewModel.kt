@@ -65,11 +65,11 @@ class MediaViewModel
     val position = MutableLiveData<Int>()
 
     val videoSizeChangedEvent: MutableLiveData<Event<Pair<Int, Int>>> by lazy {
-        MutableLiveData<Event<Pair<Int, Int>>>()
+        MutableLiveData()
     }
 
     val changeFullScreenModeEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     lateinit var mediaPlayer: MediaPlayer
@@ -158,6 +158,16 @@ class MediaViewModel
             isMediaPlaying.value = false
             stopUpdatePlaybackPosition()
             mediaPlayer.pause()
+        }
+    }
+
+    @UiThread
+    fun seekTo(position: Int, resumePlay: Boolean) {
+        if (::mediaPlayer.isInitialized) {
+            mediaPlayer.seekTo(position)
+            if (resumePlay) {
+                play()
+            }
         }
     }
 

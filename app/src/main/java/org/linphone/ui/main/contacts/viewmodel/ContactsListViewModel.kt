@@ -33,6 +33,8 @@ import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
 import org.linphone.contacts.ContactsManager.ContactsListener
 import org.linphone.core.Friend
+import org.linphone.core.FriendList
+import org.linphone.core.FriendListListenerStub
 import org.linphone.core.MagicSearch
 import org.linphone.core.MagicSearchListenerStub
 import org.linphone.core.SearchResult
@@ -67,8 +69,16 @@ class ContactsListViewModel
 
     val isDefaultAccountLinphone = MutableLiveData<Boolean>()
 
+    val showResultsLimitReached = MutableLiveData<Boolean>()
+
+    val disableAddContact = MutableLiveData<Boolean>()
+
     val vCardTerminatedEvent: MutableLiveData<Event<Pair<String, File>>> by lazy {
-        MutableLiveData<Event<Pair<String, File>>>()
+        MutableLiveData()
+    }
+
+    val cardDavSynchronizationCompletedEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData()
     }
 
     private var previousFilter = "NotSet"
@@ -86,6 +96,14 @@ class ContactsListViewModel
             Log.i("$TAG Magic search contacts available")
             processMagicSearchResults(magicSearch.lastSearch, favourites = false)
         }
+
+        @WorkerThread
+        override fun onResultsLimitReached(magicSearch: MagicSearch, sourcesFlag: Int) {
+            Log.w("$TAG Results limit reached (configured limit is [${magicSearch.searchLimit}]) for source(s) [$sourcesFlag], user should refine it's search")
+            if (searchFilter.value.orEmpty().isNotEmpty()) {
+                showResultsLimitReached.postValue(true)
+            }
+        }
     }
 
     private val favouritesMagicSearchListener = object : MagicSearchListenerStub() {
@@ -93,6 +111,22 @@ class ContactsListViewModel
         override fun onSearchResultsReceived(magicSearch: MagicSearch) {
             Log.i("$TAG Magic search favourites contacts available")
             processMagicSearchResults(magicSearch.lastSearch, favourites = true)
+        }
+    }
+
+    private val friendListListener = object : FriendListListenerStub() {
+        @WorkerThread
+        override fun onSyncStatusChanged(
+            friendList: FriendList,
+            status: FriendList.SyncStatus?,
+            message: String?
+        ) {
+            Log.i("$TAG Synchronization status changed to [$status] for friend list [${friendList.displayName}] with message [$message]")
+            if (status == FriendList.SyncStatus.Successful || status == FriendList.SyncStatus.Failure) {
+                friendList.removeListener(this)
+                cardDavSynchronizationCompletedEvent.postValue(Event(true))
+            }
+            // TODO FIXME: alert user when failure ?
         }
     }
 
@@ -105,7 +139,8 @@ class ContactsListViewModel
 
             applyFilter(
                 currentFilter,
-                domainFilter
+                domainFilter,
+                true
             )
         }
 
@@ -116,7 +151,9 @@ class ContactsListViewModel
     init {
         fetchInProgress.value = true
         showFavourites.value = corePreferences.showFavoriteContacts
-        showFilter.value = !corePreferences.hidePhoneNumbers
+        showFilter.value = !corePreferences.hidePhoneNumbers && !corePreferences.hideSipAddresses
+        disableAddContact.value = corePreferences.disableAddContact
+        isListFiltered.value = false
 
         coreContext.postOnCoreThread { core ->
             domainFilter = corePreferences.contactsFilter
@@ -133,9 +170,7 @@ class ContactsListViewModel
             favouritesMagicSearch.limitedSearch = false
             favouritesMagicSearch.addListener(favouritesMagicSearchListener)
 
-            coreContext.postOnMainThread {
-                applyFilter(currentFilter)
-            }
+            applyFilter(currentFilter, domainFilter)
         }
     }
 
@@ -153,10 +188,7 @@ class ContactsListViewModel
     override fun filter() {
         isListFiltered.value = currentFilter.isNotEmpty()
         coreContext.postOnCoreThread {
-            applyFilter(
-                currentFilter,
-                domainFilter
-            )
+            applyFilter(currentFilter, domainFilter)
         }
     }
 
@@ -167,9 +199,7 @@ class ContactsListViewModel
             areAllContactsDisplayed.postValue(domainFilter.isEmpty())
             checkIfDefaultAccountOnDefaultDomain()
 
-            coreContext.postOnMainThread {
-                applyFilter(currentFilter)
-            }
+            applyFilter(currentFilter, domainFilter)
         }
     }
 
@@ -187,8 +217,8 @@ class ContactsListViewModel
             corePreferences.contactsFilter = domainFilter
             Log.i("$TAG Newly set filter is [${corePreferences.contactsFilter}]")
 
-            coreContext.postOnMainThread {
-                applyFilter(currentFilter)
+            coreContext.postOnCoreThread {
+                applyFilter(currentFilter, domainFilter, filterChanged = true)
             }
         }
     }
@@ -255,10 +285,24 @@ class ContactsListViewModel
         }
     }
 
+    @UiThread
+    fun refreshCardDavContacts() {
+        coreContext.postOnCoreThread { core ->
+            for (friendList in core.friendsLists) {
+                if (friendList.type == FriendList.Type.CardDAV) {
+                    Log.i("$TAG Found CardDAV friend list [${friendList.displayName}], starting update")
+                    friendList.addListener(friendListListener)
+                    friendList.synchronizeFriendsFromServer()
+                }
+            }
+        }
+    }
+
     @WorkerThread
     private fun applyFilter(
         filter: String,
-        domain: String
+        domain: String,
+        filterChanged: Boolean = false
     ) {
         if (contactsList.value.orEmpty().isEmpty()) {
             fetchInProgress.postValue(true)
@@ -278,8 +322,9 @@ class ContactsListViewModel
             "$TAG Asking Magic search for contacts matching filter [$filter], domain [$domain] and in sources Friends/LDAP/CardDAV"
         )
         searchInProgress.postValue(filter.isNotEmpty())
+        showResultsLimitReached.postValue(false)
 
-        if (filter.isEmpty()) {
+        if (filter.isEmpty() && (favouritesList.value.orEmpty().isEmpty() || filterChanged)) {
             favouritesMagicSearch.getContactsListAsync(
                 filter,
                 domain,
@@ -302,11 +347,17 @@ class ContactsListViewModel
         Log.i("$TAG Processing [${results.size}] results, favourites is [$favourites]")
 
         val list = arrayListOf<ContactAvatarModel>()
-        var count = 0
+        val collator = Collator.getInstance(Locale.getDefault())
+        val hideEmptyContacts = corePreferences.hideContactsWithoutPhoneNumberOrSipAddress
 
         for (result in results) {
             val friend = result.friend
             if (friend != null) {
+                if (hideEmptyContacts && friend.addresses.isEmpty() && friend.phoneNumbers.isEmpty()) {
+                    Log.i("$TAG Friend [${friend.name}] has no SIP address nor phone number, do not show it")
+                    continue
+                }
+
                 if (friend.refKey.orEmpty().isEmpty()) {
                     if (friend.vcard != null) {
                         friend.vcard?.generateUniqueId()
@@ -325,21 +376,15 @@ class ContactsListViewModel
             } else {
                 coreContext.contactsManager.getContactAvatarModelForAddress(result.address)
             }
-
-            list.add(model)
-            count += 1
-
+            model.refreshSortingName()
             val starred = friend?.starred == true
             model.isFavourite.postValue(starred)
 
-            if (!favourites && firstLoad && count == 20) {
-                contactsList.postValue(list)
-            }
+            list.add(model)
         }
 
-        val collator = Collator.getInstance(Locale.getDefault())
         list.sortWith { model1, model2 ->
-            collator.compare(model1.friend.name, model2.friend.name)
+            collator.compare(model1.getNameToUseForSorting(), model2.getNameToUseForSorting())
         }
 
         searchInProgress.postValue(false)

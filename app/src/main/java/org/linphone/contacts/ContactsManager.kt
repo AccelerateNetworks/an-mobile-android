@@ -19,9 +19,7 @@
  */
 package org.linphone.contacts
 
-import android.Manifest
 import android.content.ContentUris
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
@@ -29,7 +27,6 @@ import android.provider.ContactsContract
 import androidx.annotation.MainThread
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
-import androidx.core.app.ActivityCompat
 import androidx.core.app.Person
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.text.isDigitsOnly
@@ -66,6 +63,7 @@ import org.linphone.utils.ImageUtils
 import org.linphone.utils.LinphoneUtils
 import org.linphone.utils.PhoneNumberUtils
 import org.linphone.utils.ShortcutUtils
+import java.io.FileNotFoundException
 
 class ContactsManager
     @UiThread
@@ -98,8 +96,6 @@ class ContactsManager
     private val magicSearchListener = object : MagicSearchListenerStub() {
         @WorkerThread
         override fun onSearchResultsReceived(magicSearch: MagicSearch) {
-            reloadRemoteContactsJob?.cancel()
-
             var queriedSipUri = ""
             for ((key, value) in magicSearchMap.entries) {
                 if (value == magicSearch) {
@@ -123,6 +119,7 @@ class ContactsManager
                         Log.w("$TAG Received friend [${friend.name}] with SIP URI [$address] doesn't match queried SIP URI [$queriedSipUri]")
                     } else {
                         found = true
+                        reloadRemoteContactsJob?.cancel()
 
                         // Store friend in app's cache to be re-used in call history, conversations, etc...
                         val temporaryFriendList = getRemoteContactDirectoriesCacheFriendList()
@@ -415,8 +412,9 @@ class ContactsManager
 
         notifyContactsListChanged()
 
-        Log.i("$TAG Native contacts have been loaded, creating chat rooms shortcuts")
-        ShortcutUtils.createShortcutsToChatRooms(coreContext.context)
+        Log.i("$TAG Native contacts have been loaded")
+        // No longer create chat room shortcuts depending on most recents ones, create it when a message is sent or received instead
+        // ShortcutUtils.createShortcutsToChatRooms(coreContext.context)
     }
 
     @WorkerThread
@@ -442,8 +440,10 @@ class ContactsManager
 
     @WorkerThread
     fun findContactByAddress(address: Address): Friend? {
+        Log.i("$TAG Looking for friend matching SIP address [${address.asStringUriOnly()}]")
         val found = coreContext.core.findFriend(address)
         if (found != null) {
+            Log.i("$TAG Found friend [${found.name}] matching SIP address [${address.asStringUriOnly()}]")
             return found
         }
 
@@ -472,8 +472,11 @@ class ContactsManager
         }
 
         return if (!username.isNullOrEmpty() && (username.startsWith("+") || username.isDigitsOnly())) {
-            Log.d("$TAG Looking for friend with phone number [$username]")
+            Log.i("$TAG Looking for friend using phone number [$username]")
             val foundUsingPhoneNumber = coreContext.core.findFriendByPhoneNumber(username)
+            if (foundUsingPhoneNumber != null) {
+                Log.i("$TAG Found friend [${foundUsingPhoneNumber.name}] matching phone number [$username]")
+            }
             foundUsingPhoneNumber
         } else {
             null
@@ -597,14 +600,16 @@ class ContactsManager
         }
 
         val context = coreContext.context
-        if (ActivityCompat.checkSelfPermission(
+        ShortcutUtils.removeLegacyShortcuts(context)
+        // No longer create chat room shortcuts depending on most recents ones, create it when a message is sent or received instead
+        /*if (ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.READ_CONTACTS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Log.w("$TAG READ_CONTACTS permission was denied, creating chat rooms shortcuts")
+            Log.w("$TAG READ_CONTACTS permission was denied, creating chat rooms shortcuts now")
             ShortcutUtils.createShortcutsToChatRooms(context)
-        }
+        }*/
 
         for (list in core.friendsLists) {
             if (list.type == FriendList.Type.CardDAV && !list.uri.isNullOrEmpty()) {
@@ -620,6 +625,11 @@ class ContactsManager
     fun onCoreStopped(core: Core) {
         Log.w("$TAG Core has been stopped")
         coroutineScope.cancel()
+
+        knownContactsAvatarsMap.clear()
+        unknownContactsAvatarsMap.clear()
+        conferenceAvatarMap.clear()
+        magicSearchMap.clear()
 
         core.removeListener(coreListener)
 
@@ -736,6 +746,8 @@ fun Friend.getNativeContactPictureUri(): Uri? {
                     fd.close()
                     return pictureUri
                 }
+            } catch (fnfe: FileNotFoundException) {
+                Log.w("[Contacts Manager] Can't open [$pictureUri] for contact [$name]: $fnfe")
             } catch (e: Exception) {
                 Log.e("[Contacts Manager] Can't open [$pictureUri] for contact [$name]: $e")
             }
@@ -795,6 +807,7 @@ fun Friend.getPerson(): Person {
 @WorkerThread
 fun Friend.getListOfSipAddresses(): ArrayList<Address> {
     val addressesList = arrayListOf<Address>()
+    if (corePreferences.hideSipAddresses) return addressesList
 
     for (address in addresses) {
         if (addressesList.find { it.weakEqual(address) } == null) {
@@ -809,7 +822,12 @@ fun Friend.getListOfSipAddresses(): ArrayList<Address> {
 fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddressClickListener): ArrayList<ContactNumberOrAddressModel> {
     val addressesAndNumbers = arrayListOf<ContactNumberOrAddressModel>()
 
+    // Will return an empty list if corePreferences.hideSipAddresses == true
     for (address in getListOfSipAddresses()) {
+        if (LinphoneUtils.isSipAddressLinkedToPhoneNumberByPresence(this, address.asStringUriOnly())) {
+            continue
+        }
+
         val data = ContactNumberOrAddressModel(
             this,
             address,
@@ -820,39 +838,26 @@ fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddress
         )
         addressesAndNumbers.add(data)
     }
+
     if (corePreferences.hidePhoneNumbers) {
         return addressesAndNumbers
     }
 
-    val indexOfLastSipAddress = addressesAndNumbers.count()
     for (number in phoneNumbersWithLabel) {
-        val presenceModel = getPresenceModelForUriOrTel(number.phoneNumber)
+        val phoneNumber = number.phoneNumber
+        val presenceModel = getPresenceModelForUriOrTel(phoneNumber)
         val hasPresenceInfo = !presenceModel?.contact.isNullOrEmpty()
         var presenceAddress: Address? = null
 
         if (presenceModel != null && hasPresenceInfo) {
-            Log.d("[Friend] Phone number [${number.phoneNumber}] has presence information")
-            // Show linked SIP address if not already stored as-is
             val contact = presenceModel.contact
             if (!contact.isNullOrEmpty()) {
                 val address = core.interpretUrl(contact, false)
                 if (address != null) {
                     address.clean() // To remove ;user=phone
                     presenceAddress = address
-                    if (addressesAndNumbers.find { it.address?.weakEqual(address) == true } == null) {
-                        val data = ContactNumberOrAddressModel(
-                            this,
-                            address,
-                            address.asStringUriOnly(),
-                            true, // SIP addresses are always enabled
-                            listener,
-                            true
-                        )
-                        addressesAndNumbers.add(indexOfLastSipAddress, data)
-                    }
-                    Log.d(
-                        "[Friend] Phone number [${number.phoneNumber}] is linked to SIP address [${presenceAddress.asStringUriOnly()}]"
-                    )
+                } else {
+                    Log.e("[Contacts Manager] Failed to parse phone number [$phoneNumber] contact address [$contact] from presence model!")
                 }
             }
         }
@@ -861,17 +866,20 @@ fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddress
         val defaultAccount = LinphoneUtils.getDefaultAccount()
         val enablePhoneNumbers = hasPresenceInfo || !isEndToEndEncryptionMandatory()
         val address = presenceAddress ?: core.interpretUrl(
-            number.phoneNumber,
+            phoneNumber,
             LinphoneUtils.applyInternationalPrefix(defaultAccount)
         )
+        address ?: continue
+
         val label = PhoneNumberUtils.vcardParamStringToAddressBookLabel(
             coreContext.context.resources,
             number.label ?: ""
         )
+        Log.d("[Contacts Manager] Parsed phone number [$phoneNumber] with label [$label] into address [${address.asStringUriOnly()}], presence address is [${presenceAddress?.asStringUriOnly()}]")
         val data = ContactNumberOrAddressModel(
             this,
             address,
-            number.phoneNumber,
+            phoneNumber,
             enablePhoneNumbers,
             listener,
             false,

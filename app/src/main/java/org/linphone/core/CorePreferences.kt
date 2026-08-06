@@ -381,8 +381,12 @@ class CorePreferences
         get() = config.getBool("ui", "only_display_sip_uri_username", true)
 
     @get:AnyThread
+    val suppressSipAddresses: Boolean
+        get() = config.getBool("ui", "suppress_sip_addresses", false)
+
+    @get:AnyThread
     val hideSipAddresses: Boolean
-        get() = config.getBool("ui", "hide_sip_addresses", false)
+        get() = suppressSipAddresses || config.getBool("ui", "hide_sip_addresses", true)
 
     @get:AnyThread
     val disableChat: Boolean

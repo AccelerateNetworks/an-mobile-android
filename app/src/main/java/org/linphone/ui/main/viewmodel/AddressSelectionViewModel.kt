@@ -316,7 +316,6 @@ abstract class AddressSelectionViewModel
             arrayListOf()
         }
 
-        val defaultAccountDomain = LinphoneUtils.getDefaultAccount()?.params?.domain
         val favoritesList = arrayListOf<ConversationContactOrSuggestionModel>()
         val domain = corePreferences.contactsFilter
         // Make a quick synchronous search for favorites (in case of total results exceed magic search limit to prevent missing ones)
@@ -384,7 +383,7 @@ abstract class AddressSelectionViewModel
                     continue
                 }
 
-                val model = ConversationContactOrSuggestionModel(address, defaultAccountDomain = defaultAccountDomain) {
+                val model = ConversationContactOrSuggestionModel(address) {
                     coreContext.startAudioCall(address)
                 }
                 val avatarModel = getContactAvatarModelForAddress(address)

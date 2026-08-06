@@ -36,6 +36,14 @@ android_monitor_audio_devices=0
 displaytype=MSAndroidTextureDisplay
 auto_resize_preview_to_keep_ratio=1
 max_conference_size=vga
+# AccelerateNetworks: server infrastructure cannot carry video. Video is off by
+# default (capture/display disabled, policy set to never auto-initiate/accept).
+# UI hides itself via hideVideo = !core.isVideoEnabled; there is no toggle to turn
+# it on and AN provisioning must not set these on.
+capture=0
+display=0
+automatically_initiate=0
+automatically_accept=0
 
 [misc]
 enable_basic_to_client_group_chat_room_migration=0

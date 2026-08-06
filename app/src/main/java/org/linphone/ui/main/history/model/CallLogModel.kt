@@ -23,7 +23,6 @@ import androidx.annotation.IntegerRes
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import org.linphone.LinphoneApplication.Companion.coreContext
-import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
 import org.linphone.core.CallLog
 import org.linphone.core.tools.Log
@@ -97,11 +96,7 @@ class CallLogModel
             friendRefKey = friend.refKey
             friendExists = coreContext.contactsManager.isContactAvailable(friend)
         }
-        displayedAddress = if (corePreferences.onlyDisplaySipUriUsername) {
-            address.username ?: ""
-        } else {
-            sipUri
-        }
+        displayedAddress = LinphoneUtils.getDisplayAddress(address)
 
         iconResId = LinphoneUtils.getCallIconResId(callLog.status, callLog.dir)
     }

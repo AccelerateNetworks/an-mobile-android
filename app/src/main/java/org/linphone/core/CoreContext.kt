@@ -697,20 +697,6 @@ class CoreContext
         }
 
         computeUserAgent()
-
-        // AccelerateNetworks: our server infrastructure cannot carry video, so video is
-        // disabled at the Core level on every start. This is the media-layer guarantee:
-        // no video is negotiated even on inbound invites. It also drives the UI, since
-        // 6.2 binds video controls to hideVideo = !core.isVideoEnabled, so every video
-        // control hides automatically without per-layout edits.
-        core.isVideoCaptureEnabled = false
-        core.isVideoDisplayEnabled = false
-        val videoPolicy = core.videoActivationPolicy.clone()
-        videoPolicy.automaticallyInitiate = false
-        videoPolicy.automaticallyAccept = false
-        core.videoActivationPolicy = videoPolicy
-        Log.i("$TAG [AN] Video disabled at Core level (capture/display off, no auto initiate/accept)")
-
         Log.i("$TAG Core has been configured with user-agent [${core.userAgent}], starting it")
         core.start()
     }

@@ -221,7 +221,6 @@ class HistoryListViewModel
         val suggestionsList = arrayListOf<CallLogModelWrapper>()
         val requestList = arrayListOf<CallLogModelWrapper>()
 
-        val defaultAccountDomain = LinphoneUtils.getDefaultAccount()?.params?.domain
         for (result in results) {
             val address = result.address
             val friend = result.friend
@@ -257,7 +256,7 @@ class HistoryListViewModel
                     continue
                 }
 
-                val model = ConversationContactOrSuggestionModel(address, defaultAccountDomain = defaultAccountDomain) {
+                val model = ConversationContactOrSuggestionModel(address) {
                     coreContext.startAudioCall(address)
                 }
                 val avatarModel = getContactAvatarModelForAddress(address)

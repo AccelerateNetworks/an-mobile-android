@@ -22,7 +22,6 @@ package org.linphone.ui.main.model
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
-import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.core.Address
 import org.linphone.core.Friend
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
@@ -36,7 +35,6 @@ class ConversationContactOrSuggestionModel
     val conversationId: String = "",
     conversationSubject: String? = null,
     val friend: Friend? = null,
-    val defaultAccountDomain: String? = null,
     private val onClicked: ((Address) -> Unit)? = null
 ) {
     val id = friend?.refKey ?: address.asStringUriOnly().hashCode()
@@ -52,17 +50,7 @@ class ConversationContactOrSuggestionModel
             address.username ?: address.domain.orEmpty()
         }
 
-    val sipUri = if (!corePreferences.hideSipAddresses) {
-        // Hide SIP address and only show username for suggestions
-        // on the same domain as the currently selected account
-        if (!defaultAccountDomain.isNullOrEmpty() && defaultAccountDomain == address.domain) {
-            address.username
-        } else {
-            address.asStringUriOnly()
-        }
-    } else {
-        address.username
-    }
+    val sipUri = LinphoneUtils.getDisplayAddress(address)
 
     val initials = AppUtils.getInitials(conversationSubject ?: name)
 

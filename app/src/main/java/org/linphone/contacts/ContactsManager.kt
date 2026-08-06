@@ -807,7 +807,7 @@ fun Friend.getPerson(): Person {
 @WorkerThread
 fun Friend.getListOfSipAddresses(): ArrayList<Address> {
     val addressesList = arrayListOf<Address>()
-    if (corePreferences.hideSipAddresses) return addressesList
+    if (corePreferences.suppressSipAddresses) return addressesList
 
     for (address in addresses) {
         if (addressesList.find { it.weakEqual(address) } == null) {
@@ -822,7 +822,7 @@ fun Friend.getListOfSipAddresses(): ArrayList<Address> {
 fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddressClickListener): ArrayList<ContactNumberOrAddressModel> {
     val addressesAndNumbers = arrayListOf<ContactNumberOrAddressModel>()
 
-    // Will return an empty list if corePreferences.hideSipAddresses == true
+    // Will return an empty list if corePreferences.suppressSipAddresses == true
     for (address in getListOfSipAddresses()) {
         if (LinphoneUtils.isSipAddressLinkedToPhoneNumberByPresence(this, address.asStringUriOnly())) {
             continue
@@ -831,7 +831,7 @@ fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddress
         val data = ContactNumberOrAddressModel(
             this,
             address,
-            address.asStringUriOnly(),
+            LinphoneUtils.getDisplayAddress(address),
             true, // SIP addresses are always enabled
             listener,
             true

@@ -340,7 +340,6 @@ class ConversationsListViewModel
         val suggestionsList = arrayListOf<ConversationModelWrapper>()
         val requestList = arrayListOf<ConversationModelWrapper>()
 
-        val defaultAccountDomain = LinphoneUtils.getDefaultAccount()?.params?.domain
         for (result in results) {
             val address = result.address
             val friend = result.friend
@@ -376,7 +375,7 @@ class ConversationsListViewModel
                     continue
                 }
 
-                val model = ConversationContactOrSuggestionModel(address, defaultAccountDomain = defaultAccountDomain) {
+                val model = ConversationContactOrSuggestionModel(address) {
                     coreContext.startAudioCall(address)
                 }
                 val avatarModel = getContactAvatarModelForAddress(address)

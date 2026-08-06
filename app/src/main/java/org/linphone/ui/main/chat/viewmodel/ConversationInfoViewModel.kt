@@ -474,12 +474,7 @@ class ConversationInfoViewModel
         val firstParticipant = chatRoom.participants.firstOrNull()
         if (firstParticipant != null) {
             val address = firstParticipant.address
-            val uri = if (corePreferences.onlyDisplaySipUriUsername) {
-                address.username ?: ""
-            } else {
-                LinphoneUtils.getAddressAsCleanStringUriOnly(address)
-            }
-            sipUri.postValue(uri)
+            sipUri.postValue(LinphoneUtils.getDisplayAddress(address))
 
             val friend = coreContext.contactsManager.findContactByAddress(address)
             if (friend == null) {

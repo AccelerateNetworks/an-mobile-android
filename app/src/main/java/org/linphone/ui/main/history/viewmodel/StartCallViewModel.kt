@@ -85,10 +85,6 @@ class StartCallViewModel
         MutableLiveData()
     }
 
-    val initiateBlindTransferEvent: MutableLiveData<Event<Pair<Address, String>>> by lazy {
-        MutableLiveData<Event<Pair<Address, String>>>()
-    }
-
     private val conferenceListener = object : ConferenceListenerStub() {
         @WorkerThread
         override fun onStateChanged(conference: Conference, newState: Conference.State?) {

@@ -116,6 +116,19 @@ class LinphoneUtils {
         }
 
         @WorkerThread
+        fun getDisplayAddress(address: Address): String {
+            val username = address.username
+            if (!corePreferences.onlyDisplaySipUriUsername || username.isNullOrEmpty()) {
+                return getAddressAsCleanStringUriOnly(address)
+            }
+            val homeDomain = getDefaultAccount()?.params?.domain
+            if (address.domain == homeDomain || address.domain == corePreferences.defaultDomain) {
+                return username
+            }
+            return getAddressAsCleanStringUriOnly(address)
+        }
+
+        @WorkerThread
         fun getDisplayName(address: Address?): String {
             if (address == null) return "[null]"
 

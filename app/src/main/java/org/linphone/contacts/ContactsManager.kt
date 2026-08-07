@@ -259,6 +259,9 @@ class ContactsManager
             Log.i("$TAG Friend list [${friendList.displayName}] sync status changed to [$status]")
             when (status) {
                 FriendList.SyncStatus.Successful -> {
+                    if (friendList.type == FriendList.Type.VCard4) {
+                        enableDirectoryPresenceSubscriptions(friendList)
+                    }
                     notifyContactsListChanged()
                 }
                 FriendList.SyncStatus.Failure -> {
@@ -618,6 +621,26 @@ class ContactsManager
                 )
                 list.synchronizeFriendsFromServer()
             }
+        }
+    }
+
+    @WorkerThread
+    private fun enableDirectoryPresenceSubscriptions(friendList: FriendList) {
+        val homeDomain = LinphoneUtils.getDefaultAccount()?.params?.domain ?: return
+        var changed = false
+        for (friend in friendList.friends) {
+            if (friend.isSubscribesEnabled) continue
+            if (friend.addresses.any { it.domain == homeDomain }) {
+                friend.edit()
+                friend.setSubscribesEnabled(true)
+                friend.done()
+                changed = true
+            }
+        }
+        if (changed) {
+            friendList.isSubscriptionsEnabled = true
+            friendList.updateSubscriptions()
+            Log.i("$TAG Enabled presence subscriptions for directory extensions on [$homeDomain]")
         }
     }
 

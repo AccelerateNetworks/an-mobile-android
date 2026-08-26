@@ -49,6 +49,8 @@ class CallsViewModel
 
     val allCallsIntoConference = MutableLiveData<Boolean>()
 
+    val canMergeCalls = MutableLiveData<Boolean>()
+
     val showTopBar = MutableLiveData<Boolean>()
 
     val goToActiveCallEvent = MutableLiveData<Event<Boolean>>()
@@ -156,6 +158,7 @@ class CallsViewModel
 
     init {
         showTopBar.value = false
+        canMergeCalls.value = false
 
         coreContext.postOnCoreThread { core ->
             core.addListener(coreListener)
@@ -220,6 +223,14 @@ class CallsViewModel
     @UiThread
     fun mergeCallsIntoConference() {
         coreContext.postOnCoreThread { core ->
+            if (!areAllCallsMergeable(core)) {
+                Log.w(
+                    "$TAG Refusing to merge: not every call has established media, joining a connecting call to the mixer would abort liblinphone"
+                )
+                showRedToast(R.string.conference_failed_to_merge_calls_into_conference_toast, R.drawable.warning_circle)
+                return@postOnCoreThread
+            }
+
             val callsCount = core.callsNb
             val defaultAccount = LinphoneUtils.getDefaultAccount()
             val subject = if (defaultAccount != null && defaultAccount.params.audioVideoConferenceFactoryAddress != null) {
@@ -295,6 +306,30 @@ class CallsViewModel
             }
         } else if (core.callsNb == 1) {
             configureTopBarForSingleCallOrConference()
+        }
+
+        canMergeCalls.postValue(areAllCallsMergeable(core))
+    }
+
+    // Merging builds a local conference by joining each call's media StreamsGroup to a mixer.
+    // A call still connecting/ringing has no stable stream, so the join aborts liblinphone with
+    // "StreamsGroup::joinMixerSession() already joined !" (native SIGABRT, kills the process).
+    // Only allow the merge once every call's media is established.
+    @WorkerThread
+    private fun areAllCallsMergeable(core: Core): Boolean {
+        return core.callsNb > 1 && core.calls.all { isCallMediaEstablished(it.state) }
+    }
+
+    private fun isCallMediaEstablished(state: Call.State): Boolean {
+        return when (state) {
+            Call.State.StreamsRunning,
+            Call.State.Paused,
+            Call.State.Pausing,
+            Call.State.PausedByRemote,
+            Call.State.Resuming,
+            Call.State.Updating,
+            Call.State.UpdatedByRemote -> true
+            else -> false
         }
     }
 

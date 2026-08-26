@@ -53,7 +53,7 @@
             android:layout_height="0dp"
             android:src="@drawable/arrows_merge"
             android:contentDescription="@string/content_description_merge_calls_into_conference"
-            android:visibility="@{viewModel.callsCount > 1 ? View.VISIBLE : View.GONE}"
+            android:visibility="@{viewModel.canMergeCalls ? View.VISIBLE : View.GONE}"
             app:tint="?attr/color_main2_500"
             app:layout_constraintBottom_toBottomOf="@id/title"
             app:layout_constraintEnd_toEndOf="parent"

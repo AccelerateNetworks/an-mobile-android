@@ -234,6 +234,15 @@ class ActiveCallFragment : GenericCallFragment() {
             callMediaEncryptionStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         }
 
+        callViewModel.isPausedByRemote.observe(viewLifecycleOwner) { paused ->
+            if (paused) {
+                if (callViewModel.fullScreenMode.value == true) {
+                    Log.i("$TAG Call is paused by remote, leaving full screen mode")
+                    callViewModel.fullScreenMode.postValue(false)
+                }
+            }
+        }
+
         callViewModel.showZrtpSasDialogEvent.observe(viewLifecycleOwner) {
             it.consume { pair ->
                 callMediaEncryptionStatsBottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
@@ -258,7 +267,7 @@ class ActiveCallFragment : GenericCallFragment() {
                     )
                 } else {
                     // Only allow "trying again" once
-                    showZrtpAlertDialog(false)
+                    showZrtpAlertDialog()
                 }
             }
         }
@@ -304,6 +313,12 @@ class ActiveCallFragment : GenericCallFragment() {
             }
         }
 
+        callViewModel.clearPressedDtmfBarEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                binding.callNumpad.digitsHistory.setText("")
+            }
+        }
+
         callViewModel.appendDigitToSearchBarEvent.observe(viewLifecycleOwner) {
             it.consume { digit ->
                 binding.callNumpad.digitsHistory.addCharacterAtPosition(digit)
@@ -331,17 +346,6 @@ class ActiveCallFragment : GenericCallFragment() {
             }
         }
 
-        callViewModel.goToConferenceEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                if (findNavController().currentDestination?.id == R.id.activeCallFragment) {
-                    Log.i("$TAG Going to conference fragment")
-                    val action =
-                        ActiveCallFragmentDirections.actionActiveCallFragmentToActiveConferenceCallFragment()
-                    findNavController().navigate(action)
-                }
-            }
-        }
-
         callViewModel.isReceivingVideo.observe(viewLifecycleOwner) { receiving ->
             if (!receiving && callViewModel.fullScreenMode.value == true) {
                 Log.i("$TAG We are no longer receiving video, leaving full screen mode")
@@ -358,15 +362,6 @@ class ActiveCallFragment : GenericCallFragment() {
                     Log.i("$TAG We are not sending video, clearing capture preview surface")
                     null
                 }
-            }
-        }
-
-        callViewModel.chatRoomCreationErrorEvent.observe(viewLifecycleOwner) {
-            it.consume { error ->
-                (requireActivity() as GenericActivity).showRedToast(
-                    getString(error),
-                    R.drawable.warning_circle
-                )
             }
         }
 
@@ -408,7 +403,7 @@ class ActiveCallFragment : GenericCallFragment() {
 
         if (callViewModel.isZrtpAlertDialogVisible) {
             Log.i("$TAG Fragment resuming, showing ZRTP alert dialog")
-            showZrtpAlertDialog(false)
+            showZrtpAlertDialog()
         } else if (callViewModel.isZrtpDialogVisible) {
             Log.i("$TAG Fragment resuming, showing ZRTP SAS validation dialog")
             callViewModel.showZrtpSasDialogIfPossible()
@@ -481,12 +476,12 @@ class ActiveCallFragment : GenericCallFragment() {
         callViewModel.isZrtpDialogVisible = true
     }
 
-    private fun showZrtpAlertDialog(allowTryAgain: Boolean = true) {
+    private fun showZrtpAlertDialog() {
         if (zrtpSasDialog != null) {
             zrtpSasDialog?.dismiss()
         }
 
-        val model = ZrtpAlertDialogModel(allowTryAgain)
+        val model = ZrtpAlertDialogModel(false)
         val dialog = DialogUtils.getZrtpAlertDialog(requireActivity(), model)
 
         model.tryAgainEvent.observe(viewLifecycleOwner) { event ->

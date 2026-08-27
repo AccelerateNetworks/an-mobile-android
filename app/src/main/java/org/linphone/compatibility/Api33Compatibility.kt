@@ -20,6 +20,7 @@
 package org.linphone.compatibility
 
 import android.Manifest
+import android.app.ActivityOptions
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -44,6 +45,12 @@ class Api33Compatibility {
             return context.checkSelfPermission(
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        fun getPendingIntentActivityOptions(): ActivityOptions {
+            val options = ActivityOptions.makeBasic()
+            options.isPendingIntentBackgroundActivityLaunchAllowed = true
+            return options
         }
 
         fun hasTelecomManagerFeature(context: Context): Boolean {

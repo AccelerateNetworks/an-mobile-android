@@ -20,9 +20,6 @@
 package org.linphone.ui.main.meetings.fragment
 
 import android.content.ActivityNotFoundException
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.CalendarContract
@@ -47,6 +44,7 @@ import org.linphone.ui.main.fragment.SlidingPaneChildFragment
 import org.linphone.utils.ConfirmationDialogModel
 import org.linphone.ui.main.meetings.adapter.MeetingParticipantsAdapter
 import org.linphone.ui.main.meetings.viewmodel.MeetingViewModel
+import org.linphone.utils.AppUtils
 import org.linphone.utils.DialogUtils
 import org.linphone.utils.Event
 
@@ -136,7 +134,7 @@ class MeetingFragment : SlidingPaneChildFragment() {
             }
         }
 
-        binding.setShareClickListener {
+        binding.setCopyUriToClipboardClickListener {
             copyMeetingAddressIntoClipboard(uri)
         }
 
@@ -223,14 +221,16 @@ class MeetingFragment : SlidingPaneChildFragment() {
         )
 
         val isUserOrganizer = viewModel.isEditable.value == true && viewModel.isCancelled.value == false
-        popupView.cancelInsteadOfDelete = isUserOrganizer
+        val hasNotStartedYet = viewModel.hasNotStartedYet.value == true
+        val showCancelActionInsteadOfDelete = isUserOrganizer && hasNotStartedYet
+        popupView.cancelInsteadOfDelete = showCancelActionInsteadOfDelete
         popupView.setDeleteClickListener {
-            if (isUserOrganizer) {
-                // In case we are organizer of the meeting, ask user confirmation before cancelling it
+            if (isUserOrganizer && hasNotStartedYet) {
+                Log.i("$TAG Meeting start hasn't started yet and we are the organizer, asking user if it should be cancelled")
                 showCancelMeetingDialog()
             } else {
-                // If we're not organizer, ask user confirmation of removing itself from participants & deleting it locally
-                showDeleteMeetingDialog()
+                Log.i("$TAG Deleting meeting [${viewModel.sipUri}]")
+                viewModel.delete()
             }
             popupWindow.dismiss()
         }
@@ -247,15 +247,12 @@ class MeetingFragment : SlidingPaneChildFragment() {
 
     private fun copyMeetingAddressIntoClipboard(meetingSipUri: String) {
         Log.i("$TAG Copying conference SIP URI [$meetingSipUri] into clipboard")
-
-        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val label = "Meeting SIP address"
-        clipboard.setPrimaryClip(ClipData.newPlainText(label, meetingSipUri))
-
-        (requireActivity() as GenericActivity).showGreenToast(
-            getString(R.string.meeting_address_copied_to_clipboard_toast),
-            R.drawable.check
-        )
+        if (AppUtils.copyToClipboard(requireContext(), "Meeting SIP address", meetingSipUri)) {
+            (requireActivity() as GenericActivity).showGreenToast(
+                getString(R.string.meeting_address_copied_to_clipboard_toast),
+                R.drawable.check
+            )
+        }
     }
 
     private fun shareMeetingInfoAsCalendarEvent() {
@@ -297,42 +294,18 @@ class MeetingFragment : SlidingPaneChildFragment() {
             }
         }
 
-        model.cancelEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                dialog.dismiss()
-            }
-        }
-
         model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
-                viewModel.cancel()
+                Log.i("$TAG Cancelling meeting [${viewModel.sipUri}] and sending notification to participants")
+                viewModel.cancel(true)
                 dialog.dismiss()
             }
         }
 
-        dialog.show()
-    }
-
-    private fun showDeleteMeetingDialog() {
-        Log.i("$TAG Meeting is not editable or already cancelled, asking whether to delete it or not")
-        val model = ConfirmationDialogModel()
-        val dialog = DialogUtils.getDeleteMeetingDialog(requireContext(), model)
-
-        model.dismissEvent.observe(viewLifecycleOwner) {
+        model.alternativeChoiceEvent.observe(viewLifecycleOwner) {
             it.consume {
-                dialog.dismiss()
-            }
-        }
-
-        model.cancelEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                dialog.dismiss()
-            }
-        }
-
-        model.confirmEvent.observe(viewLifecycleOwner) {
-            it.consume {
-                viewModel.delete()
+                Log.i("$TAG Cancelling meeting [${viewModel.sipUri}] without notifying participants")
+                viewModel.cancel(false)
                 dialog.dismiss()
             }
         }

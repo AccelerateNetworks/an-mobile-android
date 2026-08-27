@@ -52,11 +52,11 @@ class MeetingsListAdapter :
     var selectedAdapterPosition = -1
 
     val meetingClickedEvent: MutableLiveData<Event<MeetingModel>> by lazy {
-        MutableLiveData<Event<MeetingModel>>()
+        MutableLiveData()
     }
 
     val meetingLongClickedEvent: MutableLiveData<Event<MeetingModel>> by lazy {
-        MutableLiveData<Event<MeetingModel>>()
+        MutableLiveData()
     }
 
     override fun displayHeaderForPosition(position: Int): Boolean {
@@ -156,7 +156,7 @@ class MeetingsListAdapter :
         }
     }
 
-    inner class TodayIndicatorViewHolder(
+    class TodayIndicatorViewHolder(
         val binding: MeetingListTodayIndicatorBinding
     ) : RecyclerView.ViewHolder(binding.root) {
         @UiThread

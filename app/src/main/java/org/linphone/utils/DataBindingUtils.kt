@@ -26,12 +26,14 @@ import android.graphics.drawable.AnimatedVectorDrawable
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.SeekBar
 import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import androidx.annotation.DimenRes
@@ -62,13 +64,14 @@ import coil3.transform.RoundedCornersTransformation
 import coil3.video.videoFrameMillis
 import com.google.android.flexbox.FlexboxLayout
 import org.linphone.BR
+import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
 import org.linphone.contacts.AbstractAvatarModel
-import org.linphone.contacts.AvatarGenerator
 import org.linphone.core.ConsolidatedPresence
 import org.linphone.core.tools.Log
 import org.linphone.ui.NotoSansFont
 import org.linphone.ui.call.conference.model.ConferenceParticipantDeviceModel
+import org.linphone.ui.call.view.VuMeterView
 import org.linphone.ui.call.view.RoundCornersTextureView
 
 /**
@@ -222,6 +225,25 @@ fun View.setKeyboardInsetListener(lambda: (visible: Boolean) -> Unit) {
 }
 
 @UiThread
+@BindingAdapter("android:onContextClick")
+fun View.setContextListener(longClickListener: View.OnLongClickListener?) {
+    longClickListener ?: return
+
+    this.setOnContextClickListener {
+        longClickListener.onLongClick(this)
+    }
+}
+
+@UiThread
+@BindingAdapter("android:onContextClick")
+fun View.setContextListener(lambda: () -> Unit) {
+    this.setOnContextClickListener {
+        lambda.invoke()
+        true
+    }
+}
+
+@UiThread
 @BindingAdapter("android:src")
 fun ImageView.setSourceImageResource(resource: Int) {
     this.setImageResource(resource)
@@ -230,8 +252,10 @@ fun ImageView.setSourceImageResource(resource: Int) {
 @UiThread
 @BindingAdapter("android:drawableTint")
 fun AppCompatTextView.setDrawableTint(@ColorInt color: Int) {
-    for (drawable in compoundDrawablesRelative) {
-        drawable?.setTint(color)
+    coreContext.postOnMainThread {
+        for (drawable in compoundDrawablesRelative) {
+            drawable?.setTint(color)
+        }
     }
 }
 
@@ -429,14 +453,6 @@ fun ImageView.loadCallAvatarWithCoil(model: AbstractAvatarModel?) {
     loadContactPictureWithCoil(this, model, size = size, textSize = initialsSize)
 }
 
-@UiThread
-@BindingAdapter("coilInitials")
-fun ImageView.loadInitialsAvatarWithCoil(initials: String?) {
-    val builder = AvatarGenerator(context)
-    builder.setInitials(initials.orEmpty())
-    load(builder.buildDrawable())
-}
-
 @SuppressLint("ResourceType")
 private fun loadContactPictureWithCoil(
     imageView: ImageView,
@@ -488,7 +504,7 @@ private fun getErrorImageLoader(
             R.drawable.inset_user_circle
         }
     } else {
-        ImageUtils.getGeneratedAvatar(context, size, textSize, initials)
+        ImageUtils.generatedAvatarIfNeededAndReturnPath(context, initials)
     }
 }
 
@@ -499,6 +515,12 @@ fun setParticipantTextureView(
     model: ConferenceParticipantDeviceModel
 ) {
     model.setTextureView(textureView)
+}
+
+@UiThread
+@BindingAdapter("vuMeterPercentage")
+fun setVuMeterPercentage(view: VuMeterView, percentage: Float) {
+    view.setVuMeterPercentage(percentage)
 }
 
 @UiThread
@@ -616,6 +638,11 @@ fun setFlexboxLayoutWrapBefore(view: View, wrap: Boolean = false) {
     view.layoutParams = params
 }
 
+@BindingAdapter("seekBarListener")
+fun setSeekBarListener(seekBar: SeekBar, listener: SeekBar.OnSeekBarChangeListener) {
+    seekBar.setOnSeekBarChangeListener(listener)
+}
+
 @BindingAdapter("emojiPickedListener")
 fun EmojiPickerView.setEmojiPickedListener(listener: EmojiPickedListener) {
     setOnEmojiPickedListener { emoji ->
@@ -625,4 +652,22 @@ fun EmojiPickerView.setEmojiPickedListener(listener: EmojiPickedListener) {
 
 interface EmojiPickedListener {
     fun onEmojiPicked(item: EmojiViewItem)
+}
+
+@SuppressLint("ClickableViewAccessibility")
+@BindingAdapter("onTouchListener")
+fun View.setTouchListener(listener: TouchListener) {
+    setOnTouchListener { view, event ->
+        return@setOnTouchListener when (event.action) {
+            MotionEvent.ACTION_DOWN -> listener.onPressed(view)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> listener.onReleased(view)
+            else -> false
+        }
+    }
+}
+
+interface TouchListener {
+    fun onPressed(view: View): Boolean
+
+    fun onReleased(view: View): Boolean
 }

@@ -113,8 +113,12 @@ class RecordingMediaPlayerViewModel
     fun setVideoRenderingSurface(textureView: TextureView) {
         val texture = textureView.surfaceTexture
         coreContext.postOnCoreThread {
-            Log.i("$TAG Setting window ID in player")
-            player.setWindowId(texture)
+            if (::player.isInitialized) {
+                Log.i("$TAG Setting window ID in player")
+                player.setWindowId(texture)
+            } else {
+                Log.e("$TAG Player hasn't been created yet, can't set the video texture")
+            }
         }
     }
 
@@ -175,6 +179,14 @@ class RecordingMediaPlayerViewModel
         }
     }
 
+    @UiThread
+    fun seekTo(position: Int) {
+        coreContext.postOnCoreThread {
+            seekPlaybackTo(position)
+            startPlayback()
+        }
+    }
+
     @WorkerThread
     private fun startPlayback() {
         if (!::player.isInitialized) return
@@ -230,6 +242,18 @@ class RecordingMediaPlayerViewModel
         isPlaying.postValue(false)
         updatePositionJob?.cancel()
         updatePositionJob = null
+    }
+
+    @WorkerThread
+    private fun seekPlaybackTo(position: Int) {
+        if (!::player.isInitialized) return
+
+        if (player.state == Player.State.Closed) {
+            player.open(recordingModel.filePath)
+        }
+
+        Log.i("$TAG Seeking player to position [$position]")
+        player.seek(position)
     }
 
     @WorkerThread

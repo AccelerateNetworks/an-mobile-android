@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - testing
+      - 'release/**'
   workflow_dispatch:
 concurrency:
   group: "${{ github.ref }}"
@@ -42,6 +43,7 @@ jobs:
         export GOOGLE_APPLICATION_CREDENTIALS=./google-creds.json
         if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then python3 upload-app.py --track beta com.acceleratenetworks.mobile "$(./version.sh)"; fi
         if [[ "${{ github.ref }}" == "refs/heads/testing" ]]; then python3 upload-app.py --track alpha com.acceleratenetworks.mobile "$(./version.sh)"; fi
+        if [[ "${{ github.ref }}" == refs/heads/release/* ]]; then python3 upload-app.py --track alpha com.acceleratenetworks.mobile "$(./version.sh)"; fi
     - uses: actions/upload-artifact@v4.1.0
       if: always()
       with:

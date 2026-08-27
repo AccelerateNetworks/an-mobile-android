@@ -49,10 +49,11 @@
                     android:id="@+id/top_bar"
                     layout="@layout/main_activity_top_bar"
                     bind:viewModel="@{viewModel}"
-                    bind:enableExtraAction="@{true}"
+                    bind:showExtraAction="@{true}"
                     bind:extraActionIcon="@{@drawable/funnel}"
                     bind:extraActionClickListener="@{filterClickListener}"
                     bind:extraActionContentDescription="@{@string/content_description_contacts_list_filters}"
+                    bind:extraActionEnabled="@{true}"
                     android:layout_width="0dp"
                     android:layout_height="@dimen/top_bar_height"
                     app:layout_constraintTop_toTopOf="parent"
@@ -80,7 +81,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_marginEnd="16dp"
-                        android:layout_marginTop="20dp"
+                        android:layout_marginTop="10dp"
                         android:text="@string/contacts_list_favourites_title"
                         android:drawableEnd="@{viewModel.showFavourites ? @drawable/caret_up : @drawable/caret_down, default=@drawable/caret_up}"
                         android:drawableTint="@color/gray_main2_600"/>
@@ -103,11 +104,32 @@
                         android:layout_marginTop="16dp"
                         android:text="@string/contacts_list_all_contacts_title"/>
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/contactsList"
+                    <androidx.appcompat.widget.AppCompatTextView
+                        style="@style/default_text_style_300"
+                        android:id="@+id/results_limit_reached"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:text="@string/contacts_list_search_results_limit_reached_label"
+                        android:textColor="?attr/color_main2_600"
+                        android:textSize="12sp"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:visibility="@{viewModel.showResultsLimitReached ? View.VISIBLE : View.GONE, default=gone}"/>
+
+                    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                        android:id="@+id/contactsListSwipeRefresh"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:layout_marginTop="8dp" />
+                        android:layout_marginTop="4dp">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/contactsList"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
                 </LinearLayout>
 
@@ -128,10 +150,11 @@
                 <androidx.appcompat.widget.AppCompatTextView
                     style="@style/section_header_style"
                     android:id="@+id/no_contacts_label"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="@{viewModel.isFilterEmpty ? (viewModel.areAllContactsDisplayed ? @string/contacts_list_empty : @string/contacts_list_sip_empty) : @string/list_filter_no_result_found, default=@string/contacts_list_sip_empty}"
-                    app:layout_constraintBottom_toTopOf="@id/lists"
+                    android:textAlignment="center"
+                    app:layout_constraintBottom_toTopOf="@id/show_contacts_filter"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/bottom_nav_bar"
                     app:layout_constraintTop_toBottomOf="@id/no_contacts_image" />
@@ -154,6 +177,7 @@
                     android:background="@drawable/secondary_button_background"
                     android:visibility="@{viewModel.contactsList.empty &amp;&amp; !viewModel.areAllContactsDisplayed ? View.VISIBLE : View.GONE}"
                     app:layout_constraintTop_toBottomOf="@id/no_contacts_label"
+                    app:layout_constraintBottom_toTopOf="@id/lists"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/bottom_nav_bar"/>
 
@@ -178,11 +202,19 @@
                     android:layout_margin="16dp"
                     android:src="@drawable/user_plus"
                     android:contentDescription="@string/content_description_contact_create"
+                    android:visibility="@{viewModel.disableAddContact ? View.GONE : View.VISIBLE}"
                     app:tint="?attr/color_on_main"
                     app:backgroundTint="?attr/color_main1_500"
                     app:shapeAppearanceOverlay="@style/rounded"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent" />
+
+                <include
+                    layout="@layout/sliding_pane_separator"
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

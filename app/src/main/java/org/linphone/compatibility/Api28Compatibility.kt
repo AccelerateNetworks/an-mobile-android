@@ -34,15 +34,17 @@ class Api28Compatibility {
     companion object {
         private const val TAG = "[API 28 Compatibility]"
 
-        fun startServiceForeground(service: Service, id: Int, notification: Notification) {
+        fun startServiceForeground(service: Service, id: Int, notification: Notification): Boolean {
             try {
                 service.startForeground(
                     id,
                     notification
                 )
+                return true
             } catch (e: Exception) {
                 Log.e("$TAG Can't start service as foreground! $e")
             }
+            return false
         }
 
         fun enterPipMode(activity: Activity): Boolean {

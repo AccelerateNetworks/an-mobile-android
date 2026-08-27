@@ -31,6 +31,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.linphone.LinphoneApplication.Companion.coreContext
@@ -71,6 +74,8 @@ class CurrentCallViewModel
     constructor() : GenericViewModel() {
     companion object {
         private const val TAG = "[Current Call ViewModel]"
+        private const val VU_METER_MIN = -20f
+        private const val VU_METER_MAX = 0
     }
 
     val contact = MutableLiveData<ContactAvatarModel>()
@@ -109,6 +114,10 @@ class CurrentCallViewModel
 
     val isMicrophoneMuted = MutableLiveData<Boolean>()
 
+    val microphoneRecordingVolume = MutableLiveData<Float>()
+
+    val playbackVolume = MutableLiveData<Float>()
+
     val isSpeakerEnabled = MutableLiveData<Boolean>()
 
     val isHeadsetEnabled = MutableLiveData<Boolean>()
@@ -116,6 +125,8 @@ class CurrentCallViewModel
     val isHearingAidEnabled = MutableLiveData<Boolean>()
 
     val isBluetoothEnabled = MutableLiveData<Boolean>()
+
+    val isHdmiEnabled = MutableLiveData<Boolean>()
 
     val fullScreenMode = MutableLiveData<Boolean>()
 
@@ -140,33 +151,35 @@ class CurrentCallViewModel
     }
 
     val incomingCallTitle: MutableLiveData<String> by lazy {
-        MutableLiveData<String>()
+        MutableLiveData()
     }
 
     val qualityValue = MutableLiveData<Float>()
 
     val qualityIcon = MutableLiveData<Int>()
 
+    val hideSipAddresses = MutableLiveData<Boolean>()
+
     var terminatedByUser = false
 
     val isRemoteRecordingEvent: MutableLiveData<Event<Pair<Boolean, String>>> by lazy {
-        MutableLiveData<Event<Pair<Boolean, String>>>()
+        MutableLiveData()
     }
 
     val goToEndedCallEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val finishActivityEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val requestRecordAudioPermission: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val requestCameraPermission: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val proximitySensorEnabled = MutableLiveData<Boolean>()
@@ -175,21 +188,21 @@ class CurrentCallViewModel
     val callDuration = MutableLiveData<Int>()
 
     val showAudioDevicesListEvent: MutableLiveData<Event<ArrayList<AudioDeviceModel>>> by lazy {
-        MutableLiveData<Event<ArrayList<AudioDeviceModel>>>()
+        MutableLiveData()
     }
 
     // ZRTP related
 
     val showZrtpSasDialogEvent: MutableLiveData<Event<Pair<String, List<String>>>> by lazy {
-        MutableLiveData<Event<Pair<String, List<String>>>>()
+        MutableLiveData()
     }
 
     val showZrtpSasCacheMismatchDialogEvent: MutableLiveData<Event<Pair<String, List<String>>>> by lazy {
-        MutableLiveData<Event<Pair<String, List<String>>>>()
+        MutableLiveData()
     }
 
     val zrtpAuthTokenVerifiedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     var isZrtpDialogVisible: Boolean = false
@@ -204,11 +217,7 @@ class CurrentCallViewModel
     val operationInProgress = MutableLiveData<Boolean>()
 
     val goToConversationEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
-    }
-
-    val chatRoomCreationErrorEvent: MutableLiveData<Event<Int>> by lazy {
-        MutableLiveData<Event<Int>>()
+        MutableLiveData()
     }
 
     // Conference
@@ -216,52 +225,48 @@ class CurrentCallViewModel
     val conferenceModel = ConferenceViewModel()
 
     val goToConferenceEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val goToCallEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     // Extras actions
 
     val toggleExtraActionsBottomSheetEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val showNumpadBottomSheetEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val transferInProgressEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val transferFailedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val numpadModel: NumpadModel
 
     val appendDigitToSearchBarEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val removedCharacterAtCurrentPositionEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
+    }
+
+    val clearPressedDtmfBarEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData()
     }
 
     // Sliding answer/decline button
 
     val isScreenLocked = MutableLiveData<Boolean>()
-
-    val slidingButtonAboveAnswer = MutableLiveData<Boolean>()
-
-    val slidingButtonAboveDecline = MutableLiveData<Boolean>()
-
-    val answerAlpha = MutableLiveData<Float>()
-
-    val declineAlpha = MutableLiveData<Float>()
 
     lateinit var currentCall: Call
 
@@ -365,10 +370,8 @@ class CurrentCallViewModel
                     updateCallDuration()
                     if (call.conference != null) {
                         Log.i(
-                            "$TAG Call is in Connected state and conference isn't null, going to conference fragment"
+                            "$TAG Call is in Connected state and conference isn't null, wait for StreamsRunning state to navigate to conference layout"
                         )
-                        conferenceModel.configureFromCall(call)
-                        goToConferenceEvent.postValue(Event(true))
                     } else {
                         conferenceModel.destroy()
                     }
@@ -390,6 +393,13 @@ class CurrentCallViewModel
                             updateEncryption()
                         }
                         else -> {}
+                    }
+
+                    if (call.conference != null && !conferenceModel.conferenceConfigured) {
+                        Log.i("$TAG Found conference on call but not conference model, initializing it now")
+                        conferenceModel.configureFromCall(call)
+                        updateMicrophoneMutedIcon()
+                        goToConferenceEvent.postValue(Event(true))
                     }
                 }
             }
@@ -413,7 +423,7 @@ class CurrentCallViewModel
             if (state == ChatRoom.State.Instantiated) return
 
             val id = LinphoneUtils.getConversationId(chatRoom)
-            Log.i("$TAG Conversation [$id] (${chatRoom.subject}) state changed: [$state]")
+            Log.i("$TAG Conversation [$id] (${chatRoom.subjectUtf8}) state changed: [$state]")
 
             if (state == ChatRoom.State.Created) {
                 Log.i("$TAG Conversation [$id] successfully created")
@@ -424,9 +434,7 @@ class CurrentCallViewModel
                 Log.e("$TAG Conversation [$id] creation has failed!")
                 chatRoom.removeListener(this)
                 operationInProgress.postValue(false)
-                chatRoomCreationErrorEvent.postValue(
-                    Event(R.string.conversation_failed_to_create_toast)
-                )
+                showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
             }
         }
     }
@@ -525,12 +533,13 @@ class CurrentCallViewModel
         operationInProgress.value = false
         proximitySensorEnabled.value = false
         videoUpdateInProgress.value = false
+        microphoneRecordingVolume.value = 0f
+        playbackVolume.value = 0f
 
         refreshKeyguardLockedStatus()
-        answerAlpha.value = 1f
-        declineAlpha.value = 1f
 
         coreContext.postOnCoreThread { core ->
+            hideSipAddresses.postValue(corePreferences.hideSipAddresses)
             coreContext.contactsManager.addListener(contactsListener)
 
             core.addListener(coreListener)
@@ -570,6 +579,7 @@ class CurrentCallViewModel
             { // OnBlindTransferClicked
             },
             { // OnClearInput
+                clearPressedDtmfBarEvent.value = Event(true)
             }
         )
 
@@ -695,21 +705,7 @@ class CurrentCallViewModel
     @UiThread
     fun refreshMicrophoneState() {
         coreContext.postOnCoreThread {
-            if (::currentCall.isInitialized) {
-                val micMuted = if (currentCall.conference != null) {
-                    currentCall.conference?.microphoneMuted == true
-                } else {
-                    currentCall.microphoneMuted
-                }
-                if (micMuted != isMicrophoneMuted.value) {
-                    if (micMuted) {
-                        Log.w("$TAG Microphone is muted, updating button state accordingly")
-                    } else {
-                        Log.i("$TAG Microphone is not muted, updating button state accordingly")
-                    }
-                    isMicrophoneMuted.postValue(micMuted)
-                }
-            }
+            updateMicrophoneMutedIcon()
         }
     }
 
@@ -732,36 +728,17 @@ class CurrentCallViewModel
             for (device in audioDevices) {
                 // Only list output audio devices
                 if (!device.hasCapability(AudioDevice.Capabilities.CapabilityPlay)) continue
-
-                val name = when (device.type) {
+                when (device.type) {
                     AudioDevice.Type.Earpiece -> {
                         earpieceFound = true
-                        AppUtils.getString(R.string.call_audio_device_type_earpiece)
                     }
                     AudioDevice.Type.Speaker -> {
                         speakerFound = true
-                        AppUtils.getString(R.string.call_audio_device_type_speaker)
                     }
-                    AudioDevice.Type.Headset -> {
-                        AppUtils.getString(R.string.call_audio_device_type_headset)
-                    }
-                    AudioDevice.Type.Headphones -> {
-                        AppUtils.getString(R.string.call_audio_device_type_headphones)
-                    }
-                    AudioDevice.Type.Bluetooth -> {
-                        AppUtils.getFormattedString(
-                            R.string.call_audio_device_type_bluetooth,
-                            device.deviceName
-                        )
-                    }
-                    AudioDevice.Type.HearingAid -> {
-                        AppUtils.getFormattedString(
-                            R.string.call_audio_device_type_hearing_aid,
-                            device.deviceName
-                        )
-                    }
-                    else -> device.deviceName
+                    else -> {}
                 }
+
+                val name = LinphoneUtils.getAudioDeviceName(device)
                 val isCurrentlyInUse = device.type == currentDevice?.type && device.deviceName == currentDevice.deviceName
                 val model = AudioDeviceModel(device, name, device.type, isCurrentlyInUse, true) {
                     // onSelected
@@ -779,6 +756,9 @@ class CurrentCallViewModel
                                     currentCall
                                 )
                                 AudioDevice.Type.Speaker -> AudioUtils.routeAudioToSpeaker(
+                                    currentCall
+                                )
+                                AudioDevice.Type.Hdmi -> AudioUtils.routeAudioToHdmi(
                                     currentCall
                                 )
                                 else -> AudioUtils.routeAudioToEarpiece(currentCall)
@@ -884,6 +864,8 @@ class CurrentCallViewModel
                 isRecording.postValue(recording)
                 if (recording) {
                     showRecordingToast()
+                } else {
+                    showGreenToast(R.string.call_has_been_recorded, R.drawable.record_fill)
                 }
             }
         }
@@ -1112,7 +1094,8 @@ class CurrentCallViewModel
             Log.i("$TAG Conference [$subject] found, going to conference fragment")
             conferenceModel.configureFromCall(call)
             goToConferenceEvent.postValue(Event(true))
-        } else {
+        } else if (LinphoneUtils.isCallActive(call.state)) {
+            Log.i("$TAG No conference attached to this call, going to call fragment")
             conferenceModel.destroy()
             goToCallEvent.postValue(Event(true))
         }
@@ -1199,12 +1182,7 @@ class CurrentCallViewModel
         canBePaused.postValue(canCallBePaused())
 
         val address = call.callLog.remoteAddress
-        val uri = if (corePreferences.onlyDisplaySipUriUsername) {
-            address.username ?: ""
-        } else {
-            LinphoneUtils.getAddressAsCleanStringUriOnly(address)
-        }
-        displayedAddress.postValue(uri)
+        displayedAddress.postValue(LinphoneUtils.getDisplayAddress(address))
 
         val model = if (conferenceInfo != null) {
             coreContext.contactsManager.getContactAvatarModelForConferenceInfo(conferenceInfo)
@@ -1256,12 +1234,44 @@ class CurrentCallViewModel
         } else {
             Log.i("$TAG Failed to find an existing 1-1 conversation for current call")
         }
+
+        if (corePreferences.showMicrophoneAndSpeakerVuMeters) {
+            volumeVuMeterTickerFlow().onEach {
+                coreContext.postOnCoreThread {
+                    val call = currentCall
+                    val state = call.state
+                    if (state == Call.State.End || state == Call.State.Released) return@postOnCoreThread
+
+                    microphoneRecordingVolume.postValue(computeVuMeterValue(call.recordVolume))
+                    playbackVolume.postValue(computeVuMeterValue(call.playVolume))
+                }
+            }.launchIn(viewModelScope)
+        }
     }
 
     @WorkerThread
     fun updateCallDuration() {
         if (::currentCall.isInitialized) {
             callDuration.postValue(currentCall.duration)
+        }
+    }
+
+    @WorkerThread
+    private fun updateMicrophoneMutedIcon() {
+        if (::currentCall.isInitialized) {
+            val micMuted = if (currentCall.conference != null) {
+                currentCall.conference?.microphoneMuted == true
+            } else {
+                currentCall.microphoneMuted
+            }
+            if (micMuted != isMicrophoneMuted.value) {
+                if (micMuted) {
+                    Log.w("$TAG Microphone is muted, updating button state accordingly")
+                } else {
+                    Log.i("$TAG Microphone is not muted, updating button state accordingly")
+                }
+                isMicrophoneMuted.postValue(micMuted)
+            }
         }
     }
 
@@ -1274,6 +1284,7 @@ class CurrentCallViewModel
         )
         isHearingAidEnabled.postValue(audioDevice?.type == AudioDevice.Type.HearingAid)
         isBluetoothEnabled.postValue(audioDevice?.type == AudioDevice.Type.Bluetooth)
+        isHdmiEnabled.postValue(audioDevice?.type == AudioDevice.Type.Hdmi)
 
         updateProximitySensor()
     }
@@ -1343,19 +1354,22 @@ class CurrentCallViewModel
                 delay(1000)
                 coreContext.postOnCoreThread {
                     if (::currentCall.isInitialized) {
-                        val quality = currentCall.currentQuality
-                        val icon = when {
-                            quality >= 4 -> R.drawable.cell_signal_full
-                            quality >= 3 -> R.drawable.cell_signal_high
-                            quality >= 2 -> R.drawable.cell_signal_medium
-                            quality >= 1 -> R.drawable.cell_signal_low
-                            else -> R.drawable.cell_signal_none
-                        }
-                        qualityValue.postValue(quality)
-                        qualityIcon.postValue(icon)
-                    }
+                        val state = currentCall.state
+                        if (!LinphoneUtils.isCallEnding(state, true)) {
+                            val quality = currentCall.currentQuality
+                            val icon = when {
+                                quality >= 4 -> R.drawable.cell_signal_full
+                                quality >= 3 -> R.drawable.cell_signal_high
+                                quality >= 2 -> R.drawable.cell_signal_medium
+                                quality >= 1 -> R.drawable.cell_signal_low
+                                else -> R.drawable.cell_signal_none
+                            }
+                            qualityValue.postValue(quality)
+                            qualityIcon.postValue(icon)
 
-                    updateCallQualityIcon()
+                            updateCallQualityIcon()
+                        }
+                    }
                 }
             }
         }
@@ -1438,9 +1452,7 @@ class CurrentCallViewModel
                 "$TAG Failed to create 1-1 conversation with [${remoteAddress.asStringUriOnly()}]!"
             )
             operationInProgress.postValue(false)
-            chatRoomCreationErrorEvent.postValue(
-                Event(R.string.conversation_failed_to_create_toast)
-            )
+            showRedToast(R.string.conversation_failed_to_create_toast, R.drawable.warning_circle)
         }
     }
 
@@ -1527,28 +1539,53 @@ class CurrentCallViewModel
         showGreenToast(R.string.call_is_being_recorded, R.drawable.record_fill)
     }
 
+    private fun volumeVuMeterTickerFlow() = flow {
+        while (::currentCall.isInitialized) {
+            emit(Unit)
+            delay(50)
+        }
+    }
+
+    private fun computeVuMeterValue(volume: Float): Float {
+        if (volume < VU_METER_MIN) return 0f
+        if (volume > VU_METER_MAX) return 1f
+        return (volume - VU_METER_MIN) / (VU_METER_MAX - VU_METER_MIN)
+    }
+
     @WorkerThread
-    private fun updateProximitySensor() {
+    fun updateProximitySensor() {
         if (::currentCall.isInitialized) {
             val callState = currentCall.state
+            Log.i("$TAG Call is in state [$callState], enabling/disabling proximity sensor if needed")
+
             if (LinphoneUtils.isCallIncoming(callState)) {
+                Log.i("$TAG Call is incoming, disabling proximity sensor")
                 proximitySensorEnabled.postValue(false)
             } else if (LinphoneUtils.isCallOutgoing(callState)) {
                 val videoEnabled = currentCall.params.isVideoEnabled
+                if (videoEnabled) {
+                    Log.i("$TAG Call is outgoing and video is enabled, disabling proximity sensor")
+                } else {
+                    Log.i("$TAG Call is outgoing and video is disabled, enabling proximity sensor")
+                }
                 proximitySensorEnabled.postValue(!videoEnabled)
             } else {
                 if (isSendingVideo.value == true || isReceivingVideo.value == true) {
+                    Log.i("$TAG Video is being sent and/or received, disabling proximity sensor")
                     proximitySensorEnabled.postValue(false)
                 } else {
                     val outputAudioDevice = currentCall.outputAudioDevice ?: coreContext.core.outputAudioDevice
                     if (outputAudioDevice != null && outputAudioDevice.type == AudioDevice.Type.Earpiece) {
+                        Log.i("$TAG Audio device is earpiece, enabling proximity sensor")
                         proximitySensorEnabled.postValue(true)
                     } else {
+                        Log.i("$TAG Audio device is [${outputAudioDevice?.type}], disabling proximity sensor")
                         proximitySensorEnabled.postValue(false)
                     }
                 }
             }
         } else {
+            Log.w("$TAG No current call, disabling proximity sensor")
             proximitySensorEnabled.postValue(false)
         }
     }

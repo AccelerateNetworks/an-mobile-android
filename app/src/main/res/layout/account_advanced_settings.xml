@@ -9,6 +9,9 @@
             name="updatePasswordClickListener"
             type="View.OnClickListener" />
         <variable
+            name="outboundProxyTooltipClickListener"
+            type="View.OnClickListener" />
+        <variable
             name="viewModel"
             type="org.linphone.ui.main.settings.viewmodel.AccountSettingsViewModel" />
     </data>
@@ -19,48 +22,7 @@
         android:background="@drawable/shape_squircle_white_background">
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
-            android:id="@+id/transport_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:text="@string/assistant_sip_account_transport_protocol"
-            android:maxLines="2"
-            android:ellipsize="end"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
-        <androidx.appcompat.widget.AppCompatSpinner
-            android:id="@+id/transport_spinner"
-            android:layout_width="0dp"
-            android:layout_height="50dp"
-            android:background="@drawable/edit_text_background"
-            android:paddingStart="15dp"
-            android:paddingEnd="30dp"
-            android:overlapAnchor="false"
-            android:spinnerMode="dropdown"
-            android:popupBackground="@drawable/shape_squircle_white_background"
-            app:layout_constraintTop_toBottomOf="@id/transport_title"
-            app:layout_constraintStart_toStartOf="@id/transport_title"
-            app:layout_constraintEnd_toEndOf="@id/transport_title" />
-
-        <ImageView
-            android:id="@+id/transport_spinner_caret"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/spinner_caret_end_margin"
-            android:src="@drawable/caret_down"
-            android:contentDescription="@null"
-            app:tint="?attr/color_main2_600"
-            app:layout_constraintTop_toTopOf="@id/transport_spinner"
-            app:layout_constraintBottom_toBottomOf="@id/transport_spinner"
-            app:layout_constraintEnd_toEndOf="@id/transport_spinner"/>
-
-        <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/sip_proxy_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -70,7 +32,8 @@
             android:text="@string/account_settings_sip_proxy_url_title"
             android:maxLines="2"
             android:ellipsize="end"
-            app:layout_constraintTop_toBottomOf="@id/transport_spinner"
+            android:labelFor="@id/sip_proxy"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -87,35 +50,59 @@
             android:text="@={viewModel.sipProxyServer}"
             android:inputType="text|textUri"
             android:hint="@string/account_settings_sip_proxy_url_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/sip_proxy_title"/>
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            style="@style/material_switch_style"
-            android:id="@+id/outbound_proxy_switch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:layout_marginEnd="16dp"
-            android:checked="@={viewModel.outboundProxyEnabled}"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/sip_proxy" />
-
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/outbound_proxy_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
             android:layout_marginStart="16dp"
-            android:layout_marginEnd="10dp"
+            android:layout_marginEnd="16dp"
             android:text="@string/account_settings_outbound_proxy_title"
             android:maxLines="2"
             android:ellipsize="end"
-            app:layout_constraintTop_toTopOf="@id/outbound_proxy_switch"
-            app:layout_constraintBottom_toBottomOf="@id/outbound_proxy_switch"
+            android:labelFor="@id/sip_proxy"
+            app:layout_constraintTop_toBottomOf="@id/sip_proxy"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/outbound_proxy_switch"/>
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <ImageView
+            android:id="@+id/outbound_proxy_tooltip"
+            android:onClick="@{outboundProxyTooltipClickListener}"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/info"
+            android:contentDescription="@string/content_description_click_for_more_info"
+            app:tint="?attr/color_main2_600"
+            app:layout_constraintTop_toTopOf="@id/outbound_proxy_title"
+            app:layout_constraintBottom_toBottomOf="@id/outbound_proxy_title"
+            app:layout_constraintEnd_toEndOf="@id/outbound_proxy_title" />
+
+        <androidx.appcompat.widget.AppCompatEditText
+            style="@style/default_text_style"
+            android:id="@+id/outbound_proxy"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginStart="16dp"
+            android:background="@drawable/edit_text_background"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="@={viewModel.outboundProxyServer}"
+            android:inputType="text|textUri"
+            android:hint="@string/account_settings_outbound_proxy_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/outbound_proxy_title"/>
 
         <com.google.android.material.materialswitch.MaterialSwitch
             style="@style/material_switch_style"
@@ -126,7 +113,7 @@
             android:layout_marginEnd="16dp"
             android:checked="@={viewModel.avpfEnabled}"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/outbound_proxy_title" />
+            app:layout_constraintTop_toBottomOf="@id/outbound_proxy" />
 
         <androidx.appcompat.widget.AppCompatTextView
             style="@style/settings_title_style"
@@ -138,6 +125,7 @@
             android:text="@string/account_settings_avpf_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/avpf_switch"
             app:layout_constraintTop_toTopOf="@id/avpf_switch"
             app:layout_constraintBottom_toBottomOf="@id/avpf_switch"
             app:layout_constraintStart_toStartOf="parent"
@@ -164,6 +152,7 @@
             android:text="@string/account_settings_bundle_mode_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/bundle_mode_switch"
             app:layout_constraintTop_toTopOf="@id/bundle_mode_switch"
             app:layout_constraintBottom_toBottomOf="@id/bundle_mode_switch"
             app:layout_constraintStart_toStartOf="parent"
@@ -192,13 +181,14 @@
             android:maxLines="2"
             android:text="@string/account_settings_cpim_in_basic_conversations_title"
             android:visibility="@{viewModel.imEncryptionMandatory ? View.GONE : View.VISIBLE}"
+            android:labelFor="@id/cpim_basic_chat_room_switch"
             app:layout_constraintBottom_toBottomOf="@id/cpim_basic_chat_room_switch"
             app:layout_constraintEnd_toStartOf="@id/cpim_basic_chat_room_switch"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/cpim_basic_chat_room_switch"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/expire_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -208,6 +198,7 @@
             android:text="@string/account_settings_expire_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/expire"
             app:layout_constraintTop_toBottomOf="@id/cpim_basic_chat_room_switch"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -225,12 +216,14 @@
             android:text="@={viewModel.expire}"
             android:inputType="number"
             android:hint="@string/account_settings_expire_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/expire_title"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/conference_factory_uri_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -240,6 +233,7 @@
             android:text="@string/account_settings_conference_factory_uri_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/conference_factory_uri"
             app:layout_constraintTop_toBottomOf="@id/expire"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -258,12 +252,14 @@
             android:text="@={viewModel.conferenceFactoryUri}"
             android:inputType="text|textUri"
             android:hint="@string/account_settings_conference_factory_uri_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/conference_factory_uri_title"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/audio_video_conference_factory_uri_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -273,6 +269,7 @@
             android:text="@string/account_settings_audio_video_conference_factory_uri_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/audio_video_conference_factory_uri"
             app:layout_constraintTop_toBottomOf="@id/conference_factory_uri"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -290,12 +287,14 @@
             android:text="@={viewModel.audioVideoConferenceFactoryUri}"
             android:inputType="text|textUri"
             android:hint="@string/account_settings_audio_video_conference_factory_uri_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/audio_video_conference_factory_uri_title"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/ccmp_server_url_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -305,6 +304,7 @@
             android:text="@string/account_settings_ccmp_server_url_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/ccmp_server_url"
             app:layout_constraintTop_toBottomOf="@id/audio_video_conference_factory_uri"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -322,12 +322,14 @@
             android:text="@={viewModel.ccmpServerUrl}"
             android:inputType="text|textUri"
             android:hint="@string/account_settings_ccmp_server_url_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/ccmp_server_url_title"/>
 
         <androidx.appcompat.widget.AppCompatTextView
-            style="@style/settings_title_style"
+            style="@style/settings_title_padding_style"
             android:id="@+id/lime_server_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -337,7 +339,11 @@
             android:text="@string/account_settings_lime_server_url_title"
             android:maxLines="2"
             android:ellipsize="end"
+            android:labelFor="@id/lime_server"
+            app:layout_constraintVertical_chainStyle="packed"
+            app:layout_constraintVertical_bias="0"
             app:layout_constraintTop_toBottomOf="@id/ccmp_server_url"
+            app:layout_constraintBottom_toTopOf="@id/lime_server"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -355,10 +361,51 @@
             android:text="@={viewModel.limeServerUrl}"
             android:inputType="text|textUri"
             android:hint="@string/account_settings_lime_server_url_title"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/lime_server_title"
-            app:layout_constraintBottom_toTopOf="@id/update_password"/>
+            app:layout_constraintBottom_toTopOf="@id/lime_algo_title"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            style="@style/settings_title_padding_style"
+            android:id="@+id/lime_algo_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:text="@string/assistant_sip_account_lime_algorithm"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:labelFor="@id/lime_algo_list"
+            android:visibility="@{viewModel.showDeveloperSettings ? View.VISIBLE : View.GONE, default=gone}"
+            app:layout_constraintTop_toBottomOf="@id/lime_server"
+            app:layout_constraintBottom_toTopOf="@id/lime_algo_list"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <androidx.appcompat.widget.AppCompatEditText
+            style="@style/default_text_style"
+            android:id="@+id/lime_algo_list"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginStart="16dp"
+            android:background="@drawable/edit_text_background"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="@={viewModel.limeAlgorithms}"
+            android:inputType="text|textNoSuggestions"
+            android:hint="@string/assistant_sip_account_lime_algorithm_hint"
+            android:visibility="@{viewModel.showDeveloperSettings ? View.VISIBLE : View.GONE, default=gone}"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintWidth_max="@dimen/text_input_max_width"
+            app:layout_constraintTop_toBottomOf="@id/lime_algo_title"
+            app:layout_constraintBottom_toTopOf="@id/update_password"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
 
         <androidx.appcompat.widget.AppCompatTextView
             style="@style/settings_title_style"
@@ -376,10 +423,13 @@
             android:text="@string/account_settings_update_password_title"
             android:maxLines="1"
             android:ellipsize="end"
+            android:drawableEnd="@drawable/pencil_simple"
+            android:drawableTint="?attr/color_main2_600"
+            android:background="@drawable/squircle_transparent_button_background"
             app:layout_constraintHorizontal_bias="1"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/lime_server"
+            app:layout_constraintTop_toBottomOf="@id/lime_algo_list"
             app:layout_constraintBottom_toBottomOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

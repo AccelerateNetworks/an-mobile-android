@@ -33,7 +33,7 @@
             android:paddingTop="3dp"
             android:adjustViewBounds="true"
             android:contentDescription="@null"
-            android:src="@drawable/lock_simple_bold"
+            android:src="@drawable/lock_simple"
             app:tint="@color/blue_info_500"
             app:layout_constraintTop_toTopOf="@id/secured_title"
             app:layout_constraintBottom_toBottomOf="@id/secured_subtitle"

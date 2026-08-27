@@ -41,11 +41,11 @@ class ContactsListAdapter(
     var selectedAdapterPosition = -1
 
     val contactClickedEvent: MutableLiveData<Event<ContactAvatarModel>> by lazy {
-        MutableLiveData<Event<ContactAvatarModel>>()
+        MutableLiveData()
     }
 
     val contactLongClickedEvent: MutableLiveData<Event<ContactAvatarModel>> by lazy {
-        MutableLiveData<Event<ContactAvatarModel>>()
+        MutableLiveData()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -125,12 +125,12 @@ class ContactsListAdapter(
 
                 val previousItem = bindingAdapterPosition - 1
                 val previousLetter = if (previousItem >= 0) {
-                    getItem(previousItem).contactName?.get(0).toString()
+                    getItem(previousItem).sortingName?.get(0).toString()
                 } else {
                     ""
                 }
 
-                val currentLetter = contactModel.contactName?.get(0).toString()
+                val currentLetter = contactModel.sortingName?.get(0).toString()
                 val displayLetter = previousLetter.isEmpty() || currentLetter != previousLetter
                 firstContactStartingByThatLetter = displayLetter
 
@@ -160,7 +160,7 @@ class ContactsListAdapter(
         }
 
         override fun areContentsTheSame(oldItem: ContactAvatarModel, newItem: ContactAvatarModel): Boolean {
-            return false // oldItem & newItem are always the same because fetched from cache, so return false to force refresh
+            return newItem.compare(oldItem)
         }
     }
 }

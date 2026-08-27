@@ -21,16 +21,16 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:layout_marginTop="10dp"
             android:text="@{viewModel.terminatedByUser ? @string/call_locally_ended : @string/call_remotely_ended, default=@string/call_locally_ended}"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/call_media_encryption_info" />
 
         <include
             android:id="@+id/call_media_encryption_info"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:visibility="@{viewModel.callDuration > 0 ? View.VISIBLE : View.GONE}"
+            android:visibility="@{viewModel.callDuration > 0 ? View.VISIBLE : View.INVISIBLE, default=invisible}"
             layout="@layout/call_media_encryption_info"
             bind:viewModel="@{viewModel}"
             app:layout_constraintTop_toBottomOf="@id/call_direction_label"
@@ -74,12 +74,12 @@
             <androidx.appcompat.widget.AppCompatTextView
                 style="@style/default_text_style"
                 android:id="@+id/address"
-                android:visibility="@{View.GONE}"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@{viewModel.displayedAddress, default=`sip:johndoe@sip.linphone.org`}"
                 android:textColor="@color/bc_white"
-                android:textSize="14sp" />
+                android:textSize="14sp"
+                android:visibility="@{viewModel.hideSipAddresses ? View.GONE : View.VISIBLE}" />
 
         </LinearLayout>
 

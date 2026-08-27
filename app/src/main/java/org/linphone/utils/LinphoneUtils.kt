@@ -37,6 +37,7 @@ import org.linphone.R
 import org.linphone.contacts.getListOfSipAddresses
 import org.linphone.core.Account
 import org.linphone.core.Address
+import org.linphone.core.AudioDevice
 import org.linphone.core.Call
 import org.linphone.core.Call.Dir
 import org.linphone.core.Call.Status
@@ -115,6 +116,19 @@ class LinphoneUtils {
         }
 
         @WorkerThread
+        fun getDisplayAddress(address: Address): String {
+            val username = address.username
+            if (!corePreferences.onlyDisplaySipUriUsername || username.isNullOrEmpty()) {
+                return getAddressAsCleanStringUriOnly(address)
+            }
+            val homeDomain = getDefaultAccount()?.params?.domain
+            if (address.domain == homeDomain || address.domain == corePreferences.defaultDomain) {
+                return username
+            }
+            return getAddressAsCleanStringUriOnly(address)
+        }
+
+        @WorkerThread
         fun getDisplayName(address: Address?): String {
             if (address == null) return "[null]"
 
@@ -163,7 +177,7 @@ class LinphoneUtils {
             }
 
             val defaultDomain = corePreferences.defaultDomain
-            val currentDomain = friend.core.defaultAccount?.params?.identityAddress?.domain
+            val currentDomain = getDefaultAccount()?.params?.identityAddress?.domain
             if (defaultDomain != currentDomain) return null
 
             var defaultDomainAddressesCount = 0
@@ -216,6 +230,21 @@ class LinphoneUtils {
             return null
         }
 
+        @WorkerThread
+        fun isSipAddressLinkedToPhoneNumberByPresence(friend: Friend, sipAddress: String): Boolean {
+            for (phoneNumber in friend.phoneNumbers) {
+                val presenceModel = friend.getPresenceModelForUriOrTel(phoneNumber)
+                if (presenceModel != null) {
+                    val contact = presenceModel.contact
+                    if (contact == sipAddress) {
+                        Log.i("$TAG SIP address [$sipAddress] is presence contact address for phone number [$phoneNumber]")
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+
         @AnyThread
         fun isCallIncoming(callState: Call.State): Boolean {
             return when (callState) {
@@ -246,6 +275,14 @@ class LinphoneUtils {
             return when (callState) {
                 Call.State.End, Call.State.Error -> true
                 Call.State.Released -> considerReleasedAsEnding
+                else -> false
+            }
+        }
+
+        @AnyThread
+        fun isCallActive(callState: Call.State): Boolean {
+            return when (callState) {
+                Call.State.Connected, Call.State.StreamsRunning, Call.State.UpdatedByRemote, Call.State.Updating -> true
                 else -> false
             }
         }
@@ -482,13 +519,45 @@ class LinphoneUtils {
                 ChatMessage.State.InProgress, ChatMessage.State.FileTransferInProgress -> {
                     R.drawable.animated_in_progress
                 }
-                ChatMessage.State.PendingDelivery -> {
+                ChatMessage.State.PendingDelivery, ChatMessage.State.Queued -> {
                     R.drawable.hourglass
                 }
                 else -> {
                     R.drawable.animated_in_progress
                 }
             }
+        }
+
+        @WorkerThread
+        fun getComposingIconAndText(chatRoom: ChatRoom): Pair<Int, String> {
+            val composing = chatRoom.isRemoteComposing
+            if (!composing) {
+                return Pair(0, "")
+            }
+
+            val icon = R.drawable.chat_teardrop_dots
+            val composingFriends = arrayListOf<String>()
+            var label = ""
+            for (participant in chatRoom.composingParticipants) {
+                val address = participant.address
+                val avatar = coreContext.contactsManager.getContactAvatarModelForAddress(address)
+                val name = avatar.name.value ?: getDisplayName(address)
+                composingFriends.add(name)
+                label += "$name, "
+            }
+            if (composingFriends.isNotEmpty()) {
+                label = label.dropLast(2)
+
+                // TODO: use voice recording content type to change icon/text
+                val format = AppUtils.getStringWithPlural(
+                    R.plurals.conversation_composing_label,
+                    composingFriends.size,
+                    label
+                )
+                return Pair(icon, format)
+            }
+
+            return Pair(icon, label)
         }
 
         @AnyThread
@@ -596,8 +665,18 @@ class LinphoneUtils {
 
         @WorkerThread
         private fun getTextDescribingMessage(message: ChatMessage): Pair<String, String> {
+            // Check if message is empty (when deleted by its sender, for everyone)
+            if (message.isRetracted) {
+                val text = if (message.isOutgoing) {
+                    AppUtils.getString(R.string.conversation_message_content_deleted_by_us_label)
+                } else {
+                    AppUtils.getString(R.string.conversation_message_content_deleted_label)
+                }
+                return Pair(text, "")
+            }
+
             // If message contains text, then use that
-            var text = message.contents.find { content -> content.isText }?.utf8Text ?: ""
+            var text = message.contents.find { content -> content.isText }?.utf8Text.orEmpty()
             var contentDescription = ""
 
             if (text.isEmpty()) {
@@ -645,7 +724,9 @@ class LinphoneUtils {
                         if (text.isNotEmpty()) {
                             text += ", "
                         }
-                        text += content.name
+                        if (!content.name.isNullOrEmpty()) {
+                            text += content.name
+                        }
                     }
                 }
             }
@@ -688,6 +769,43 @@ class LinphoneUtils {
             avatarModel.showTrust.postValue(false)
 
             return avatarModel
+        }
+
+        @WorkerThread
+        fun getAudioDeviceName(device: AudioDevice): String {
+            return when (device.type) {
+                AudioDevice.Type.Microphone -> {
+                    AppUtils.getString(R.string.call_audio_device_type_microphone)
+                }
+                AudioDevice.Type.Earpiece -> {
+                    AppUtils.getString(R.string.call_audio_device_type_earpiece)
+                }
+                AudioDevice.Type.Speaker -> {
+                    AppUtils.getString(R.string.call_audio_device_type_speaker)
+                }
+                AudioDevice.Type.Headset -> {
+                    AppUtils.getString(R.string.call_audio_device_type_headset)
+                }
+                AudioDevice.Type.Headphones -> {
+                    AppUtils.getString(R.string.call_audio_device_type_headphones)
+                }
+                AudioDevice.Type.Bluetooth -> {
+                    AppUtils.getFormattedString(
+                        R.string.call_audio_device_type_bluetooth,
+                        device.deviceName
+                    )
+                }
+                AudioDevice.Type.HearingAid -> {
+                    AppUtils.getFormattedString(
+                        R.string.call_audio_device_type_hearing_aid,
+                        device.deviceName
+                    )
+                }
+                AudioDevice.Type.Hdmi -> {
+                    AppUtils.getString(R.string.call_audio_device_type_hdmi)
+                }
+                else -> "${device.deviceName}(${device.type})"
+            }
         }
     }
 }

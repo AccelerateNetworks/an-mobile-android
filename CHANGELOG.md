@@ -10,6 +10,108 @@ Group changes to describe their impact on the project, as follows:
     Fixed for any bug fixes.
     Security to invite users to upgrade in case of vulnerabilities.
 
+## [6.2.3] - 2026-07-07
+
+### Added
+- Setting to disable proximity sensor turning screen off when device is next to the ear during audio calls
+
+### Changed
+- Show chat message emoji reaction as soon as selected instead of waiting for message to be sent
+
+### Fixed
+- Account registrar & outbound SIP proxy URIs transport that couldn't be changed
+- Layout when conference is paused
+- Prevent fullscreen mode when conference is paused
+
+## [6.2.2] - 2026-06-25
+
+### Changed
+- Improved keep app alive foreground service notification content text
+- Only resume media player after seeking if it was playing before
+
+### Fixed
+- Prevent drawer menu to be drawn behind the navigation bar in landscape
+
+## [6.2.1] - 2026-06-23
+
+### Added
+- Added proximity sensor listener to be able to log events
+- Laotian translation from Weblate
+
+### Changed
+- Abort single sign-on process if server URL is null or empty
+- Automatically route audio to wired headphones/headset if such device is available
+
+### Fixed
+- Active call screen showing up after going back from outgoing call screen
+- Prevent DTMF to be played indefinitely when swiping the numpad bottom sheet away while pressing a digit
+
+## [6.2.0] - 2026-06-02
+
+### Added
+- Added the ability to edit/delete chat messages sent less than 24 hours ago.
+- Added keyboard shortcuts on IncomingCallFragment: Ctrl + Shift + A to answer the call, Ctrl + Shift + D to decline it
+- Added seeking feature to recordings & media player within app
+- Added PDF preview in conversation (message bubble & documents list)
+- Added media/documents access from contact page if a 1-1 conversation with any of the contact SIP addresses is found
+- Added hover effect when using a mouse (useful for tablets or devices with desktop mode)
+- Support right click on some items to open bottom sheet/menu
+- Added toggle speaker action in active call notification
+- Increased text size for chat messages that only contains emoji(s)
+- Use user-input to filter participants list after typing "@" in conversation send area
+- Handle read-only CardDAV address books, disable edit/delete menus for contacts in read-only FriendList
+- Added swipe/pull to refresh on contacts list of a CardDAV addressbook has been configured to force the synchronization
+- Show information to user when filtering contacts doesn't show them all and user may have to refine it's search
+- Core will now automatically delete from device files that were sent/received in a chat message when it is deleted (because it's ephemeral or has been manually deleted)
+- Show Android notification when an account goes to failed registration state (only when background mode is enabled)
+- New settings:
+  - one for user to choose whether to sort contacts by first name or last name
+  - one to hide contacts that have neither a SIP address nor a phone number
+  - one to let app auto-answer call with video sending already enabled
+  - one to let edit native contacts Linphone copy in-app instead of opening native addressbook third party app
+  - one to show past meetings (they are now hidden by default)
+  - one to hide received message content in android notification
+  - possibility to choose between RFC2833 and SIP INFO for DTMFs
+- Added a vu meter for recording & playback volumes (must be enabled in developer settings)
+- Added support for HDMI audio devices
+- Added video preview during in-call conversation
+- Allow text selection in chat bubble (once long press menu is displayed)
+
+### Changed
+- App now targets API level 37
+- No longer follow TelecomManager audio endpoint during calls, using our own routing policy
+- Show matching contacts & suggestions when filtering call history list & conversations list, allowing to quickly call someone without opening the start call/conversation fragment
+- Join a conference using default layout instead of audio only when clicking on a meeting SIP URI
+- Removing an account will also remove all related data in the local database (auth info, call logs, conversations, meetings, etc...)
+- Hide SIP address/phone number picker dialog if contact has exactly one SIP address matching both the app default domain & the currently selected account domain
+- Hide SIP address associated to phone number through presence mecanism in contact details & editor views.
+- Improved UI on tablets with screen sw600dp and higher, will look more like our desktop app
+- Improved navigation within app when using a keyboard
+- Now loading media/documents contents in conversation by chunks (instead of all of them at once)
+- If in-call foreground service doesn't start, show an error notification and clicking on it will fix the issue (by bringing Linphone in foreground and re-starting the foreground service)
+- Restart keep-alive service foreground notification if it's dismissed to ensure app will be kept alive in background
+- Simplified audio device name in settings
+- Reworked some settings (moved calls related ones from advanced settings to advanced calls settings)
+- Removed menu to access account profile, button is now directly available from drawer menu
+- Increased shared media preview size in chat
+- Un-encrypted conversation warning will be more visible for accounts that support end-to-end encrypted conversations
+- Made numpad buttons larger by changing their shape
+- All LDAP fields are mandatory now
+- Improved how Android shortcuts are created
+- Permission fragment will only show missing ones
+- Added more info into StartupListener logs
+- Updated password forgotten procedure, will use online account manager platform
+- Added confirmation dialog before deleting/removing something/someone (contact, meeting, conversation, call log, etc...)
+- Delivery information menu when long pressing an incoming chat message has been removed since we no longer send IMDNs to all participants of the group conversation
+
+### Fixed
+- Prevent crash & background mode from turning on when doing a remote provisioning if an account is already configured
+- Prevent app from sending all phone numbers & SIP addresses to sip.linphone.org presence server for long term presence feature if account is not sip.linphone.org
+- Fixed SIP address picker not showing up in call transfer view when selecting a contact with more than 1 SIP address
+- Prevent incoming call notification from staying visible and answer button from doing nothing after answering incoming conference call
+- Copy raw message content instead of modified one when it contains a participant mention ("@username")
+- Do not apply Crashlytics plugin if it's not enabled
+
 ## [6.0.23] - 2026-02-02
 
 ### Fixed
@@ -48,14 +150,14 @@ Group changes to describe their impact on the project, as follows:
 ### Changed
 - Added shrink resources to release config in gradle
 
-### Fixed
+### Fixed
 - Remove AuthInfo when configuring a CardDAV friend list if synchronization fails
 - Added missing toast when starting a group call or meeting if there's an issue
 - Fixed crash in RecordingPlayerFragment due to used lateinit property before it's initialized
 
 ## [6.0.19] - 2025-10-16
 
-### Added
+### Added
 - Spanish and Slovakian translations thanks to Weblate contributors
 
 ### Changed

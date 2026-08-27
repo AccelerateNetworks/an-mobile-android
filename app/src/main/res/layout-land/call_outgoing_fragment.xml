@@ -40,8 +40,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginBottom="10dp"
                 android:text="@string/call_outgoing"
                 app:layout_constraintStart_toEndOf="@id/call_direction_icon"
                 app:layout_constraintTop_toTopOf="parent"/>
@@ -83,12 +81,12 @@
                 <androidx.appcompat.widget.AppCompatTextView
                     style="@style/default_text_style"
                     android:id="@+id/address"
-                    android:visibility="@{View.GONE}"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@{viewModel.displayedAddress, default=`sip:johndoe@sip.linphone.org`}"
                     android:textColor="@color/bc_white"
-                    android:textSize="14sp" />
+                    android:textSize="14sp"
+                    android:visibility="@{viewModel.hideSipAddresses ? View.GONE : View.VISIBLE}" />
 
             </LinearLayout>
 
@@ -119,6 +117,7 @@
                 app:layout_constraintTop_toTopOf="@id/name_address"
                 app:layout_constraintBottom_toBottomOf="@id/name_address" />
 
+            <!--suppress AndroidUnknownAttribute -->
             <org.linphone.ui.call.view.RoundCornersTextureView
                 android:id="@+id/local_preview_video_surface"
                 android:layout_width="wrap_content"

@@ -72,15 +72,15 @@ class FileViewModel
     val isFromEphemeralMessage = MutableLiveData<Boolean>()
 
     val exportPlainTextFileEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val pdfRendererReadyEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val exportPdfEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     // Below are required for PDF viewer
@@ -130,8 +130,7 @@ class FileViewModel
         val extension = FileUtils.getExtensionFromFileName(file)
         val mime = FileUtils.getMimeTypeFromExtension(extension)
         mimeType.postValue(mime)
-        val mimeType = FileUtils.getMimeType(mime)
-        when (mimeType) {
+        when (val mimeType = FileUtils.getMimeType(mime)) {
             FileUtils.MimeType.Pdf -> {
                 Log.d("$TAG File [$file] seems to be a PDF")
                 loadPdf()
@@ -274,11 +273,11 @@ class FileViewModel
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                val input = ParcelFileDescriptor.open(
-                    File(filePath),
-                    ParcelFileDescriptor.MODE_READ_ONLY
-                )
                 try {
+                    val input = ParcelFileDescriptor.open(
+                        File(filePath),
+                        ParcelFileDescriptor.MODE_READ_ONLY
+                    )
                     pdfRenderer = PdfRenderer(input)
                     val count = pdfRenderer.pageCount
                     Log.i("$TAG $count pages in file $filePath")
@@ -291,7 +290,12 @@ class FileViewModel
                     Log.e("$TAG Can't open PDF, probably protected by a password: $se")
                     pdfCurrentPage.postValue("0")
                     pdfPages.postValue("0")
-                    showRedToast(R.string.conversation_pdf_file_cant_be_opened_error_toast, R.drawable.warning_circle)
+                    showRedToast(R.string.conversation_pdf_password_protected_file_cant_be_opened_error_toast, R.drawable.warning_circle)
+                } catch (e: Exception) {
+                    Log.e("$TAG Can't open PDF, it may be corrupted: $e")
+                    pdfCurrentPage.postValue("0")
+                    pdfPages.postValue("0")
+                    showRedToast(R.string.conversation_pdf_file_error_toast, R.drawable.warning_circle)
                 }
             }
         }

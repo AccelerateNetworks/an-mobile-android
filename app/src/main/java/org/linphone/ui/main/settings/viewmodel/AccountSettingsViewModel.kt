@@ -27,6 +27,7 @@ import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.core.AVPFMode
 import org.linphone.core.Account
+import org.linphone.core.Address
 import org.linphone.core.AuthInfo
 import org.linphone.core.Factory
 import org.linphone.core.NatPolicy
@@ -58,11 +59,9 @@ class AccountSettingsViewModel
 
     val availableTransports = arrayListOf<String>()
 
-    val selectedTransport = MutableLiveData<TransportType>()
-
     val sipProxyServer = MutableLiveData<String>()
 
-    val outboundProxyEnabled = MutableLiveData<Boolean>()
+    val outboundProxyServer = MutableLiveData<String>()
 
     val stunServer = MutableLiveData<String>()
 
@@ -100,6 +99,10 @@ class AccountSettingsViewModel
 
     val accountFoundEvent = MutableLiveData<Event<Boolean>>()
 
+    val showDeveloperSettings = MutableLiveData<Boolean>()
+
+    val limeAlgorithms = MutableLiveData<String>()
+
     private lateinit var account: Account
     private lateinit var natPolicy: NatPolicy
     private lateinit var natPolicyAuthInfo: AuthInfo
@@ -119,6 +122,8 @@ class AccountSettingsViewModel
         imEncryptionMandatoryAvailable.addSource(conferenceFactoryUri) {
             imEncryptionMandatoryAvailable.value = isImEncryptionMandatoryAvailable()
         }
+
+        showDeveloperSettings.postValue(corePreferences.showDeveloperSettings)
     }
 
     @UiThread
@@ -145,11 +150,10 @@ class AccountSettingsViewModel
 
                 imEncryptionMandatory.postValue(params.instantMessagingEncryptionMandatory)
 
-                val transportType = params.serverAddress?.transport ?: TransportType.Tls
-                selectedTransport.postValue(transportType)
-
                 sipProxyServer.postValue(params.serverAddress?.asStringUriOnly())
-                outboundProxyEnabled.postValue(params.isOutboundProxyEnabled)
+                if (params.routesAddresses.isNotEmpty()) {
+                    outboundProxyServer.postValue(params.routesAddresses.first().asStringUriOnly())
+                }
 
                 natPolicy = params.natPolicy ?: core.createNatPolicy()
                 stunServer.postValue(natPolicy.stunServer)
@@ -192,6 +196,8 @@ class AccountSettingsViewModel
 
                 limeServerUrl.postValue(params.limeServerUrl)
 
+                limeAlgorithms.postValue(params.limeAlgo)
+
                 accountFoundEvent.postValue(Event(true))
             } else {
                 Log.e("$TAG Failed to find account matching identity [$identity]")
@@ -214,21 +220,34 @@ class AccountSettingsViewModel
 
                 val server = sipProxyServer.value.orEmpty()
                 if (server.isNotEmpty()) {
+                    Log.i("$TAG Proxy server set to [$server]")
                     val serverAddress = core.interpretUrl(server, false)
                     if (serverAddress != null) {
-                        serverAddress.transport = selectedTransport.value
                         newParams.serverAddress = serverAddress
+                    } else {
+                        Log.e("$TAG Failed to parse proxy server!")
                     }
                 }
-                newParams.isOutboundProxyEnabled = outboundProxyEnabled.value == true
+                val outboundProxy = outboundProxyServer.value.orEmpty()
+                if (outboundProxy.isNotEmpty()) {
+                    Log.i("$TAG Outbound proxy server set to [$outboundProxy]")
+                    val outboundProxyAddress = core.interpretUrl(outboundProxy, false)
+                    if (outboundProxyAddress != null) {
+                        newParams.setRoutesAddresses(arrayOf(outboundProxyAddress))
+                    } else {
+                        Log.e("$TAG Failed to parse outbound proxy server!")
+                    }
+                } else {
+                    newParams.setRoutesAddresses(arrayOf<Address>())
+                }
 
                 if (::natPolicy.isInitialized) {
                     Log.i("$TAG Also applying changes to NAT policy")
-                    natPolicy.stunServer = stunServer.value
+                    natPolicy.stunServer = stunServer.value.orEmpty().trim()
                     natPolicy.isStunEnabled = stunServer.value.orEmpty().isNotEmpty()
                     natPolicy.isIceEnabled = iceEnabled.value == true
                     natPolicy.isTurnEnabled = turnEnabled.value == true
-                    val stunTurnUsername = turnUsername.value.orEmpty()
+                    val stunTurnUsername = turnUsername.value.orEmpty().trim()
                     natPolicy.stunServerUsername = stunTurnUsername
                     newParams.natPolicy = natPolicy
 
@@ -263,7 +282,7 @@ class AccountSettingsViewModel
 
                 newParams.isCpimInBasicChatRoomEnabled = cpimInBasicChatRooms.value == true
 
-                val mwi = mwiUri.value.orEmpty()
+                val mwi = mwiUri.value.orEmpty().trim()
                 if (mwi.isNotEmpty()) {
                     val mwiAddress = core.interpretUrl(mwi, false)
                     newParams.mwiServerAddress = mwiAddress
@@ -271,7 +290,7 @@ class AccountSettingsViewModel
                     newParams.mwiServerAddress = null
                 }
 
-                val voicemail = voicemailUri.value.orEmpty()
+                val voicemail = voicemailUri.value.orEmpty().trim()
                 if (voicemail.isNotEmpty()) {
                     val voicemailAddress = core.interpretUrl(voicemail, false)
                     newParams.voicemailAddress = voicemailAddress
@@ -311,8 +330,12 @@ class AccountSettingsViewModel
                     newParams.audioVideoConferenceFactoryAddress = null
                 }
 
-                newParams.ccmpServerUrl = ccmpServerUrl.value
-                newParams.limeServerUrl = limeServerUrl.value
+                newParams.ccmpServerUrl = ccmpServerUrl.value.orEmpty().trim()
+                newParams.limeServerUrl = limeServerUrl.value.orEmpty().trim()
+                newParams.limeAlgo = limeAlgorithms.value.orEmpty().trim()
+
+                newParams.useInternationalPrefixForCallsAndChats = applyPrefix.value == true
+                newParams.isDialEscapePlusEnabled = replacePlusBy00.value == true
 
                 newParams.useInternationalPrefixForCallsAndChats = applyPrefix.value == true
                 newParams.isDialEscapePlusEnabled = replacePlusBy00.value == true

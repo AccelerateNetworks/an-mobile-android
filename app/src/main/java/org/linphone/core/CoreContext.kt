@@ -21,18 +21,23 @@ package org.linphone.core
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Context.POWER_SERVICE
+import android.content.Context.SENSOR_SERVICE
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.PowerManager
-import android.provider.Settings
-import android.provider.Settings.SettingNotFoundException
 import androidx.annotation.AnyThread
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
@@ -51,6 +56,7 @@ import org.linphone.telecom.TelecomManager
 import org.linphone.ui.call.CallActivity
 import org.linphone.utils.ActivityMonitor
 import org.linphone.utils.AppUtils
+import org.linphone.utils.AudioUtils
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import org.linphone.utils.LinphoneUtils
@@ -94,40 +100,40 @@ class CoreContext
     var isConnectedToAndroidAuto: Boolean = false
 
     val bearerAuthenticationRequestedEvent: MutableLiveData<Event<Pair<String, String?>>> by lazy {
-        MutableLiveData<Event<Pair<String, String?>>>()
+        MutableLiveData()
     }
 
     val digestAuthenticationRequestedEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+        MutableLiveData()
     }
 
     val clearAuthenticationRequestDialogEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val refreshMicrophoneMuteStateEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     val showGreenToastEvent: MutableLiveData<Event<Pair<Int, Int>>> by lazy {
-        MutableLiveData<Event<Pair<Int, Int>>>()
+        MutableLiveData()
     }
 
     val showRedToastEvent: MutableLiveData<Event<Pair<Int, Int>>> by lazy {
-        MutableLiveData<Event<Pair<Int, Int>>>()
+        MutableLiveData()
     }
 
     val showFormattedRedToastEvent: MutableLiveData<Event<Pair<String, Int>>> by lazy {
-        MutableLiveData<Event<Pair<String, Int>>>()
+        MutableLiveData()
     }
 
     val provisioningAppliedEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     private var filesToExportToNativeMediaGallery = arrayListOf<String>()
     val filesToExportToNativeMediaGalleryEvent: MutableLiveData<Event<List<String>>> by lazy {
-        MutableLiveData<Event<List<String>>>()
+        MutableLiveData()
     }
 
     private var keepAliveServiceStarted = false
@@ -142,20 +148,38 @@ class CoreContext
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
             if (!addedDevices.isNullOrEmpty()) {
                 Log.i("$TAG [${addedDevices.size}] new device(s) have been added:")
+                var atLeastOneNewDeviceIsBluetooth = false
+                var atLeastOneNewDeviceIsHeadset = false
                 for (device in addedDevices) {
                     Log.i(
                         "$TAG Added device [${device.productName}] with ID [${device.id}] and type [${device.type}]"
                     )
+
+                    when (device.type) {
+                        AudioDeviceInfo.TYPE_BLUETOOTH_SCO, AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER, AudioDeviceInfo.TYPE_HEARING_AID, AudioDeviceInfo.TYPE_BLE_HEARING_AID -> {
+                            atLeastOneNewDeviceIsBluetooth = true
+                        }
+
+                        AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_WIRED_HEADSET -> {
+                            atLeastOneNewDeviceIsHeadset = true
+                        }
+                        else -> {}
+                    }
                 }
 
-                if (telecomManager.getCurrentlyFollowedCalls() <= 0) {
-                    Log.i("$TAG No call found in Telecom's CallsManager, reloading sound devices in 500ms")
-                    postOnCoreThreadDelayed({ core.reloadSoundDevices() }, 500)
-                }  else {
-                    Log.i(
-                        "$TAG At least one active call in Telecom's CallsManager, let it handle the added device(s)"
-                    )
-                }
+                Log.i("$TAG Reloading sound devices in 500ms")
+                postOnCoreThreadDelayed({
+                    Log.i("$TAG Reloading sound devices")
+                    core.reloadSoundDevices()
+
+                    if (atLeastOneNewDeviceIsBluetooth && core.callsNb > 0 && corePreferences.routeAudioToBluetoothWhenPossible) {
+                        Log.i("$TAG It seems a bluetooth device is now available, trying to route audio to it")
+                        AudioUtils.routeAudioBluetoothOrHearingAid()
+                    } else if (atLeastOneNewDeviceIsHeadset && core.callsNb > 0) {
+                        Log.i("$TAG It seems a headset or headphones device is now available, trying to route audio to it")
+                        AudioUtils.routeAudioToHeadset()
+                    }
+                }, 500)
             }
         }
 
@@ -168,14 +192,12 @@ class CoreContext
                         "$TAG Removed device [${device.id}][${device.productName}][${device.type}]"
                     )
                 }
-                if (telecomManager.getCurrentlyFollowedCalls() <= 0) {
-                    Log.i("$TAG No call found in Telecom's CallsManager, reloading sound devices in 500ms")
-                    postOnCoreThreadDelayed({ core.reloadSoundDevices() }, 500)
-                } else {
-                    Log.i(
-                        "$TAG At least one active call in Telecom's CallsManager, let it handle the removed device(s)"
-                    )
-                }
+
+                Log.i("$TAG Reloading sound devices in 500ms")
+                postOnCoreThreadDelayed({
+                    Log.i("$TAG Reloading sound devices")
+                    core.reloadSoundDevices()
+                }, 500)
             }
         }
     }
@@ -311,12 +333,12 @@ class CoreContext
                         val autoAnswerDelay = corePreferences.autoAnswerDelay
                         if (autoAnswerDelay == 0) {
                             Log.w("$TAG Auto answering call immediately")
-                            answerCall(call)
+                            answerCall(call, true)
                         } else {
                             Log.i("$TAG Scheduling auto answering in $autoAnswerDelay milliseconds")
                             postOnCoreThreadDelayed({
                                 Log.w("$TAG Auto answering call")
-                                answerCall(call)
+                                answerCall(call, true)
                             }, autoAnswerDelay.toLong())
                         }
                     }
@@ -347,9 +369,19 @@ class CoreContext
                         )
                     }
                 }
+                Call.State.OutgoingRinging, Call.State.OutgoingEarlyMedia -> {
+                    if (corePreferences.routeAudioToBluetoothWhenPossible) {
+                        Log.i("$TAG Trying to route audio to either bluetooth, hearing aid, headphones or headset if available")
+                        AudioUtils.routeAudioToAnyConnectedAudioDeviceOtherThanEarpieceAndSpeaker(call)
+                    }
+                }
                 Call.State.Connected -> {
                     postOnMainThread {
                         showCallActivity()
+                    }
+                    if (corePreferences.routeAudioToBluetoothWhenPossible) {
+                        Log.i("$TAG Call is connected, trying to route audio to either bluetooth, hearing aid, headphones or headset if available")
+                        AudioUtils.routeAudioToAnyConnectedAudioDeviceOtherThanEarpieceAndSpeaker(call)
                     }
                 }
                 Call.State.StreamsRunning -> {
@@ -407,6 +439,11 @@ class CoreContext
         }
 
         @WorkerThread
+        override fun onFirstCallStarted(core: Core) {
+            Log.i("$TAG First call started")
+        }
+
+        @WorkerThread
         override fun onLastCallEnded(core: Core) {
             Log.i("$TAG Last call ended")
             val currentCamera = core.videoDevice
@@ -434,6 +471,7 @@ class CoreContext
                         Log.e(
                             "$TAG Authentication request using Bearer method but authorization server is null!"
                         )
+                        core.abortAuthentication(null)
                         return
                     }
 
@@ -451,6 +489,7 @@ class CoreContext
                         Log.e(
                             "$TAG Authentication requested method is Bearer but no authorization server was found in auth info!"
                         )
+                        core.abortAuthentication(null)
                     }
                 }
                 AuthMethod.HttpDigest -> {
@@ -495,7 +534,7 @@ class CoreContext
             Log.i(
                 "$TAG New account configured: [${account.params.identityAddress?.asStringUriOnly()}]"
             )
-            if (!core.isPushNotificationAvailable || !account.params.isPushNotificationAvailable) {
+            if (!account.params.isPushNotificationAvailable) {
 //                if (!corePreferences.keepServiceAlive) {
 //                    Log.w(
 //                        "$TAG Newly added account (or the whole Core) doesn't support push notifications, enabling keep-alive foreground service..."
@@ -543,7 +582,7 @@ class CoreContext
     private var logcatEnabled: Boolean = corePreferences.printLogsInLogcat
 
     private var crashlyticsEnabled: Boolean = corePreferences.sendLogsToCrashlytics
-    private var crashlyticsAvailable = true
+    private var crashlyticsAvailable = BuildConfig.CRASHLYTICS_ENABLED
 
     private val loggingServiceListener = object : LoggingServiceListenerStub() {
         @WorkerThread
@@ -562,8 +601,26 @@ class CoreContext
                     else -> android.util.Log.d(domain, message)
                 }
             }
-            if (crashlyticsEnabled) {
+            if (crashlyticsAvailable && crashlyticsEnabled) {
                 FirebaseCrashlytics.getInstance().log("[$domain] [${level.name}] $message")
+            }
+        }
+    }
+
+    private val proximitySensorListener = object : SensorEventListener {
+        override fun onAccuracyChanged(
+            sensor: Sensor?,
+            accuracy: Int
+        ) {
+        }
+
+        override fun onSensorChanged(event: SensorEvent?) {
+            if (event?.sensor?.type == Sensor.TYPE_PROXIMITY) {
+                if (event.values[0] == 0f) {
+                    Log.i("$TAG Proximity sensor triggered, screen will turn off")
+                } else {
+                    Log.i("$TAG Proximity sensor released, screen will turn back on")
+                }
             }
         }
     }
@@ -649,6 +706,21 @@ class CoreContext
         Log.i("$TAG Core started, updating configuration if required")
         core.videoCodecPriorityPolicy = CodecPriorityPolicy.Auto
 
+        // Set in the Core the list of directories from which it is allowed to delete a file related to a chat message
+        val paths = arrayListOf<String>()
+        if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
+            paths.add(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath.orEmpty())
+            paths.add(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)?.absolutePath.orEmpty())
+            paths.add(context.getExternalFilesDir(Compatibility.getRecordingsDirectory())?.absolutePath.orEmpty())
+        }
+        paths.add(context.filesDir?.absolutePath.orEmpty())
+        val pathsArray = arrayOfNulls<String>(paths.size)
+        paths.toArray(pathsArray)
+        core.setChatMessageFilesDirectories(pathsArray)
+        for (path in paths) {
+            Log.i("$TAG Adding path [$path] to list of directories from which Core is allowed to delete files from")
+        }
+
         val currentVersion = BuildConfig.VERSION_CODE
         val oldVersion = corePreferences.linphoneConfigurationVersion
         Log.w("$TAG Current configuration version is [$oldVersion]")
@@ -662,6 +734,34 @@ class CoreContext
                 disablePushNotificationsFromThirdPartySipAccounts()
             } else if (oldVersion < 600009) { // 6.0.9
                 removePortFromSipIdentity()
+            } else if (oldVersion < 602000) { // 6.2.0
+                if (!core.isChatMessageFilesDeletionEnabled) {
+                    core.isChatMessageFilesDeletionEnabled = true
+                    Log.i("$TAG Core is allowed to automatically delete files from previously logged directories when a chat message is deleted")
+                }
+
+                val rlsUri = core.config.getString("sip", "rls_uri", "").orEmpty()
+                if (rlsUri.isNotEmpty()) {
+                    var accountOnDefaultDomainFound = false
+                    for (account in core.accountList) {
+                        if (account.params.identityAddress?.domain == corePreferences.defaultDomain) {
+                            accountOnDefaultDomainFound = true
+                            break
+                        }
+                    }
+                    if (!accountOnDefaultDomainFound) {
+                        Log.w("$TAG Removing rls_uri from [sip] section & all friend lists to prevent sending SUBSCRIBE")
+                        core.config.setString("sip", "rls_uri", "")
+                        for (friendList in core.friendsLists) {
+                            if (friendList.rlsAddress != null) {
+                                Log.i("$TAG Removing RLS URI from friend list [${friendList.displayName}]")
+                                friendList.rlsAddress = null
+                            }
+                        }
+                    } else {
+                        Log.i("$TAG Keeping RLS URI as an account on the default domain has been found")
+                    }
+                }
             }
 
             if (core.logCollectionUploadServerUrl.isNullOrEmpty()) {
@@ -699,12 +799,21 @@ class CoreContext
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
                 "${context.packageName};proximity_sensor"
             )
+            val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
+            val proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+            val added = sensorManager.registerListener(proximitySensorListener, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+            if (!added) {
+                Log.e("$TAG Failed to add proximity sensor listener!")
+            }
         }
     }
 
     @WorkerThread
     private fun onCoreStopped() {
         Log.w("$TAG Core is being shut down, notifying managers so they can remove their listeners and do some cleanup if needed")
+        val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
+        sensorManager.unregisterListener(proximitySensorListener)
+
         contactsManager.onCoreStopped(core)
         telecomManager.onCoreStopped(core)
         notificationsManager.onCoreStopped(core)
@@ -839,6 +948,16 @@ class CoreContext
         }
     }
 
+    @AnyThread
+    fun abortBearerAuthIfAny() {
+        coreContext.postOnCoreThread { core ->
+            if (bearerAuthInfoPendingPasswordUpdate != null) {
+                Log.e("$TAG Aborting bearer authentication")
+                core.abortAuthentication(bearerAuthInfoPendingPasswordUpdate)
+            }
+        }
+    }
+
     @WorkerThread
     fun isAddressMyself(address: Address): Boolean {
         val found = core.accountList.find {
@@ -856,23 +975,25 @@ class CoreContext
     fun startAudioCall(
         address: Address,
         forceZRTP: Boolean = false,
-        localAddress: Address? = null
+        localAddress: Address? = null,
+        skipNetworkReachabilityTest: Boolean = false
     ) {
         val params = core.createCallParams(null)
         params?.isVideoEnabled = false
-        startCall(address, params, forceZRTP, localAddress)
+        startCall(address, params, forceZRTP, localAddress, skipNetworkReachabilityTest)
     }
 
     @WorkerThread
     fun startVideoCall(
         address: Address,
         forceZRTP: Boolean = false,
-        localAddress: Address? = null
+        localAddress: Address? = null,
+        skipNetworkReachabilityTest: Boolean = false
     ) {
         val params = core.createCallParams(null)
         params?.isVideoEnabled = true
         params?.videoDirection = MediaDirection.SendRecv
-        startCall(address, params, forceZRTP, localAddress)
+        startCall(address, params, forceZRTP, localAddress, skipNetworkReachabilityTest)
     }
 
     @WorkerThread
@@ -880,9 +1001,10 @@ class CoreContext
         address: Address,
         callParams: CallParams? = null,
         forceZRTP: Boolean = false,
-        localAddress: Address? = null
+        localAddress: Address? = null,
+        skipNetworkReachabilityTest: Boolean = false
     ) {
-        if (!core.isNetworkReachable) {
+        if (!skipNetworkReachabilityTest && !core.isNetworkReachable) {
             Log.e("$TAG Network unreachable, abort outgoing call")
             return
         }
@@ -980,7 +1102,7 @@ class CoreContext
     }
 
     @WorkerThread
-    fun answerCall(call: Call) {
+    fun answerCall(call: Call, autoAnswer: Boolean = false) {
         Log.i(
             "$TAG Answering call with remote address [${call.remoteAddress.asStringUriOnly()}] and to address [${call.toAddress.asStringUriOnly()}]"
         )
@@ -1006,6 +1128,12 @@ class CoreContext
             Log.i(
                 "$TAG Enabling video on call params to prevent audio-only layout when answering"
             )
+        } else if (autoAnswer) {
+            val videoBothWays = corePreferences.autoAnswerVideoCallsWithVideoDirectionSendReceive
+            if (videoBothWays) {
+                Log.i("$TAG Call is being auto-answered, requesting video in both ways according to user setting")
+                params.videoDirection = MediaDirection.SendRecv
+            }
         }
 
         call.acceptWithParams(params)
@@ -1013,15 +1141,21 @@ class CoreContext
 
     @WorkerThread
     fun terminateCall(call: Call) {
-        if (call.dir == Call.Dir.Incoming && LinphoneUtils.isCallIncoming(call.state)) {
-            val reason = if (call.core.callsNb > 1) Reason.Busy else Reason.Declined
-            Log.i(
-                "$TAG Declining call [${call.remoteAddress.asStringUriOnly()}] with reason [$reason]"
-            )
-            call.decline(reason)
+        val conference = call.conference
+        if (conference != null) {
+            Log.i("$TAG Terminating conference [${call.remoteAddress.asStringUriOnly()}]")
+            conference.terminate()
         } else {
-            Log.i("$TAG Terminating call [${call.remoteAddress.asStringUriOnly()}]")
-            call.terminate()
+            if (call.dir == Call.Dir.Incoming && LinphoneUtils.isCallIncoming(call.state)) {
+                val reason = if (call.core.callsNb > 1) Reason.Busy else Reason.Declined
+                Log.i(
+                    "$TAG Declining call [${call.remoteAddress.asStringUriOnly()}] with reason [$reason]"
+                )
+                call.decline(reason)
+            } else {
+                Log.i("$TAG Terminating call [${call.remoteAddress.asStringUriOnly()}]")
+                call.terminate()
+            }
         }
     }
 
@@ -1033,7 +1167,17 @@ class CoreContext
         intent.addFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
         )
-        context.startActivity(intent)
+        val options = Compatibility.getPendingIntentActivityOptions(true)
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            options.toBundle()
+        )
+
+        val senderOptions = Compatibility.getPendingIntentActivityOptions(false)
+        Compatibility.sendPendingIntent(pendingIntent, senderOptions.toBundle())
     }
 
     @WorkerThread
@@ -1069,23 +1213,6 @@ class CoreContext
     }
 
     @WorkerThread
-    fun playDtmf(character: Char, duration: Int = 200, ignoreSystemPolicy: Boolean = false) {
-        try {
-            if (ignoreSystemPolicy || Settings.System.getInt(
-                    context.contentResolver,
-                    Settings.System.DTMF_TONE_WHEN_DIALING
-                ) != 0
-            ) {
-                core.playDtmf(character, duration)
-            } else {
-                Log.w("$TAG Numpad DTMF tones are disabled in system settings, not playing them")
-            }
-        } catch (snfe: SettingNotFoundException) {
-            Log.e("$TAG DTMF_TONE_WHEN_DIALING system setting not found: $snfe")
-        }
-    }
-
-    @WorkerThread
     fun computeUserAgent() {
         val savedDeviceName = corePreferences.deviceName
         val deviceName = if (savedDeviceName.isEmpty()) {
@@ -1112,8 +1239,6 @@ class CoreContext
         val sdkUserAgent = "$sdkVersion ($sdkBranch)"
         core.setUserAgent(userAgent, sdkUserAgent)
     }
-
-    // Migration between versions related
 
     @WorkerThread
     private fun removePortFromSipIdentity() {
@@ -1222,6 +1347,11 @@ class CoreContext
 
     @UiThread
     fun enableProximitySensor(enable: Boolean) {
+        if (enable && !corePreferences.useProximitySensor) {
+            Log.w("$TAG App tried to enable proximity sensor but it's been disabled in settings, doing nothing")
+            return
+        }
+
         if (::proximityWakeLock.isInitialized) {
             if (enable && !proximityWakeLock.isHeld) {
                 Log.i("$TAG Acquiring proximity sensor wake lock for 2 hours")
@@ -1234,24 +1364,28 @@ class CoreContext
     }
 
     fun setBackCamera(): Boolean {
-        for (camera in core.videoDevicesList) {
+        val list = core.videoDevicesList
+        for (camera in list) {
             if (camera.contains("Back")) {
-                Log.i("TAG Found back facing camera [$camera], using it")
+                Log.i("$TAG Found back facing camera [$camera], using it")
                 coreContext.core.videoDevice = camera
                 return true
             }
         }
+        Log.i("$TAG Back camera wasn't found in [${list.size}] detected video devices")
         return false
     }
 
     fun setFrontCamera(): Boolean {
-        for (camera in core.videoDevicesList) {
+        val list = core.videoDevicesList
+        for (camera in list) {
             if (camera.contains("Front")) {
                 Log.i("$TAG Found front facing camera [$camera], using it")
                 coreContext.core.videoDevice = camera
                 return true
             }
         }
+        Log.i("$TAG Front camera wasn't found in [${list.size}] detected video devices")
         return false
     }
 }

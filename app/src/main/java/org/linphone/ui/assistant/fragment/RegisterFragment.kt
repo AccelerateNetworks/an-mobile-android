@@ -42,7 +42,6 @@ import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
 import org.linphone.core.tools.Log
 import org.linphone.databinding.AssistantRegisterFragmentBinding
-import org.linphone.ui.GenericActivity
 import org.linphone.ui.GenericFragment
 import org.linphone.ui.assistant.viewmodel.AccountCreationViewModel
 import org.linphone.utils.ConfirmationDialogModel
@@ -101,23 +100,7 @@ class RegisterFragment : GenericFragment() {
         }
 
         binding.setOpenSubscribeWebPageClickListener {
-            val url = getString(R.string.web_platform_register_email_url)
-            try {
-                val browserIntent = Intent(Intent.ACTION_VIEW, url.toUri())
-                startActivity(browserIntent)
-            } catch (ise: IllegalStateException) {
-                Log.e(
-                    "$TAG Can't start ACTION_VIEW intent for URL [$url], IllegalStateException: $ise"
-                )
-            } catch (anfe: ActivityNotFoundException) {
-                Log.e(
-                    "$TAG Can't start ACTION_VIEW intent for URL [$url], ActivityNotFoundException: $anfe"
-                )
-            } catch (e: Exception) {
-                Log.e(
-                    "$TAG Can't start ACTION_VIEW intent for URL [$url]: $e"
-                )
-            }
+            openSubscribeOnlineWebpage()
         }
 
         binding.username.addTextChangedListener(object : TextWatcher {
@@ -153,6 +136,12 @@ class RegisterFragment : GenericFragment() {
             }
         }
 
+        viewModel.accountCantBeCreatedBySmsEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                showPhoneNumberValidationNotAvailableDialog()
+            }
+        }
+
         viewModel.goToSmsCodeConfirmationViewEvent.observe(viewLifecycleOwner) {
             it.consume {
                 Log.i("$TAG Going to SMS code confirmation fragment")
@@ -161,15 +150,6 @@ class RegisterFragment : GenericFragment() {
                         RegisterFragmentDirections.actionRegisterFragmentToRegisterCodeConfirmationFragment()
                     findNavController().navigate(action)
                 }
-            }
-        }
-
-        viewModel.errorHappenedEvent.observe(viewLifecycleOwner) {
-            it.consume { error ->
-                (requireActivity() as GenericActivity).showRedToast(
-                    error,
-                    R.drawable.warning_circle
-                )
             }
         }
 
@@ -228,6 +208,49 @@ class RegisterFragment : GenericFragment() {
         model.confirmEvent.observe(viewLifecycleOwner) {
             it.consume {
                 viewModel.startAccountCreation()
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun openSubscribeOnlineWebpage() {
+        val url = getString(R.string.web_platform_register_email_url)
+        try {
+            val browserIntent = Intent(Intent.ACTION_VIEW, url.toUri())
+            startActivity(browserIntent)
+        } catch (ise: IllegalStateException) {
+            Log.e(
+                "$TAG Can't start ACTION_VIEW intent for URL [$url], IllegalStateException: $ise"
+            )
+        } catch (anfe: ActivityNotFoundException) {
+            Log.e(
+                "$TAG Can't start ACTION_VIEW intent for URL [$url], ActivityNotFoundException: $anfe"
+            )
+        } catch (e: Exception) {
+            Log.e(
+                "$TAG Can't start ACTION_VIEW intent for URL [$url]: $e"
+            )
+        }
+    }
+
+    private fun showPhoneNumberValidationNotAvailableDialog() {
+        val model = ConfirmationDialogModel()
+        val dialog = DialogUtils.getAccountCreationPhoneNumberValidationNotAvailableDialog(
+            requireActivity(),
+            model
+        )
+
+        model.dismissEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                dialog.dismiss()
+            }
+        }
+
+        model.confirmEvent.observe(viewLifecycleOwner) {
+            it.consume {
+                openSubscribeOnlineWebpage()
                 dialog.dismiss()
             }
         }

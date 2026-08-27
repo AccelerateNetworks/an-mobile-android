@@ -21,7 +21,6 @@
     <string name="dialog_accept">Elfogad</string>
     <string name="dialog_cancel">Mégse</string>
     <string name="dialog_continue">Folytatás</string>
-    <string name="dialog_ok">OK</string>
     <string name="dialog_call">Hívás</string>
     <string name="dialog_delete">Törlés</string>
     <string name="dialog_install">Telepítés</string>
@@ -56,7 +55,6 @@
     <string name="notification_push_received_message">Új üzenetek fogadása</string>
     <string name="notification_chat_message_reaction_received">%1$s Reagált rá: %2$s</string>
     <string name="new_account_configured_toast">Az új fiók konfigurálva</string>
-    <string name="default_account_connection_state_error_toast">Csatlakozási hiba!</string>
     <string name="remote_provisioning_config_applied_toast">A konfiguráció sikeresen alkalmazva</string>
     <string name="media_player_generic_error_toast">Hiba történt a médialejátszó készítése közben</string>
     <string name="assistant_dialog_general_terms_and_privacy_policy_title">Általános feltételek és biztonsági szabályok</string>
@@ -102,7 +100,6 @@
     <string name="help_about_privacy_policy_subtitle">Milyen adatokat gyűjt és használ a Linphone</string>
     <string name="help_about_version_title">Verzió</string>
     <string name="help_about_advanced_title">Haladó</string>
-    <string name="help_troubleshooting_clear_native_friends_in_database">Importált névjegyek törlése a telefon névjegyzékéből</string>
     <string name="settings_title">Beállítások</string>
     <string name="settings_security_title">Biztonság</string>
     <string name="settings_security_enable_vfs_title">Titkosítás</string>
@@ -160,4 +157,6 @@
     <string name="menu_reply_to_chat_message">Válasz</string>
     <string name="generic_address_picker_conversations_list_title">Üzenetek</string>
     <string name="generic_address_picker_contacts_list_title">Névjegyek</string>
+    <string name="notification_file_transfer_title">&appName;</string>
+    <string name="settings_developer_clear_native_friends_in_database_title">Importált névjegyek törlése a telefon névjegyzékéből</string>
 </resources>

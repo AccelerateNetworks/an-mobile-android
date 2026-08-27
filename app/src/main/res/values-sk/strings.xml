@@ -43,7 +43,6 @@
     <string name="sip_address">SIP adresa</string>
     <string name="authentication_id">ID pre overenie (ak je odlišné)</string>
     <string name="notification_channel_service_desc">Služba bude bežať trvalo, aby zabezpečila funkčnosť aplikácie a príjem hovorov a správ bez použitia push oznámení.</string>
-    <string name="dialog_ok">OK</string>
     <string name="dialog_do_not_show_anymore">Tento dialóg už nezobrazovať</string>
     <string name="notification_channel_incoming_call_name">Oznámenia o prichádzajúcich hovoroch &appName;</string>
     <string name="notification_mark_message_as_read">Označiť ako prečítané</string>
@@ -76,7 +75,6 @@
     <string name="welcome_page_3_message"><b> Bezplatná </b> a otvorená aplikácia od roku <b>2001</b>.</string>
     <string name="sip_address_copied_to_clipboard_toast">SIP adresa skopírovaná do schránky</string>
     <string name="new_account_configured_toast">Nový účet bol nastavený</string>
-    <string name="default_account_connection_state_error_toast">Chyba pripojenia!</string>
     <string name="file_successfully_exported_to_media_store_toast">Súbor bol exportovaný do systémovej galérie</string>
     <string name="export_file_to_media_store_error_toast">Chyba pri exportovaní súboru do systémovej galérie</string>
     <string name="file_successfully_exported_to_documents_toast">Súbor bol exportovaný do dokumentov</string>
@@ -129,7 +127,6 @@
     <string name="assistant_forgotten_password_message">Váš účet bol vytvorený pomocou:</string>
     <string name="assistant_recover_email_account_label">E-mailu</string>
     <string name="assistant_recover_phone_number_account_label">Telefónneho čísla</string>
-    <string name="assistant_recover_phone_number_account_send_code_label">Poslať kód</string>
     <string name="assistant_recover_phone_number_account_unavailable_no_push_warning">Push notifikácie sú na Vašom zariadení nedostupné, avšak sú nevyhnutné pre obnovu účtu s telefónnym číslom v mobilnej aplikácii.</string>
     <string name="bottom_navigation_contacts_label">Kontakty</string>
     <string name="bottom_navigation_calls_label">Hovory</string>
@@ -164,7 +161,6 @@
     <string name="help_troubleshooting_share_logs_dialog_title">Zdieľať odkaz na ladiace záznamy pomocou…</string>
     <string name="help_troubleshooting_debug_logs_cleaned_toast_message">Ladiace záznamy boli vyčistené</string>
     <string name="help_troubleshooting_show_config_file">Zobraziť konfiguráciu</string>
-    <string name="help_troubleshooting_clear_native_friends_in_database">Vymazať importované kontakty zo systémového adresára</string>
     <string name="settings_title">Nastavenia</string>
     <string name="settings_security_title">Zabezpečenie</string>
     <string name="settings_security_enable_vfs_title">Šifrovať všetko</string>
@@ -180,7 +176,6 @@
     <string name="settings_calls_calibrate_echo_canceller_done_no_echo">bez ozveny</string>
     <string name="settings_calls_calibrate_echo_canceller_done">%s ms</string>
     <string name="settings_calls_calibrate_echo_canceller_failed">zlyhalo</string>
-    <string name="settings_calls_enable_video_title">Povoliť video</string>
     <string name="settings_calls_enable_fec_title">Povoliť FEC pre video</string>
     <string name="settings_calls_auto_record_title">Automaticky spustiť nahrávanie hovorov</string>
     <string name="settings_calls_change_ringtone_title">Zmeniť vyzváňací tón</string>
@@ -214,7 +209,6 @@
     <string name="settings_contacts_ldap_sip_attributes_title">Atribúty SIP</string>
     <string name="settings_contacts_ldap_sip_domain_title">Doména SIP</string>
     <string name="settings_contacts_ldap_error_toast">Nastala chyba, server LDAP nebol uložený!</string>
-    <string name="settings_contacts_ldap_empty_server_error_toast">URL adresa servera nemôže byť prázdna</string>
     <string name="settings_meetings_title">Schôdzky</string>
     <string name="settings_conversations_title">Konverzácie</string>
     <string name="settings_meetings_layout_active_speaker_label">Aktívny hovoriaci</string>
@@ -307,7 +301,6 @@
     <string name="account_settings_dialog_invalid_password_title">Vyžaduje sa overenie</string>
     <string name="account_settings_dialog_invalid_password_hint">Heslo</string>
     <string name="account_failed_to_find_identity_toast">Nepodarilo sa nájsť zodpovedajúci účet!</string>
-    <string name="history_title">História hovorov</string>
     <string name="history_call_start_title">Nový hovor</string>
     <string name="history_call_start_search_bar_filter_hint">Hľadať kontakt alebo históriu hovoru</string>
     <string name="history_call_start_create_group_call">Vytvoriť skupinový hovor</string>
@@ -325,7 +318,6 @@
     <string name="contacts_list_favourites_title">Obľúbené</string>
     <string name="generic_address_picker_conversations_list_title">Konverzácie</string>
     <string name="assistant_permissions_record_audio_title"><b>Nahrávanie zvuku:</b> Aby Vás osoba na druhej strane mohla počuť a aby ste mohli nahrávať hlasové správy.</string>
-    <string name="assistant_recover_phone_number_account_subtitle">Zadajte telefónne číslo spojené s Vašim účtom, pošleme Vám kód.</string>
     <string name="help_troubleshooting_print_logs_in_logcat">Zapisovať záznamy do logcatu</string>
     <string name="help_troubleshooting_debug_logs_upload_error_toast_message">Chyba pri nahrávaní ladiacich záznamov</string>
     <string name="manage_account_dialog_international_prefix_help_message">Vyberte svoju krajinu, aby &appName; mohol správne spárovať Vaše kontakty.</string>
@@ -464,7 +456,6 @@
     <string name="conversation_end_to_end_encrypted_event_subtitle">Správy v tejto konverzácii sú koncovo šifrované. Dešifrovať ich môže len váš partner v konverzácii.</string>
     <string name="conversation_warning_disabled_because_not_secured_title">Táto konverzácia nie je šifrovaná!</string>
     <string name="conversation_warning_disabled_because_not_secured_subtitle">Táto konverzácia bola z bezpečnostných dôvodov deaktivovaná.</string>
-    <string name="conversation_warning_disabled_encrypted_bottom_sheet_title">Povinné šifrovanie</string>
     <string name="conversation_maximum_number_of_attachments_reached">Dosiahnutý maximálny možný počet príloh!</string>
     <string name="conversation_dialog_set_subject">Nastaviť predmet konverzácie</string>
     <string name="conversation_dialog_edit_subject">Upraviť predmet konverzácie</string>
@@ -529,13 +520,11 @@
     <string name="conversation_media_list_title">Zdieľané médiá</string>
     <string name="conversation_end_to_end_encrypted_bottom_sheet_title">Zaručená dôvernosť</string>
     <string name="conversation_end_to_end_encrypted_bottom_sheet_message">Vďaka technológii koncového šifrovania v &appName; je zachovaná dôvernosť správ, hovorov a schôdzok. Vymieňané údaje nemôže dešifrovať nikto, ani my sami.</string>
-    <string name="conversation_pdf_file_cant_be_opened_error_toast">Heslom chránené PDF zatiaľ nie je možné otvoriť</string>
     <string name="conversation_info_dialog_delete_all_call_logs_title">Skutočne chcete vymazať všetky správy?</string>
     <string name="conversation_info_participant_has_been_granted_admin_rights_toast">%s je odteraz administrátorom</string>
     <string name="conversation_no_app_registered_to_handle_content_type_error_toast">Nenájdená žiadna aplikácia na otvorenie tohto typu súboru</string>
     <string name="conversation_event_security_event_max_participant_count_exceeded">Maximálny počet účastníkov bol prekročený o %s</string>
     <string name="conversation_no_app_registered_to_handle_content_type_dialog_message">Nenájdená žiadna aplikácia na otvorenie tohto typu súboru.\n\nChcete ho otvoriť ako textový súbor?</string>
-    <string name="conversation_warning_disabled_encrypted_bottom_sheet_message">Aktivovali ste povinné šifrovanie. Z dôvodu vašej bezpečnosti boli nešifrované konverzácie deaktivované. Konverzáciu môžete znovu vytvoriť, alebo v nastaveniach účtu vypnúť povinné šifrovanie.</string>
     <string name="conversation_event_participant_removed">%s sa odpojil</string>
     <string name="conversation_event_ephemeral_messages_lifetime_changed">Doba platnosti dočasných (miznúcich) správ je teraz %s</string>
     <string name="conversation_event_ephemeral_messages_enabled">Dočasné (miznúce) správy boli povolené</string>
@@ -575,10 +564,7 @@
     <string name="meeting_info_not_found_toast">Schôdzka nebola nájdená!</string>
     <string name="meeting_schedule_description_title">Popis</string>
     <string name="meeting_schedule_edit_title">Upraviť schôdzku</string>
-    <string name="meeting_schedule_cancel_dialog_title">Zrušiť schôdzku?</string>
     <string name="meeting_cancel_action_label">Zrušiť schôdzku</string>
-    <string name="meeting_schedule_delete_dialog_title">Vymazať schôdzku?</string>
-    <string name="meeting_schedule_delete_dialog_message">Želáte si vymazať schôdzku?</string>
     <string name="meeting_delete_action_label">Vymazať schôdzku</string>
     <string name="meeting_info_updated_toast">Schôdzka bola aktualizovaná</string>
     <string name="meeting_info_cancelled_toast">Schôdzka bola zrušená</string>
@@ -651,7 +637,6 @@
     <string name="call_state_paused_by_remote">Pozastavené vzdialenou stranou</string>
     <string name="conversation_message_forward_cancelled_toast">Preposlanie správy bolo zrušené</string>
     <string name="meeting_schedule_send_invitations_title">Odoslať pozvánku účastníkom</string>
-    <string name="meeting_schedule_cancel_dialog_message">Želáte si zrušiť schôdzku a odoslať oznámenie všetkým účastníkom?</string>
     <string name="call_stats_bandwidth_label">Šírka pásma: %s</string>
     <string name="call_action_pause_call">Pozastaviť</string>
     <string name="meeting_info_created_toast">Schôdzka bola vytvorená</string>
@@ -720,12 +705,6 @@
     <string name="menu_export_selected_item">Stiahnuť</string>
     <string name="menu_share_selected_item">Zdieľať</string>
     <string name="orange">Oranžová</string>
-    <string name="yellow">Žltá</string>
-    <string name="green">Zelená</string>
-    <string name="blue">Modrá</string>
-    <string name="red">Červená</string>
-    <string name="pink">Ružová</string>
-    <string name="purple">Fialová</string>
     <string name="list_filter_no_result_found">Žiadne výsledky…</string>
     <string name="multiple_participants_selection_placeholder">Tu sa zobrazia vybraní účastníci</string>
     <string name="connection_error_for_non_default_account">Chyba pripojenia účtu(-ov)</string>
@@ -795,7 +774,6 @@
     <string name="content_description_chat_open_emoji_picker">Otvorí výber emoji</string>
     <string name="content_description_chat_open_attach_file">Otvorí výber súboru</string>
     <string name="content_description_chat_toggle_mute">Zapne/vypne stlmenie konverzácie</string>
-    <string name="content_description_chat_removal_in_progress">Konverzácia sa odstraňuje</string>
     <string name="content_description_chat_unsecured">Táto konverzácia nie je zabezpečená</string>
     <string name="content_description_chat_search_message_up">Hľadať smerom hore</string>
     <string name="content_description_chat_search_message_down">Hľadať smerom dole</string>
@@ -857,4 +835,9 @@
     <string name="content_description_chat_edit_conversation_subject">Kliknutím upraviť názov konverzácie</string>
     <string name="content_description_contact_create">Vytvoriť kontakt</string>
     <string name="content_description_call_voicemail">Podržaním tlačidla volanie hlasovej schránky</string>
+    <string name="conversation_pdf_password_protected_file_cant_be_opened_error_toast">Heslom chránené PDF zatiaľ nie je možné otvoriť</string>
+    <string name="conversation_participants_list_header">Účastníci</string>
+    <string name="search">Hľadať</string>
+    <string name="settings_developer_clear_native_friends_in_database_title">Vymazať importované kontakty zo systémového adresára</string>
+    <string name="menu_edit_chat_message">Upraviť</string>
 </resources>

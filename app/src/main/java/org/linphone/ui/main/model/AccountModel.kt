@@ -21,7 +21,6 @@
 
 package org.linphone.ui.main.model
 
-import android.view.View
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MutableLiveData
@@ -46,11 +45,13 @@ class AccountModel
     @WorkerThread
     constructor(
     val account: Account,
-    private val onMenuClicked: ((view: View, account: Account) -> Unit)? = null
+    private val onMenuClicked: ((model: AccountModel) -> Unit)? = null
 ) : AbstractAvatarModel() {
     companion object {
         private const val TAG = "[Account Model]"
     }
+
+    val identity = account.params.identityAddress?.asStringUriOnly().orEmpty()
 
     val displayName = MutableLiveData<String>()
 
@@ -81,6 +82,7 @@ class AccountModel
             update()
         }
 
+        @WorkerThread
         override fun onMessageWaitingIndicationChanged(
             account: Account,
             mwi: MessageWaitingIndication
@@ -107,6 +109,11 @@ class AccountModel
     private val coreListener = object : CoreListenerStub() {
         @WorkerThread
         override fun onChatRoomRead(core: Core, chatRoom: ChatRoom) {
+            computeNotificationsCount()
+        }
+
+        @WorkerThread
+        override fun onMessageRetracted(core: Core, chatRoom: ChatRoom, message: ChatMessage) {
             computeNotificationsCount()
         }
 
@@ -161,8 +168,8 @@ class AccountModel
     }
 
     @UiThread
-    fun openMenu(view: View) {
-        onMenuClicked?.invoke(view, account)
+    fun openMenu() {
+        onMenuClicked?.invoke(this)
     }
 
     @UiThread

@@ -20,6 +20,7 @@
 package org.linphone.utils
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.ImageDecoder
@@ -27,7 +28,6 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
-import android.graphics.drawable.BitmapDrawable
 import androidx.annotation.AnyThread
 import androidx.annotation.WorkerThread
 import java.io.FileNotFoundException
@@ -35,24 +35,31 @@ import org.linphone.contacts.AvatarGenerator
 import org.linphone.core.tools.Log
 import androidx.core.net.toUri
 import androidx.core.graphics.createBitmap
+import org.linphone.R
 
 class ImageUtils {
     companion object {
         private const val TAG = "[Image Utils]"
 
         @AnyThread
-        fun getGeneratedAvatar(context: Context, size: Int = 0, textSize: Int = 0, initials: String): BitmapDrawable {
+        fun generatedAvatarIfNeededAndReturnPath(context: Context, initials: String): String {
+            val darkMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            val suffix = if (darkMode) "_dark" else "_light"
+
+            val generatedAvatarPath = FileUtils.getFileStorageCacheDir("$initials$suffix.png", overrideExisting = true)
+            if (generatedAvatarPath.exists()) {
+                val path = generatedAvatarPath.absolutePath
+                return path
+            }
+
             val builder = AvatarGenerator(context)
             builder.setInitials(initials)
-            if (size > 0) {
-                builder.setAvatarSize(
-                    AppUtils.getDimension(size).toInt()
-                )
-            }
-            if (textSize > 0) {
-                builder.setTextSize(AppUtils.getDimension(textSize))
-            }
-            return builder.buildDrawable()
+            builder.setAvatarSize(AppUtils.getDimension(R.dimen.avatar_big_size).toInt())
+            builder.setTextSize(AppUtils.getDimension(R.dimen.avatar_initials_call_text_size))
+
+            val bitmap = builder.buildBitmap(false)
+            val path = FileUtils.storeBitmap(bitmap, generatedAvatarPath)
+            return path
         }
 
         @WorkerThread

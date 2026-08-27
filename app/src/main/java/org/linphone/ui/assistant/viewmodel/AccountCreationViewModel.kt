@@ -47,7 +47,6 @@ import org.linphone.core.Dictionary
 import org.linphone.core.Factory
 import org.linphone.core.tools.Log
 import org.linphone.ui.GenericViewModel
-import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 import org.linphone.utils.LinphoneUtils
 
@@ -105,15 +104,21 @@ class AccountCreationViewModel
 
     val accountCreatedEvent = MutableLiveData<Event<Boolean>>()
 
-    val errorHappenedEvent: MutableLiveData<Event<String>> by lazy {
-        MutableLiveData<Event<String>>()
+    val accountRecoveryTokenReceivedEvent: MutableLiveData<Event<String>> by lazy {
+        MutableLiveData()
+    }
+
+    val accountCantBeCreatedBySmsEvent: MutableLiveData<Event<Boolean>> by lazy {
+        MutableLiveData()
     }
 
     private var waitingForFlexiApiPushToken = false
     private var waitForPushJob: Job? = null
 
     private lateinit var accountManagerServices: AccountManagerServices
+    private var requestedTokenIsForAccountCreation: Boolean = true
     private var accountCreationToken: String? = null
+    private var accountRecoveryToken: String? = null
 
     private var accountCreatedAuthInfo: AuthInfo? = null
     private var accountCreated: Account? = null
@@ -124,7 +129,7 @@ class AccountCreationViewModel
             request: AccountManagerServicesRequest,
             data: String?
         ) {
-            Log.i("$TAG Request [$request] was successful, data is [$data]")
+            Log.i("$TAG Request [${request.type}] was successful, data is [$data]")
             operationInProgress.postValue(false)
 
             when (request.type) {
@@ -137,6 +142,10 @@ class AccountCreationViewModel
                             "$TAG No data found for createAccountUsingToken request, can't continue!"
                         )
                     }
+                }
+                AccountManagerServicesRequest.Type.SendAccountCreationTokenByPush,
+                AccountManagerServicesRequest.Type.SendAccountRecoveryTokenByPush -> {
+                    Log.i("$TAG Send token by push notification request has been accepted, it should be received soon")
                 }
                 AccountManagerServicesRequest.Type.SendPhoneNumberLinkingCodeBySms -> {
                     goToSmsCodeConfirmationViewEvent.postValue(Event(true))
@@ -156,12 +165,16 @@ class AccountCreationViewModel
             parameterErrors: Dictionary?
         ) {
             Log.e(
-                "$TAG Request [$request] returned an error with status code [$statusCode] and message [$errorMessage]"
+                "$TAG Request [${request.type}] returned an error with status code [$statusCode] and message [$errorMessage]"
             )
             operationInProgress.postValue(false)
 
             if (!errorMessage.isNullOrEmpty()) {
-                showFormattedRedToast(errorMessage, R.drawable.warning_circle)
+                if (request.type == AccountManagerServicesRequest.Type.SendPhoneNumberLinkingCodeBySms && statusCode == 422) {
+                    // Do not show error message sent by the account management platform for this specific scenario
+                } else {
+                    showFormattedRedToast(errorMessage, R.drawable.warning_circle)
+                }
             }
 
             for (parameter in parameterErrors?.keys.orEmpty()) {
@@ -174,25 +187,28 @@ class AccountCreationViewModel
             }
 
             when (request.type) {
-                AccountManagerServicesRequest.Type.SendAccountCreationTokenByPush -> {
+                AccountManagerServicesRequest.Type.SendAccountCreationTokenByPush,
+                AccountManagerServicesRequest.Type.SendAccountRecoveryTokenByPush -> {
                     Log.w("$TAG Cancelling job waiting for push notification")
                     waitingForFlexiApiPushToken = false
                     waitForPushJob?.cancel()
                 }
                 AccountManagerServicesRequest.Type.SendPhoneNumberLinkingCodeBySms -> {
-                    val authInfo = accountCreatedAuthInfo
-                    if (authInfo != null) {
-                        coreContext.core.removeAuthInfo(authInfo)
+                    Log.e("$TAG Error sending SMS code, clearing auth info & account")
+                    removePendingAccount()
+
+                    if (statusCode == 422) {
+                        accountCantBeCreatedBySmsEvent.postValue(Event(true))
                     }
-                    val account = accountCreated
-                    if (account != null) {
-                        coreContext.core.removeAccount(account)
-                    }
+                }
+                AccountManagerServicesRequest.Type.LinkPhoneNumberUsingCode -> {
+                    Log.e("$TAG Wrong confirmation code")
                 }
                 else -> {
                 }
             }
             createEnabled.postValue(true)
+            lockUsernameAndPassword.postValue(false)
         }
     }
 
@@ -220,11 +236,19 @@ class AccountCreationViewModel
 
                         val token = customPayload.getString("token")
                         if (token.isNotEmpty()) {
-                            accountCreationToken = token
-                            Log.i(
-                                "$TAG Extracted token [$accountCreationToken] from push payload, creating account"
-                            )
-                            createAccount()
+                            if (requestedTokenIsForAccountCreation) {
+                                accountCreationToken = token
+                                Log.i(
+                                    "$TAG Extracted token [$accountCreationToken] from push payload, creating account"
+                                )
+                                createAccount()
+                            } else {
+                                accountRecoveryToken = token
+                                Log.i(
+                                    "$TAG Extracted token [$accountRecoveryToken] from push payload, opening browser"
+                                )
+                                accountRecoveryTokenReceivedEvent.postValue(Event(token))
+                            }
                         } else {
                             Log.e("$TAG Push payload JSON object has an empty 'token'!")
                             onFlexiApiTokenRequestError()
@@ -317,9 +341,7 @@ class AccountCreationViewModel
                 normalizedPhoneNumberEvent.postValue(Event(formattedPhoneNumber))
             } else {
                 Log.e("$TAG Account manager services hasn't been initialized!")
-                errorHappenedEvent.postValue(
-                    Event(AppUtils.getString(R.string.assistant_account_register_unexpected_error))
-                )
+                showRedToast(R.string.assistant_account_register_unexpected_error, R.drawable.warning_circle)
             }
         }
     }
@@ -330,8 +352,8 @@ class AccountCreationViewModel
 
         coreContext.postOnCoreThread {
             if (accountCreationToken.isNullOrEmpty()) {
-                Log.i("$TAG We don't have a creation token, let's request one")
-                requestFlexiApiToken()
+                Log.i("$TAG We don't have an account creation token yet, let's request one")
+                requestFlexiApiToken(requestAccountCreationToken = true)
             } else {
                 val authInfo = accountCreatedAuthInfo
                 if (authInfo != null) {
@@ -341,6 +363,20 @@ class AccountCreationViewModel
                     Log.i("$TAG We've already have a token [$accountCreationToken], continuing")
                     createAccount()
                 }
+            }
+        }
+    }
+
+    @UiThread
+    fun requestAccountRecoveryToken() {
+        coreContext.postOnCoreThread {
+            val existingToken = accountRecoveryToken
+            if (existingToken.isNullOrEmpty()) {
+                Log.i("$TAG We don't have an account recovery token yet, let's request one")
+                requestFlexiApiToken(requestAccountCreationToken = false)
+            } else {
+                Log.i("$TAG We've already have a token [$existingToken], using it")
+                accountRecoveryTokenReceivedEvent.postValue(Event(existingToken))
             }
         }
     }
@@ -384,6 +420,27 @@ class AccountCreationViewModel
                 smsCodeThirdDigit.postValue("")
                 smsCodeLastDigit.postValue("")
             }
+        }
+    }
+
+    @UiThread
+    fun abortAccountCreation() {
+        coreContext.postOnCoreThread {
+            removePendingAccount()
+        }
+    }
+
+    @WorkerThread
+    private fun removePendingAccount() {
+        val authInfo = accountCreatedAuthInfo
+        if (authInfo != null) {
+            coreContext.core.removeAuthInfo(authInfo)
+            accountCreatedAuthInfo = null
+        }
+        val account = accountCreated
+        if (account != null) {
+            coreContext.core.removeAccount(account)
+            accountCreated = null
         }
     }
 
@@ -519,7 +576,8 @@ class AccountCreationViewModel
     }
 
     @WorkerThread
-    private fun requestFlexiApiToken() {
+    private fun requestFlexiApiToken(requestAccountCreationToken: Boolean) {
+        requestedTokenIsForAccountCreation = requestAccountCreationToken
         if (!coreContext.core.isPushNotificationAvailable) {
             Log.e(
                 "$TAG Core says push notification aren't available, can't request a token from FlexiAPI"
@@ -545,11 +603,21 @@ class AccountCreationViewModel
             }
 
             // Request an auth token, will be sent by push
-            val request = accountManagerServices.createSendAccountCreationTokenByPushRequest(
-                provider,
-                param,
-                prid
-            )
+            val request = if (requestAccountCreationToken) {
+                Log.i("$TAG Requesting account creation token")
+                accountManagerServices.createSendAccountCreationTokenByPushRequest(
+                    provider,
+                    param,
+                    prid
+                )
+            } else {
+                Log.i("$TAG Requesting account recovery token")
+                accountManagerServices.createSendAccountRecoveryTokenByPushRequest(
+                    provider,
+                    param,
+                    prid
+                )
+            }
             request.addListener(accountManagerServicesListener)
             request.submit()
 
@@ -580,12 +648,6 @@ class AccountCreationViewModel
     private fun onFlexiApiTokenRequestError() {
         Log.e("$TAG Flexi API token request by push error!")
         operationInProgress.postValue(false)
-        errorHappenedEvent.postValue(
-            Event(
-                AppUtils.getString(
-                    R.string.assistant_account_register_push_notification_not_received_error
-                )
-            )
-        )
+        showRedToast(R.string.assistant_account_register_push_notification_not_received_error, R.drawable.warning_circle)
     }
 }

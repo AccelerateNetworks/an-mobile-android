@@ -19,13 +19,16 @@
  */
 package org.linphone.compatibility
 
+import android.app.ActivityOptions
 import android.app.Notification
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import androidx.annotation.RequiresApi
 import org.linphone.core.tools.Log
@@ -41,16 +44,18 @@ class Api34Compatibility {
             id: Int,
             notification: Notification,
             foregroundServiceType: Int
-        ) {
+        ): Boolean {
             try {
                 service.startForeground(
                     id,
                     notification,
                     foregroundServiceType
                 )
+                return true
             } catch (e: Exception) {
                 Log.e("$TAG Can't start service as foreground! $e")
             }
+            return false
         }
 
         fun hasFullScreenIntentPermission(context: Context): Boolean {
@@ -77,6 +82,22 @@ class Api34Compatibility {
             } catch (anfe: ActivityNotFoundException) {
                 Log.e("$TAG Failed to start intent for granting full screen intent permission: $anfe")
             }
+        }
+
+        fun sendPendingIntent(pendingIntent: PendingIntent, bundle: Bundle) {
+            pendingIntent.send(bundle)
+        }
+
+        fun getPendingIntentActivityOptions(creator: Boolean): ActivityOptions {
+            val options = ActivityOptions.makeBasic()
+            if (creator) {
+                options.pendingIntentCreatorBackgroundActivityStartMode =
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+            } else {
+                options.pendingIntentBackgroundActivityStartMode =
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+            }
+            return options
         }
     }
 }

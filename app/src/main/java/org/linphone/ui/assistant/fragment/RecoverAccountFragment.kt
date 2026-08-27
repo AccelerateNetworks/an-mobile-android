@@ -33,7 +33,7 @@ import org.linphone.R
 import org.linphone.core.tools.Log
 import org.linphone.ui.GenericFragment
 import org.linphone.databinding.AssistantRecoverAccountFragmentBinding
-import org.linphone.ui.assistant.viewmodel.RecoverPhoneAccountViewModel
+import org.linphone.ui.assistant.viewmodel.AccountCreationViewModel
 import kotlin.getValue
 
 @UiThread
@@ -44,7 +44,7 @@ class RecoverAccountFragment : GenericFragment() {
 
     private lateinit var binding: AssistantRecoverAccountFragmentBinding
 
-    private val viewModel: RecoverPhoneAccountViewModel by navGraphViewModels(
+    private val viewModel: AccountCreationViewModel by navGraphViewModels(
         R.id.assistant_nav_graph
     )
 
@@ -64,6 +64,13 @@ class RecoverAccountFragment : GenericFragment() {
         binding.viewModel = viewModel
         observeToastEvents(viewModel)
 
+        viewModel.accountRecoveryTokenReceivedEvent.observe(viewLifecycleOwner) {
+            it.consume { token ->
+                Log.i("$TAG Account recovery token received [$token], opening browser")
+                recoverPhoneNumberAccount(token)
+            }
+        }
+
         binding.setBackClickListener {
             goBack()
         }
@@ -73,10 +80,7 @@ class RecoverAccountFragment : GenericFragment() {
         }
 
         binding.setRecoverPhoneNumberAccountClickListener {
-            if (findNavController().currentDestination?.id == R.id.recoverAccountFragment) {
-                val action = RecoverAccountFragmentDirections.actionRecoverAccountFragmentToRecoverPhoneAccountFragment()
-                findNavController().navigate(action)
-            }
+            viewModel.requestAccountRecoveryToken()
         }
     }
 
@@ -85,8 +89,32 @@ class RecoverAccountFragment : GenericFragment() {
     }
 
     private fun recoverEmailAccount() {
-        val url = getString(R.string.web_platform_forgotten_password_url)
+        val rootUrl = getString(R.string.web_platform_forgotten_password_url)
+        val url = "$rootUrl/recovery/email"
         try {
+            Log.i("$TAG Trying to open [$url] URL")
+            val browserIntent = Intent(Intent.ACTION_VIEW, url.toUri())
+            startActivity(browserIntent)
+        } catch (ise: IllegalStateException) {
+            Log.e(
+                "$TAG Can't start ACTION_VIEW intent for URL [$url], IllegalStateException: $ise"
+            )
+        } catch (anfe: ActivityNotFoundException) {
+            Log.e(
+                "$TAG Can't start ACTION_VIEW intent for URL [$url], ActivityNotFoundException: $anfe"
+            )
+        } catch (e: Exception) {
+            Log.e(
+                "$TAG Can't start ACTION_VIEW intent for URL [$url]: $e"
+            )
+        }
+    }
+
+    private fun recoverPhoneNumberAccount(recoveryToken: String) {
+        val rootUrl = getString(R.string.web_platform_forgotten_password_url)
+        val url = "$rootUrl/recovery/phone/$recoveryToken"
+        try {
+            Log.i("$TAG Trying to open [$url] URL")
             val browserIntent = Intent(Intent.ACTION_VIEW, url.toUri())
             startActivity(browserIntent)
         } catch (ise: IllegalStateException) {

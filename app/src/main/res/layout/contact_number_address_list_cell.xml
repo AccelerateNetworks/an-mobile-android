@@ -13,11 +13,11 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:onClick="@{() -> model.onClicked()}"
         android:onLongClick="@{() -> model.onLongPress()}"
+        android:onContextClick="@{() -> model.onLongPress()}"
         android:selected="@{model.selected}"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:padding="10dp"
         android:background="@drawable/secondary_cell_background">
 
         <androidx.appcompat.widget.AppCompatTextView
@@ -68,6 +68,7 @@
             android:layout_marginTop="10dp"
             android:background="?attr/color_separator"
             android:visibility="gone"
+            android:importantForAccessibility="no"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/number_or_address"

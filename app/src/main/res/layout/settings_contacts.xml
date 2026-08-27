@@ -16,6 +16,109 @@
         android:background="@drawable/shape_squircle_white_background">
 
         <androidx.appcompat.widget.AppCompatTextView
+            style="@style/settings_title_padding_style"
+            android:id="@+id/sort_contacts_by_first_name_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="10dp"
+            android:text="@string/settings_contacts_sort_by_first_name_title"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:labelFor="@id/sort_contacts_by_first_name_spinner"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <androidx.appcompat.widget.AppCompatSpinner
+            style="@style/default_text_style"
+            android:id="@+id/sort_contacts_by_first_name_spinner"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/edit_text_background"
+            android:paddingStart="@dimen/spinner_start_padding"
+            android:paddingEnd="@dimen/spinner_end_padding"
+            android:overlapAnchor="false"
+            android:spinnerMode="dropdown"
+            android:popupBackground="@drawable/shape_squircle_white_background"
+            app:layout_constraintHorizontal_bias="0"
+            app:layout_constraintTop_toBottomOf="@id/sort_contacts_by_first_name_title"
+            app:layout_constraintStart_toStartOf="@id/sort_contacts_by_first_name_title"
+            app:layout_constraintEnd_toEndOf="@id/sort_contacts_by_first_name_title" />
+
+        <ImageView
+            android:id="@+id/sort_contacts_by_first_name_spinner_caret"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/spinner_caret_end_margin"
+            android:src="@drawable/caret_down"
+            android:contentDescription="@string/content_description_spinner_caret"
+            app:tint="?attr/color_main2_600"
+            app:layout_constraintTop_toTopOf="@id/sort_contacts_by_first_name_spinner"
+            app:layout_constraintBottom_toBottomOf="@id/sort_contacts_by_first_name_spinner"
+            app:layout_constraintEnd_toEndOf="@id/sort_contacts_by_first_name_spinner"/>
+
+        <androidx.appcompat.widget.AppCompatTextView
+            style="@style/settings_title_style"
+            android:onClick="@{() -> viewModel.toggleHideEmptyContacts()}"
+            android:id="@+id/hide_empty_contacts_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="10dp"
+            android:text="@string/settings_contacts_hide_empty_contacts_title"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:labelFor="@id/hide_empty_contacts_switch"
+            app:layout_constraintTop_toTopOf="@id/hide_empty_contacts_switch"
+            app:layout_constraintBottom_toBottomOf="@id/hide_empty_contacts_switch"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/hide_empty_contacts_switch"/>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/material_switch_style"
+            android:id="@+id/edit_native_contacts_in_linphone_switch"
+            android:onClick="@{() -> viewModel.toggleEditNativeContactsInLinphone()}"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp"
+            android:checked="@{viewModel.editNativeContactsInLinphone}"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/sort_contacts_by_first_name_spinner" />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            style="@style/settings_title_style"
+            android:onClick="@{() -> viewModel.toggleEditNativeContactsInLinphone()}"
+            android:id="@+id/edit_native_contacts_in_linphone_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="10dp"
+            android:text="@string/settings_contacts_edit_native_contacts_in_linphone_title"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:labelFor="@id/edit_native_contacts_in_linphone_switch"
+            app:layout_constraintTop_toTopOf="@id/edit_native_contacts_in_linphone_switch"
+            app:layout_constraintBottom_toBottomOf="@id/edit_native_contacts_in_linphone_switch"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/edit_native_contacts_in_linphone_switch"/>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/material_switch_style"
+            android:id="@+id/hide_empty_contacts_switch"
+            android:onClick="@{() -> viewModel.toggleHideEmptyContacts()}"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp"
+            android:checked="@{viewModel.hideEmptyContacts}"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/edit_native_contacts_in_linphone_switch" />
+
+        <androidx.appcompat.widget.AppCompatTextView
             style="@style/settings_title_style"
             android:onClick="@{() -> viewModel.addLdapServer()}"
             android:id="@+id/add_ldap_server"
@@ -30,8 +133,9 @@
             android:ellipsize="end"
             android:drawableEnd="@drawable/caret_right"
             android:drawableTint="?attr/color_main2_600"
+            android:background="@drawable/squircle_transparent_button_background"
             android:visibility="@{viewModel.ldapAvailable ? View.VISIBLE : View.GONE}"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/hide_empty_contacts_switch"
             app:layout_constraintBottom_toTopOf="@id/existing_ldap_servers"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
@@ -66,6 +170,7 @@
             android:ellipsize="end"
             android:drawableEnd="@drawable/caret_right"
             android:drawableTint="?attr/color_main2_600"
+            android:background="@drawable/squircle_transparent_button_background"
             app:layout_constraintTop_toBottomOf="@id/existing_ldap_servers"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>

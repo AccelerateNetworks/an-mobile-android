@@ -24,7 +24,9 @@ import android.os.CountDownTimer
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import androidx.annotation.AnyThread
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.MediatorLiveData
@@ -111,7 +113,7 @@ class MessageModel
             )?.params?.instantMessagingEncryptionMandatory == true
             )
 
-    val isReply = chatMessage.isReply
+    val isReply = MutableLiveData<Boolean>()
 
     val replyToMessageId = chatMessage.replyMessageId
 
@@ -135,6 +137,8 @@ class MessageModel
 
     val text = MutableLiveData<Spannable>()
 
+    val isTextEmoji = MutableLiveData<Boolean>()
+
     val reactions = MutableLiveData<String>()
 
     val ourReactionIndex = MutableLiveData<Int>()
@@ -143,7 +147,13 @@ class MessageModel
 
     val firstFileModel = MediatorLiveData<FileModel>()
 
+    val hasBeenEdited = MutableLiveData<Boolean>()
+
+    val hasBeenRetracted = MutableLiveData<Boolean>()
+
     val isSelected = MutableLiveData<Boolean>()
+
+    private var rawTextContent: String = ""
 
     // Below are for conferences info
     val meetingFound = MutableLiveData<Boolean>()
@@ -181,7 +191,7 @@ class MessageModel
     val formattedVoiceRecordingDuration = MutableLiveData<String>()
 
     val dismissLongPressMenuEvent: MutableLiveData<Event<Boolean>> by lazy {
-        MutableLiveData<Event<Boolean>>()
+        MutableLiveData()
     }
 
     var isTextHighlighted = false
@@ -210,26 +220,12 @@ class MessageModel
     private val chatMessageListener = object : ChatMessageListenerStub() {
         @WorkerThread
         override fun onMsgStateChanged(message: ChatMessage, messageState: ChatMessage.State?) {
+            Log.i("$TAG Chat message [${message.messageId}] state changed to [$messageState]")
             if (messageState != ChatMessage.State.FileTransferDone && messageState != ChatMessage.State.FileTransferInProgress) {
                 statusIcon.postValue(LinphoneUtils.getChatIconResId(chatMessage.state))
 
                 if (messageState == ChatMessage.State.Displayed) {
                     isRead = chatMessage.isRead
-                }
-            } else if (messageState == ChatMessage.State.FileTransferDone) {
-                Log.i("$TAG File transfer is done")
-                transferringFileModel?.updateTransferProgress(-1)
-                transferringFileModel = null
-                if (!allFilesDownloaded) {
-                    computeContentsList()
-                } else {
-                    for (content in message.contents) {
-                        if (content.isVoiceRecording) {
-                            Log.i("$TAG File transfer done, updating voice record info")
-                            computeVoiceRecordContent(content)
-                            break
-                        }
-                    }
                 }
             }
             isInError.postValue(messageState == ChatMessage.State.NotDelivered)
@@ -238,22 +234,7 @@ class MessageModel
         @WorkerThread
         override fun onFileTransferTerminated(message: ChatMessage, content: Content) {
             Log.i("$TAG File [${content.name}] from message [${message.messageId}] transfer terminated")
-
-            // Never do auto media export for ephemeral messages!
-            if (corePreferences.makePublicMediaFilesDownloaded && !message.isEphemeral) {
-                val path = content.filePath
-                if (path.isNullOrEmpty()) return
-
-                val mime = "${content.type}/${content.subtype}"
-                val mimeType = FileUtils.getMimeType(mime)
-                when (mimeType) {
-                    FileUtils.MimeType.Image, FileUtils.MimeType.Video, FileUtils.MimeType.Audio -> {
-                        Log.i("$TAG Exporting file path [$path] to the native media gallery")
-                        onFileToExportToNativeGallery?.invoke(path)
-                    }
-                    else -> {}
-                }
-            }
+            fileTransferTerminated(message, content)
         }
 
         @WorkerThread
@@ -266,7 +247,7 @@ class MessageModel
 
         @WorkerThread
         override fun onReactionRemoved(message: ChatMessage, address: Address) {
-            Log.i("$TAG A reaction was removed for message with ID [$id]")
+            Log.i("$TAG A reaction from [${address.asStringUriOnly()}] was removed for message with ID [$id]")
             updateReactionsList()
         }
 
@@ -301,6 +282,21 @@ class MessageModel
             Log.d("$TAG Ephemeral timer started")
             updateEphemeralTimer()
         }
+
+        @WorkerThread
+        override fun onContentEdited(message: ChatMessage) {
+            Log.i("$TAG Message [${message.messageId}] has been edited")
+            hasBeenEdited.postValue(true)
+            computeContentsList()
+        }
+
+        @WorkerThread
+        override fun onRetracted(message: ChatMessage) {
+            Log.i("$TAG Content(s) of the message have been deleted by it's sender")
+            hasBeenEdited.postValue(false)
+            hasBeenRetracted.postValue(true)
+            computeContentsList()
+        }
     }
 
     init {
@@ -318,9 +314,14 @@ class MessageModel
         statusIcon.postValue(LinphoneUtils.getChatIconResId(chatMessage.state))
         updateReactionsList()
 
+        hasBeenEdited.postValue(chatMessage.isEdited && !chatMessage.isRetracted)
+        hasBeenRetracted.postValue(chatMessage.isRetracted)
         computeContentsList()
-        if (isReply) {
+        if (chatMessage.isReply) {
+            // Wait to see if original message is found before setting isReply to true
             computeReplyInfo()
+        } else {
+            isReply.postValue(false)
         }
 
         coreContext.postOnMainThread {
@@ -359,6 +360,7 @@ class MessageModel
                 val reaction = chatMessage.createReaction(emoji)
                 reaction.send()
             }
+            updateReactionsList()
             dismissLongPressMenuEvent.postValue(Event(true))
         }
     }
@@ -410,11 +412,22 @@ class MessageModel
         avatarModel.postValue(avatar)
     }
 
+    @AnyThread
+    fun getRawTextContent(): String {
+        return rawTextContent
+    }
+
     @WorkerThread
     private fun computeContentsList() {
         Log.d("$TAG Computing message contents list")
         text.postValue(Spannable.Factory.getInstance().newSpannable(""))
         filesList.value.orEmpty().forEach(FileModel::destroy)
+
+        if (chatMessage.isRetracted) {
+            meetingFound.postValue(false)
+            isVoiceRecord.postValue(false)
+            isTextEmoji.postValue(false)
+        }
 
         var displayableContentFound = false
         var contentIndex = 0
@@ -422,7 +435,9 @@ class MessageModel
 
         val contents = chatMessage.contents
         allFilesDownloaded = true
-        val exactly4Contents = contents.size == 4
+        val exactly4Contents = contents.count {
+            it.isFile || it.isFileTransfer
+        } == 4
 
         for (content in contents) {
             val isFileEncrypted = content.isFileEncrypted
@@ -561,9 +576,10 @@ class MessageModel
 
     @WorkerThread
     private fun downloadContent(model: FileModel, content: Content) {
-        Log.d("$TAG Starting downloading content for file [${model.fileName}]")
+        Log.i("$TAG Start downloading content for file [${model.fileName}]")
 
-        if (content.filePath.orEmpty().isEmpty()) {
+        val path = content.filePath.orEmpty()
+        if (path.isEmpty()) {
             val contentName = content.name
             if (contentName != null) {
                 val isImage = FileUtils.isExtensionImage(contentName)
@@ -579,6 +595,8 @@ class MessageModel
             } else {
                 Log.e("$TAG Content name is null, can't download it!")
             }
+        } else {
+            Log.e("$TAG We already have a file path [$path] for this content, doing nothing")
         }
     }
 
@@ -620,7 +638,9 @@ class MessageModel
             ourReactionIndex.postValue(-1)
         }
 
-        reactions.postValue(reactionsList)
+        if (reactionsList != reactions.value) {
+            reactions.postValue(reactionsList)
+        }
     }
 
     @WorkerThread
@@ -646,39 +666,33 @@ class MessageModel
             val avatarModel = coreContext.contactsManager.getContactAvatarModelForAddress(from)
             replyTo.postValue(avatarModel.contactName ?: LinphoneUtils.getDisplayName(from))
             replyText.postValue(LinphoneUtils.getFormattedTextDescribingMessage(replyMessage))
+            isReply.postValue(true)
         } else {
-            Log.e("$TAG Failed to find the reply message from ID [${chatMessage.replyMessageId}]")
+            Log.w("$TAG Failed to find the reply message from ID [${chatMessage.replyMessageId}]")
+            isReply.postValue(false)
         }
     }
 
     @WorkerThread
     private fun computeTextContent(content: Content, highlight: String) {
-        val textContent = content.utf8Text.orEmpty().trim()
-        val spannableBuilder = SpannableStringBuilder(textContent)
+        rawTextContent = content.utf8Text.orEmpty().trim()
+        val spannableBuilder = SpannableStringBuilder(rawTextContent)
 
-        // Check for search
-        if (highlight.isNotEmpty()) {
-            val indexStart = textContent.indexOf(highlight, 0, ignoreCase = true)
-            if (indexStart >= 0) {
-                isTextHighlighted = true
-                val indexEnd = indexStart + highlight.length
-                spannableBuilder.setSpan(
-                    StyleSpan(Typeface.BOLD),
-                    indexStart,
-                    indexEnd,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
+        val emojiOnly = AppUtils.isTextOnlyContainsEmoji(rawTextContent)
+        isTextEmoji.postValue(emojiOnly)
+        if (emojiOnly) {
+            text.postValue(spannableBuilder)
+            return
         }
 
         // Check for mentions
         val chatRoom = chatMessage.chatRoom
-        val matcher = Pattern.compile(MENTION_REGEXP).matcher(textContent)
+        val matcher = Pattern.compile(MENTION_REGEXP).matcher(rawTextContent)
         var offset = 0
         while (matcher.find()) {
             val start = matcher.start()
             val end = matcher.end()
-            val source = textContent.subSequence(start + 1, end) // +1 to remove @
+            val source = rawTextContent.subSequence(start + 1, end) // +1 to remove @
             Log.d("$TAG Found mention [$source]")
 
             // Find address matching username
@@ -725,6 +739,13 @@ class MessageModel
                     start + offset + displayName.length + 1,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
+                // Change color
+                spannableBuilder.setSpan(
+                    ForegroundColorSpan(AppUtils.getColorInt(R.color.orange_main_500)),
+                    start + offset,
+                    start + offset + displayName.length + 1,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
                 offset += displayName.length - source.length
             }
         }
@@ -760,6 +781,21 @@ class MessageModel
                 )
                 .build(spannableBuilder)
         )
+
+        // Check for search
+        if (highlight.isNotEmpty()) {
+            val indexStart = rawTextContent.indexOf(highlight, 0, ignoreCase = true)
+            if (indexStart >= 0) {
+                isTextHighlighted = true
+                val indexEnd = indexStart + highlight.length
+                spannableBuilder.setSpan(
+                    StyleSpan(Typeface.BOLD),
+                    indexStart,
+                    indexEnd,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
     }
 
     @WorkerThread
@@ -1018,5 +1054,38 @@ class MessageModel
         Log.i(
             "$TAG Found voice record with path [$voiceRecordPath] and duration [$formattedDuration]"
         )
+    }
+
+    @WorkerThread
+    private fun fileTransferTerminated(message: ChatMessage, content: Content) {
+        // Never do auto media export for ephemeral messages!
+        if (corePreferences.makePublicMediaFilesDownloaded && !message.isEphemeral) {
+            val path = content.filePath
+            if (path.isNullOrEmpty()) return
+
+            val mime = "${content.type}/${content.subtype}"
+            val mimeType = FileUtils.getMimeType(mime)
+            when (mimeType) {
+                FileUtils.MimeType.Image, FileUtils.MimeType.Video, FileUtils.MimeType.Audio -> {
+                    Log.i("$TAG Exporting file path [$path] to the native media gallery")
+                    onFileToExportToNativeGallery?.invoke(path)
+                }
+                else -> {}
+            }
+        }
+
+        transferringFileModel?.updateTransferProgress(-1)
+        transferringFileModel = null
+        if (!allFilesDownloaded) {
+            computeContentsList()
+        } else {
+            for (content in message.contents) {
+                if (content.isVoiceRecording) {
+                    Log.i("$TAG File transfer done, updating voice record info")
+                    computeVoiceRecordContent(content)
+                    break
+                }
+            }
+        }
     }
 }

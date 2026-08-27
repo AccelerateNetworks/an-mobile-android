@@ -35,10 +35,11 @@ class ConversationContactOrSuggestionModel
     val conversationId: String = "",
     conversationSubject: String? = null,
     val friend: Friend? = null,
-    val defaultAccountDomain: String? = null,
     private val onClicked: ((Address) -> Unit)? = null
 ) {
     val id = friend?.refKey ?: address.asStringUriOnly().hashCode()
+
+    val isFriend = friend != null
 
     val starred = friend?.starred == true
 
@@ -49,13 +50,7 @@ class ConversationContactOrSuggestionModel
             address.username ?: address.domain.orEmpty()
         }
 
-    // Hide SIP address and only show username for suggestions
-    // on the same domain as the currently selected account
-    val sipUri = if (!defaultAccountDomain.isNullOrEmpty() && defaultAccountDomain == address.domain) {
-        address.username
-    } else {
-        address.asStringUriOnly()
-    }
+    val sipUri = LinphoneUtils.getDisplayAddress(address)
 
     val initials = AppUtils.getInitials(conversationSubject ?: name)
 

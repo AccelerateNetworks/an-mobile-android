@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AccelerateNetworks: grey variant of secondary_button_background, used by "Login with URL" -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false"
+        android:drawable="@drawable/shape_secondary_button_disabled_background" />
+    <item android:state_pressed="true"
+        android:drawable="@drawable/shape_secondary_gray_button_pressed_background" />
+    <item android:state_hovered="true"
+        android:drawable="@drawable/shape_secondary_gray_button_pressed_background" />
+    <item
+        android:drawable="@drawable/shape_secondary_gray_button_background" />
+</selector>

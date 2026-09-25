@@ -29,6 +29,12 @@
         tools:layout="@layout/assistant_qr_code_scanner_fragment" />
 
     <fragment
+        android:id="@+id/loginWithUrlFragment"
+        android:name="org.linphone.ui.assistant.fragment.LoginWithUrlFragment"
+        android:label="LoginWithUrlFragment"
+        tools:layout="@layout/assistant_login_with_url_fragment" />
+
+    <fragment
         android:id="@+id/thirdPartySipAccountLoginFragment"
         android:name="org.linphone.ui.assistant.fragment.ThirdPartySipAccountLoginFragment"
         android:label="ThirdPartySipAccountLoginFragment"
@@ -111,6 +117,15 @@
         <action
             android:id="@+id/action_landingFragment_to_qrCodeScannerFragment"
             app:destination="@id/qrCodeScannerFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right"
+            app:launchSingleTop="true" />
+
+        <action
+            android:id="@+id/action_landingFragment_to_loginWithUrlFragment"
+            app:destination="@id/loginWithUrlFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"

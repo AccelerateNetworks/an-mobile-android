@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:bind="http://schemas.android.com/tools">
+
+    <data>
+        <import type="android.view.View" />
+        <variable
+            name="backClickListener"
+            type="View.OnClickListener" />
+        <variable
+            name="viewModel"
+            type="org.linphone.ui.assistant.viewmodel.LoginWithUrlViewModel" />
+    </data>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/color_main2_000">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    style="@style/icon_top_bar_button_style"
+                    android:id="@+id/back"
+                    android:onClick="@{backClickListener}"
+                    android:layout_width="@dimen/top_bar_height"
+                    android:layout_height="@dimen/top_bar_height"
+                    android:src="@drawable/caret_left"
+                    android:contentDescription="@string/content_description_go_back_icon"
+                    app:tint="?attr/color_main2_500"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"/>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/assistant_page_title_style"
+                    android:id="@+id/title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/assistant_login_with_url"
+                    android:textColor="?attr/color_text"
+                    app:layout_constraintTop_toTopOf="@id/back"
+                    app:layout_constraintBottom_toBottomOf="@id/back"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/header_style"
+                    android:id="@+id/url_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="38dp"
+                    android:layout_marginEnd="16dp"
+                    android:labelFor="@id/url"
+                    android:text="@string/assistant_login_with_url_label"
+                    app:layout_constraintTop_toBottomOf="@id/title"
+                    app:layout_constraintStart_toStartOf="@id/url"/>
+
+                <androidx.appcompat.widget.AppCompatEditText
+                    style="@style/default_text_style"
+                    android:id="@+id/url"
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:text="@={viewModel.url}"
+                    android:textSize="14sp"
+                    android:textColor="?attr/color_main2_600"
+                    android:background="@drawable/edit_text_background"
+                    android:inputType="textUri|textNoSuggestions"
+                    android:imeOptions="actionGo"
+                    android:maxLines="1"
+                    android:hint="@string/assistant_login_with_url_hint"
+                    app:layout_constraintWidth_max="@dimen/text_input_max_width"
+                    app:layout_constraintTop_toBottomOf="@id/url_label"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"/>
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/primary_button_label_style"
+                    android:id="@+id/login"
+                    android:onClick="@{() -> viewModel.login()}"
+                    android:enabled="@{viewModel.loginEnabled, default=false}"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:text="@string/assistant_account_login"
+                    app:layout_constraintWidth_max="@dimen/button_max_width"
+                    app:layout_constraintTop_toBottomOf="@id/url"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <ImageView
+                    android:id="@+id/mountains"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/screen_bottom_margin"
+                    android:src="@drawable/mountains"
+                    android:adjustViewBounds="true"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="@null"
+                    app:layout_constraintVertical_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/login"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:tint="?attr/color_main1_500" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </ScrollView>
+
+        <include
+            layout="@layout/operation_in_progress"
+            bind:visibility="@{viewModel.provisioningInProgress}" />
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+</layout>

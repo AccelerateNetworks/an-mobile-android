@@ -66,25 +66,36 @@ class LinphoneUtils {
         const val RECORDING_MKV_FILE_EXTENSION = ".mkv"
         const val RECORDING_SMFF_FILE_EXTENSION = ".smff"
 
+        // AccelerateNetworks: shared by the QR code scanner, the linphone-config: intent handler and the
+        // assistant's login-with-URL field, kept in sync with iOS's LinphoneUtils.getRemoteProvisioningUrl.
+        // Accepts linphone-config:https://host/..., linphone-config://host/..., linphone-config://https://host/...,
+        // linphone-config:file://..., a plain http(s) URL and a bare host, all case-insensitively.
         @AnyThread
         fun getRemoteProvisioningUrlFromUri(uri: String): String? {
+            var url = uri.trim()
+
             val linphoneScheme = "linphone-config:"
-            return if (uri.startsWith(linphoneScheme)) {
-                val remoteConfigUri = uri.substring(linphoneScheme.length)
-                val url = when {
-                    remoteConfigUri.startsWith("http://") || remoteConfigUri.startsWith("https://") -> remoteConfigUri
-                    remoteConfigUri.startsWith("file://") -> remoteConfigUri
-                    remoteConfigUri.startsWith("//") -> "https:$remoteConfigUri"
-                    else -> "https://$remoteConfigUri"
-                }
-                url
-            } else {
-                val isValidUrl = Patterns.WEB_URL.matcher(uri).matches()
-                if (!isValidUrl) {
-                    return null
-                }
-                uri
+            if (url.startsWith(linphoneScheme, ignoreCase = true)) {
+                url = url.substring(linphoneScheme.length).removePrefix("//")
             }
+
+            // linphone-config://https://host parses with "https" as the host and an empty port, which
+            // can come back canonicalised to linphone-config://https//host: put the colon back.
+            url = url.replaceFirst(Regex("^(https?)//", RegexOption.IGNORE_CASE), "\$1://")
+
+            val scheme = Regex("^([a-z][a-z0-9+.-]*)://", RegexOption.IGNORE_CASE)
+                .find(url)?.groupValues?.get(1)?.lowercase()
+            when (scheme) {
+                null -> url = "https://$url"
+                "file" -> return if (url.length > "file://".length) url else null
+                "http", "https" -> {}
+                else -> return null
+            }
+
+            if (!Patterns.WEB_URL.matcher(url).matches()) {
+                return null
+            }
+            return url
         }
 
         @WorkerThread

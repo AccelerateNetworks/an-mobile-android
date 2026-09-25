@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AccelerateNetworks: grey variant of secondary_button_label_color, used by "Login with URL" -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false"
+        android:color="?attr/color_bottom_sheet_disabled_menu" />
+    <item android:state_pressed="true"
+        android:color="?attr/color_on_main" />
+    <item android:state_hovered="true"
+        android:color="?attr/color_on_main" />
+    <item
+        android:color="@color/gray_main2_500"/>
+</selector>

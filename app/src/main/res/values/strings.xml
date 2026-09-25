@@ -157,6 +157,10 @@
     <string name="assistant_account_login">Login</string>
     <string name="assistant_scan_qr_code">Scan QR code</string>
     <string name="assistant_qr_code_invalid_toast">Invalid QR code!</string>
+    <string name="assistant_login_with_url">Login with URL</string>
+    <string name="assistant_login_with_url_label">Provisioning URL</string>
+    <string name="assistant_login_with_url_hint" translatable="false">https://</string>
+    <string name="assistant_login_with_url_invalid_toast">Invalid URL!</string>
     <string name="assistant_login_third_party_sip_account">Use a third party SIP account</string>
     <string name="assistant_login_third_party_sip_account_title">Third party SIP account</string>
     <string name="assistant_login_using_single_sign_on">Single sign on</string>

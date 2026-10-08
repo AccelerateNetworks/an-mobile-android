@@ -793,6 +793,10 @@ class MainActivity : GenericActivity() {
         val url = ProvisioningUrl.parse(uri)
         if (url == null) {
             Log.e("$TAG Couldn't parse URI [$uri] into a valid remote provisioning URL, aborting")
+            showRedToast(
+                getString(R.string.remote_provisioning_failed_bad_uri_toast),
+                R.drawable.warning_circle
+            )
             return
         }
 

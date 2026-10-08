@@ -282,12 +282,14 @@ class CoreContext
             message: String?
         ) {
             Log.i("$TAG Configuring state changed [$status], message is [$message]")
+            // Read before a rollback replaces it, the failure toast depends on it
+            val provisioningUri = core.provisioningUri
             if (corePreferences.provisioningRollbackPending) {
                 when (status) {
                     ConfiguringState.Failed -> {
                         // Passing null disables remote provisioning, an empty string would throw
                         val previous = corePreferences.provisioningRollbackUri.takeIf { it.isNotEmpty() }
-                        Log.w("$TAG Remote provisioning from [${core.provisioningUri}] failed, restoring [$previous]")
+                        Log.w("$TAG Remote provisioning from [$provisioningUri] failed, restoring [$previous]")
                         core.provisioningUri = previous
                         clearProvisioningRollback()
                     }
@@ -335,7 +337,7 @@ class CoreContext
                 showRedToastEvent.postValue(
                     Event(
                         Pair(
-                            ProvisioningUrl.getProvisioningFailureMessage(message),
+                            ProvisioningUrl.getProvisioningFailureMessage(message, provisioningUri),
                             org.linphone.R.drawable.warning_circle
                         )
                     )

@@ -64,17 +64,25 @@ object ProvisioningUrl {
         return if (isValid(url)) url else null
     }
 
-    /** Maps the message liblinphone passes along with ConfiguringState.Failed to a user-facing string. */
+    /**
+     * Maps the message liblinphone passes along with ConfiguringState.Failed to a user-facing string.
+     * [uri] is the provisioning URI that failed, needed because a file:// target that can't be
+     * loaded is also reported as "Bad URI".
+     */
     @StringRes
-    fun getProvisioningFailureMessage(message: String?): Int {
+    fun getProvisioningFailureMessage(message: String?, uri: String?): Int {
         return when (message?.trim()?.lowercase(Locale.ROOT)) {
-            null, "" -> R.string.remote_provisioning_config_failed_toast
-            "bad uri" -> R.string.remote_provisioning_failed_bad_uri_toast
+            "bad uri" -> if (uri?.startsWith("file://") == true) {
+                R.string.remote_provisioning_failed_file_unreadable_toast
+            } else {
+                R.string.remote_provisioning_failed_bad_uri_toast
+            }
             "http error", "http io error" -> R.string.remote_provisioning_failed_network_toast
             "http timeout" -> R.string.remote_provisioning_failed_timeout_toast
             "http auth requested" -> R.string.remote_provisioning_failed_auth_toast
-            // Anything else is the XML parser's error text
-            else -> R.string.remote_provisioning_failed_invalid_config_toast
+            "invalid request" -> R.string.remote_provisioning_failed_invalid_request_toast
+            // Anything else (no message, or the XML parser's error text) can't be pinned on a single cause
+            else -> R.string.remote_provisioning_config_failed_toast
         }
     }
 }

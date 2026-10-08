@@ -962,14 +962,13 @@ class CoreContext
     }
 
     /**
-     * Sets [url] as the provisioning URI and restarts the Core to fetch it.
+     * Writes [url] as the provisioning URI, to be fetched on the next Core start.
      * misc/config-uri is written before the fetch, so the previous value is
-     * restored if the attempt fails, otherwise a bad URL is retried on every start.
-     * Must not be called from inside a Core callback, as it stops the Core.
-     * Returns false without restarting the Core if liblinphone can't parse [url].
+     * kept aside and restored if that fetch fails, otherwise a bad URL is retried on every start.
+     * Returns false, and writes nothing, if liblinphone can't parse [url].
      */
     @WorkerThread
-    fun applyRemoteProvisioning(url: String): Boolean {
+    fun setRemoteProvisioningUri(url: String): Boolean {
         val previous = core.provisioningUri
         // Armed before the URI is written so that it's never on disk without its rollback.
         // If an attempt is already pending, keep the URI from before it, the pending one isn't confirmed
@@ -986,25 +985,54 @@ class CoreContext
             if (armed) {
                 clearProvisioningRollback()
             }
-            showRedToastEvent.postValue(
-                Event(
-                    Pair(
-                        org.linphone.R.string.remote_provisioning_failed_bad_uri_toast,
-                        org.linphone.R.drawable.warning_circle
-                    )
-                )
-            )
+            showInvalidProvisioningUrlToast()
             return false
         }
 
         // Flush now, the process may well be killed while the fetch is in flight
         core.config.sync()
         Log.i(
-            "$TAG Remote provisioning URI set to [$url] (rollback is [${corePreferences.provisioningRollbackUri}]), restarting Core"
+            "$TAG Remote provisioning URI set to [$url] (rollback is [${corePreferences.provisioningRollbackUri}])"
         )
+        return true
+    }
+
+    /**
+     * Same as [setRemoteProvisioningUri], then restarts the Core to fetch it now.
+     * Must not be called from inside a Core callback, as it stops the Core.
+     * Returns false without restarting the Core if liblinphone can't parse [url].
+     */
+    @WorkerThread
+    fun applyRemoteProvisioning(url: String): Boolean {
+        if (!setRemoteProvisioningUri(url)) {
+            return false
+        }
+
+        Log.i("$TAG Restarting Core to fetch remote provisioning")
         core.stop()
         core.start()
         return true
+    }
+
+    @WorkerThread
+    fun disableRemoteProvisioning() {
+        Log.i("$TAG Disabling remote provisioning")
+        // Passing null disables remote provisioning, an empty string would throw
+        core.provisioningUri = null
+        // Nothing will be fetched anymore, so nothing to roll back to
+        clearProvisioningRollback()
+    }
+
+    @AnyThread
+    fun showInvalidProvisioningUrlToast() {
+        showRedToastEvent.postValue(
+            Event(
+                Pair(
+                    org.linphone.R.string.remote_provisioning_failed_bad_uri_toast,
+                    org.linphone.R.drawable.warning_circle
+                )
+            )
+        )
     }
 
     @WorkerThread

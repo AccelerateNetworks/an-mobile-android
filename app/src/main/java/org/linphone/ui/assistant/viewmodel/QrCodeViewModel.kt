@@ -31,7 +31,7 @@ import org.linphone.ui.GenericViewModel
 import org.linphone.utils.Event
 import org.linphone.R
 import org.linphone.core.GlobalState
-import org.linphone.utils.LinphoneUtils
+import org.linphone.utils.ProvisioningUrl
 
 class QrCodeViewModel
     @UiThread
@@ -76,7 +76,7 @@ class QrCodeViewModel
             if (result == null) {
                 showRedToast(R.string.assistant_qr_code_invalid_toast, R.drawable.warning_circle)
             } else {
-                val url = LinphoneUtils.getRemoteProvisioningUrlFromUri(result)
+                val url = ProvisioningUrl.parse(result)
                 if (url == null) {
                     Log.e("$TAG The content of the QR Code [$result] doesn't seem to be a valid web URL")
                     showRedToast(R.string.assistant_qr_code_invalid_toast, R.drawable.warning_circle)

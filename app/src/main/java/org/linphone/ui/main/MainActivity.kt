@@ -74,6 +74,7 @@ import org.linphone.utils.DialogUtils
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import org.linphone.utils.LinphoneUtils
+import org.linphone.utils.ProvisioningUrl
 import androidx.core.content.edit
 import org.linphone.ui.sso.SingleSignOnActivity
 
@@ -789,7 +790,7 @@ class MainActivity : GenericActivity() {
 
     private fun handleConfigIntent(uri: String) {
         Log.i("$TAG Trying to parse config intent [$uri] as remote provisioning URL")
-        val url = LinphoneUtils.getRemoteProvisioningUrlFromUri(uri)
+        val url = ProvisioningUrl.parse(uri)
         if (url == null) {
             Log.e("$TAG Couldn't parse URI [$uri] into a valid remote provisioning URL, aborting")
             return

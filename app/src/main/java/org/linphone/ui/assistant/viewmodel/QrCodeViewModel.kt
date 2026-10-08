@@ -89,14 +89,9 @@ class QrCodeViewModel
                 core.nativePreviewWindowId = null
                 core.isVideoPreviewEnabled = false
                 core.isQrcodeVideoPreviewEnabled = false
-                core.provisioningUri = url
 
-                coreContext.postOnCoreThread { core ->
-                    Log.i("$TAG Stopping Core")
-                    core.stop()
-                    Log.i("$TAG Core has been stopped, restarting it")
-                    core.start()
-                    Log.i("$TAG Core has been restarted")
+                coreContext.postOnCoreThread {
+                    coreContext.applyRemoteProvisioning(url)
                 }
             }
         }

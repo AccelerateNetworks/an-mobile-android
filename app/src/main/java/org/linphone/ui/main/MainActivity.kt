@@ -562,7 +562,7 @@ class MainActivity : GenericActivity() {
             }
             Intent.ACTION_VIEW -> {
                 val uri = intent.data?.toString() ?: ""
-                if (uri.startsWith("linphone-config:")) {
+                if (ProvisioningUrl.isConfigUri(uri)) {
                     handleConfigIntent(uri)
                 } else {
                     handleCallIntent(intent)
@@ -796,13 +796,9 @@ class MainActivity : GenericActivity() {
             return
         }
 
-        coreContext.postOnCoreThread { core ->
-            core.provisioningUri = url
-            Log.w("$TAG Remote provisioning URL set to [$url], restarting Core now")
-            core.stop()
-            Log.i("$TAG Core has been stopped, let's restart it")
-            core.start()
-            Log.i("$TAG Core has been restarted")
+        coreContext.postOnCoreThread {
+            Log.w("$TAG Applying remote provisioning URL [$url]")
+            coreContext.applyRemoteProvisioning(url)
         }
     }
 

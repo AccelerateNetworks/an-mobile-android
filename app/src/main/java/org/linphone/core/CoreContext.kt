@@ -131,6 +131,10 @@ class CoreContext
         MutableLiveData()
     }
 
+    // Provisioning URI to restore if the pending remote provisioning attempt fails
+    private var previousProvisioningUri: String? = null
+    private var provisioningRollbackPending = false
+
     private var filesToExportToNativeMediaGallery = arrayListOf<String>()
     val filesToExportToNativeMediaGalleryEvent: MutableLiveData<Event<List<String>>> by lazy {
         MutableLiveData()
@@ -281,6 +285,19 @@ class CoreContext
             message: String?
         ) {
             Log.i("$TAG Configuring state changed [$status], message is [$message]")
+            // Restarting the Core reports Skipped before the fetch itself has finished, wait for the outcome
+            if (provisioningRollbackPending && status != ConfiguringState.Skipped) {
+                if (status == ConfiguringState.Failed) {
+                    // Passing null disables remote provisioning, an empty string would throw
+                    val previous = previousProvisioningUri?.takeIf { it.isNotEmpty() }
+                    Log.w("$TAG Remote provisioning from [${core.provisioningUri}] failed, restoring [$previous]")
+                    core.provisioningUri = previous
+                }
+                // On success the served payload sets misc/config-uri itself, nothing to restore
+                previousProvisioningUri = null
+                provisioningRollbackPending = false
+            }
+
             if (status == ConfiguringState.Successful) {
                 val accounts = core.accountList
                 if (core.defaultAccount == null && accounts.isNotEmpty()) {
@@ -930,6 +947,25 @@ class CoreContext
                 core.consolidatedPresence = ConsolidatedPresence.Offline
             }
         }
+    }
+
+    /**
+     * Sets [url] as the provisioning URI and restarts the Core to fetch it.
+     * misc/config-uri is written before the fetch, so the previous value is
+     * restored if the attempt fails, otherwise a bad URL is retried on every start.
+     * Must not be called from inside a Core callback, as it stops the Core.
+     */
+    @WorkerThread
+    fun applyRemoteProvisioning(url: String) {
+        if (!provisioningRollbackPending) {
+            // Keep the value from before the first attempt if another one is already in flight
+            previousProvisioningUri = core.provisioningUri
+            provisioningRollbackPending = true
+        }
+        Log.i("$TAG Setting remote provisioning URI to [$url] (previous was [$previousProvisioningUri]), restarting Core")
+        core.provisioningUri = url
+        core.stop()
+        core.start()
     }
 
     @WorkerThread

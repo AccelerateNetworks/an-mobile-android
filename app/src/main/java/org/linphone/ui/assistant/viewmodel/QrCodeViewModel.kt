@@ -91,7 +91,10 @@ class QrCodeViewModel
                 core.isQrcodeVideoPreviewEnabled = false
 
                 coreContext.postOnCoreThread {
-                    coreContext.applyRemoteProvisioning(url)
+                    if (!coreContext.applyRemoteProvisioning(url)) {
+                        // Core wasn't restarted so no configuring status will follow, restart video capture
+                        onErrorEvent.postValue(Event(true))
+                    }
                 }
             }
         }

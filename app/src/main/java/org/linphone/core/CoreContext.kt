@@ -956,18 +956,35 @@ class CoreContext
      * misc/config-uri is written before the fetch, so the previous value is
      * restored if the attempt fails, otherwise a bad URL is retried on every start.
      * Must not be called from inside a Core callback, as it stops the Core.
+     * Returns false without restarting the Core if liblinphone can't parse [url].
      */
     @WorkerThread
-    fun applyRemoteProvisioning(url: String) {
+    fun applyRemoteProvisioning(url: String): Boolean {
+        val previous = core.provisioningUri
+        // The property setter drops the status; on -1 nothing is written, and restarting
+        // would re-provision from the previous URI and report it as this one succeeding
+        if (core.setProvisioningUri(url) != 0) {
+            Log.e("$TAG liblinphone couldn't parse remote provisioning URI [$url], keeping [$previous]")
+            showRedToastEvent.postValue(
+                Event(
+                    Pair(
+                        org.linphone.R.string.remote_provisioning_failed_bad_uri_toast,
+                        org.linphone.R.drawable.warning_circle
+                    )
+                )
+            )
+            return false
+        }
+
         if (!provisioningRollbackPending) {
             // Keep the value from before the first attempt if another one is already in flight
-            previousProvisioningUri = core.provisioningUri
+            previousProvisioningUri = previous
             provisioningRollbackPending = true
         }
-        Log.i("$TAG Setting remote provisioning URI to [$url] (previous was [$previousProvisioningUri]), restarting Core")
-        core.provisioningUri = url
+        Log.i("$TAG Remote provisioning URI set to [$url] (previous was [$previousProvisioningUri]), restarting Core")
         core.stop()
         core.start()
+        return true
     }
 
     @WorkerThread

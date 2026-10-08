@@ -19,7 +19,9 @@
  */
 package org.linphone.utils
 
+import androidx.annotation.StringRes
 import java.util.Locale
+import org.linphone.R
 
 /**
  * Remote provisioning URL grammar shared with linphone-ios.
@@ -60,5 +62,19 @@ object ProvisioningUrl {
     fun parse(uri: String): String? {
         val url = normalize(uri)
         return if (isValid(url)) url else null
+    }
+
+    /** Maps the message liblinphone passes along with ConfiguringState.Failed to a user-facing string. */
+    @StringRes
+    fun getProvisioningFailureMessage(message: String?): Int {
+        return when (message?.trim()?.lowercase(Locale.ROOT)) {
+            null, "" -> R.string.remote_provisioning_config_failed_toast
+            "bad uri" -> R.string.remote_provisioning_failed_bad_uri_toast
+            "http error", "http io error" -> R.string.remote_provisioning_failed_network_toast
+            "http timeout" -> R.string.remote_provisioning_failed_timeout_toast
+            "http auth requested" -> R.string.remote_provisioning_failed_auth_toast
+            // Anything else is the XML parser's error text
+            else -> R.string.remote_provisioning_failed_invalid_config_toast
+        }
     }
 }

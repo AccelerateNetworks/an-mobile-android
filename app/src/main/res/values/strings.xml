@@ -142,6 +142,11 @@
     <string name="media_playback_low_volume_warning_toast">Media volume is low, you may not hear anything!</string>
     <string name="remote_provisioning_config_applied_toast">Configuration successfully applied</string>
     <string name="remote_provisioning_config_failed_toast">Error while trying to download and apply remote configuration</string>
+    <string name="remote_provisioning_failed_bad_uri_toast">Invalid remote configuration URL</string>
+    <string name="remote_provisioning_failed_network_toast">Couldn\'t download remote configuration, check your connection</string>
+    <string name="remote_provisioning_failed_timeout_toast">Remote configuration download timed out</string>
+    <string name="remote_provisioning_failed_auth_toast">Remote configuration server requires authentication</string>
+    <string name="remote_provisioning_failed_invalid_config_toast">Remote configuration file is invalid</string>
     <string name="media_player_generic_error_toast">Error trying to create media player</string>
 
     <!-- Assistant related string (account register / login / etc...) -->

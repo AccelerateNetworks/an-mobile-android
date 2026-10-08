@@ -60,6 +60,7 @@ import org.linphone.utils.AudioUtils
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import org.linphone.utils.LinphoneUtils
+import org.linphone.utils.ProvisioningUrl
 
 class CoreContext
     @UiThread
@@ -322,10 +323,11 @@ class CoreContext
                     )
                 )
             } else if (status == ConfiguringState.Failed) {
+                Log.e("$TAG Remote provisioning failed: [$message]")
                 showRedToastEvent.postValue(
                     Event(
                         Pair(
-                            org.linphone.R.string.remote_provisioning_config_failed_toast,
+                            ProvisioningUrl.getProvisioningFailureMessage(message),
                             org.linphone.R.drawable.warning_circle
                         )
                     )

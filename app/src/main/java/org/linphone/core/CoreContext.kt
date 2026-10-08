@@ -132,10 +132,6 @@ class CoreContext
         MutableLiveData()
     }
 
-    // Provisioning URI to restore if the pending remote provisioning attempt fails
-    private var previousProvisioningUri: String? = null
-    private var provisioningRollbackPending = false
-
     private var filesToExportToNativeMediaGallery = arrayListOf<String>()
     val filesToExportToNativeMediaGalleryEvent: MutableLiveData<Event<List<String>>> by lazy {
         MutableLiveData()
@@ -286,17 +282,29 @@ class CoreContext
             message: String?
         ) {
             Log.i("$TAG Configuring state changed [$status], message is [$message]")
-            // Restarting the Core reports Skipped before the fetch itself has finished, wait for the outcome
-            if (provisioningRollbackPending && status != ConfiguringState.Skipped) {
-                if (status == ConfiguringState.Failed) {
-                    // Passing null disables remote provisioning, an empty string would throw
-                    val previous = previousProvisioningUri?.takeIf { it.isNotEmpty() }
-                    Log.w("$TAG Remote provisioning from [${core.provisioningUri}] failed, restoring [$previous]")
-                    core.provisioningUri = previous
+            if (corePreferences.provisioningRollbackPending) {
+                when (status) {
+                    ConfiguringState.Failed -> {
+                        // Passing null disables remote provisioning, an empty string would throw
+                        val previous = corePreferences.provisioningRollbackUri.takeIf { it.isNotEmpty() }
+                        Log.w("$TAG Remote provisioning from [${core.provisioningUri}] failed, restoring [$previous]")
+                        core.provisioningUri = previous
+                        clearProvisioningRollback()
+                    }
+                    ConfiguringState.Successful -> {
+                        // The served payload sets misc/config-uri itself, nothing to restore
+                        clearProvisioningRollback()
+                    }
+                    else -> {
+                        // Skipped is also what liblinphone reports when the Core stops with a fetch in flight
+                        // (app killed, Core restarted), so the URI is still unconfirmed: keep the rollback
+                        // and let the outcome of its next fetch decide, unless there's nothing left to fetch
+                        if (core.provisioningUri.isNullOrEmpty()) {
+                            Log.i("$TAG Remote provisioning is disabled, dropping pending rollback")
+                            clearProvisioningRollback()
+                        }
+                    }
                 }
-                // On success the served payload sets misc/config-uri itself, nothing to restore
-                previousProvisioningUri = null
-                provisioningRollbackPending = false
             }
 
             if (status == ConfiguringState.Successful) {
@@ -961,10 +969,21 @@ class CoreContext
     @WorkerThread
     fun applyRemoteProvisioning(url: String): Boolean {
         val previous = core.provisioningUri
+        // Armed before the URI is written so that it's never on disk without its rollback.
+        // If an attempt is already pending, keep the URI from before it, the pending one isn't confirmed
+        val armed = !corePreferences.provisioningRollbackPending
+        if (armed) {
+            corePreferences.provisioningRollbackUri = previous.orEmpty()
+            corePreferences.provisioningRollbackPending = true
+        }
+
         // The property setter drops the status; on -1 nothing is written, and restarting
         // would re-provision from the previous URI and report it as this one succeeding
         if (core.setProvisioningUri(url) != 0) {
             Log.e("$TAG liblinphone couldn't parse remote provisioning URI [$url], keeping [$previous]")
+            if (armed) {
+                clearProvisioningRollback()
+            }
             showRedToastEvent.postValue(
                 Event(
                     Pair(
@@ -976,15 +995,21 @@ class CoreContext
             return false
         }
 
-        if (!provisioningRollbackPending) {
-            // Keep the value from before the first attempt if another one is already in flight
-            previousProvisioningUri = previous
-            provisioningRollbackPending = true
-        }
-        Log.i("$TAG Remote provisioning URI set to [$url] (previous was [$previousProvisioningUri]), restarting Core")
+        // Flush now, the process may well be killed while the fetch is in flight
+        core.config.sync()
+        Log.i(
+            "$TAG Remote provisioning URI set to [$url] (rollback is [${corePreferences.provisioningRollbackUri}]), restarting Core"
+        )
         core.stop()
         core.start()
         return true
+    }
+
+    @WorkerThread
+    private fun clearProvisioningRollback() {
+        corePreferences.provisioningRollbackPending = false
+        corePreferences.provisioningRollbackUri = ""
+        core.config.sync()
     }
 
     @WorkerThread

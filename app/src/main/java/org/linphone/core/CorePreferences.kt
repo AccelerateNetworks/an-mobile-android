@@ -68,6 +68,23 @@ class CorePreferences
             config.setBool("app", "first_6.0_launch", value)
         }
 
+    // Set while a remote provisioning URI has been applied but no fetch of it has succeeded or failed yet,
+    // stored here rather than in memory so the rollback survives the process being killed mid-fetch
+    @get:AnyThread @set:WorkerThread
+    var provisioningRollbackPending: Boolean
+        get() = config.getBool("app", "provisioning_rollback_pending", false)
+        set(value) {
+            config.setBool("app", "provisioning_rollback_pending", value)
+        }
+
+    // Provisioning URI to restore if the pending one fails, empty if there was none
+    @get:AnyThread @set:WorkerThread
+    var provisioningRollbackUri: String
+        get() = config.getString("app", "provisioning_rollback_uri", "").orEmpty()
+        set(value) {
+            config.setString("app", "provisioning_rollback_uri", value)
+        }
+
     @get:AnyThread @set:WorkerThread
     var linphoneConfigurationVersion: Int
         get() = config.getInt("app", "config_version", 52005)

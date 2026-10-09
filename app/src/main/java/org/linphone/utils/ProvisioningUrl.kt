@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2023 Belledonne Communications SARL.
+ * Copyright (c) 2026 Accelerate Networks.
  *
  * This file is part of linphone-android
  * (see https://www.linphone.org).
@@ -19,12 +19,13 @@
  */
 package org.linphone.utils
 
+import androidx.annotation.AnyThread
 import androidx.annotation.StringRes
 import java.util.Locale
 import org.linphone.R
 
 /**
- * Remote provisioning URL grammar shared with linphone-ios.
+ * Remote provisioning URL grammar, as specified in an-mobile-android#43.
  *
  * Diverges from upstream linphone-config:// workaround (7a6c3ff70), which
  * accepted http, schemeless and arbitrary-scheme URLs and never lowercased the
@@ -35,11 +36,7 @@ import org.linphone.R
 object ProvisioningUrl {
     const val CONFIG_SCHEME_PREFIX = "linphone-config:"
 
-    fun isConfigUri(uri: String): Boolean {
-        return uri.trim().startsWith(CONFIG_SCHEME_PREFIX, ignoreCase = true)
-    }
-
-    fun normalize(uri: String): String {
+    private fun normalize(uri: String): String {
         var url = uri.trim()
         if (url.startsWith(CONFIG_SCHEME_PREFIX, ignoreCase = true)) {
             url = url.substring(CONFIG_SCHEME_PREFIX.length)
@@ -54,11 +51,12 @@ object ProvisioningUrl {
         return url
     }
 
-    fun isValid(url: String): Boolean {
+    private fun isValid(url: String): Boolean {
         return url.startsWith("https://") || url.startsWith("file://")
     }
 
     /** Returns the normalised URL, or null if it isn't an acceptable provisioning URL. */
+    @AnyThread
     fun parse(uri: String): String? {
         val url = normalize(uri)
         return if (isValid(url)) url else null
@@ -69,6 +67,7 @@ object ProvisioningUrl {
      * [uri] is the provisioning URI that failed, needed because a file:// target that can't be
      * loaded is also reported as "Bad URI".
      */
+    @AnyThread
     @StringRes
     fun getProvisioningFailureMessage(message: String?, uri: String?): Int {
         return when (message?.trim()?.lowercase(Locale.ROOT)) {
@@ -82,7 +81,7 @@ object ProvisioningUrl {
             "http timeout" -> R.string.remote_provisioning_failed_timeout_toast
             "http auth requested" -> R.string.remote_provisioning_failed_auth_toast
             "invalid request" -> R.string.remote_provisioning_failed_invalid_request_toast
-            // liblinphone only sends the strings above, so anything else is the XML parser's error text
+            // What's left ("invalid xml", or the XML parser's own error text) means the served file couldn't be loaded
             else -> R.string.remote_provisioning_failed_invalid_config_toast
         }
     }

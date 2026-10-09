@@ -562,7 +562,8 @@ class MainActivity : GenericActivity() {
             }
             Intent.ACTION_VIEW -> {
                 val uri = intent.data?.toString() ?: ""
-                if (ProvisioningUrl.isConfigUri(uri)) {
+                // Matched on the prefix alone so rejected config links still reach handleConfigIntent and get reported
+                if (uri.trim().startsWith(ProvisioningUrl.CONFIG_SCHEME_PREFIX, ignoreCase = true)) {
                     handleConfigIntent(uri)
                 } else {
                     handleCallIntent(intent)

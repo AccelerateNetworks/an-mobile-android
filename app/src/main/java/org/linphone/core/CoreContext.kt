@@ -333,7 +333,6 @@ class CoreContext
                     )
                 )
             } else if (status == ConfiguringState.Failed) {
-                Log.e("$TAG Remote provisioning failed: [$message]")
                 showRedToastEvent.postValue(
                     Event(
                         Pair(

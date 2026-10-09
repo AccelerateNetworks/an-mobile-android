@@ -31,7 +31,7 @@ import org.linphone.ui.GenericViewModel
 import org.linphone.utils.Event
 import org.linphone.R
 import org.linphone.core.GlobalState
-import org.linphone.utils.LinphoneUtils
+import org.linphone.utils.ProvisioningUrl
 
 class QrCodeViewModel
     @UiThread
@@ -49,8 +49,8 @@ class QrCodeViewModel
         override fun onConfiguringStatus(core: Core, status: ConfiguringState, message: String?) {
             Log.i("$TAG Configuring state is [$status]")
             if (status == ConfiguringState.Failed) {
+                // CoreContext displays the failure toast
                 Log.e("$TAG Failure applying remote provisioning: $message")
-                showRedToast(R.string.remote_provisioning_config_failed_toast, R.drawable.warning_circle)
                 onErrorEvent.postValue(Event(true))
             }
         }
@@ -76,7 +76,7 @@ class QrCodeViewModel
             if (result == null) {
                 showRedToast(R.string.assistant_qr_code_invalid_toast, R.drawable.warning_circle)
             } else {
-                val url = LinphoneUtils.getRemoteProvisioningUrlFromUri(result)
+                val url = ProvisioningUrl.parse(result)
                 if (url == null) {
                     Log.e("$TAG The content of the QR Code [$result] doesn't seem to be a valid web URL")
                     showRedToast(R.string.assistant_qr_code_invalid_toast, R.drawable.warning_circle)
@@ -89,14 +89,12 @@ class QrCodeViewModel
                 core.nativePreviewWindowId = null
                 core.isVideoPreviewEnabled = false
                 core.isQrcodeVideoPreviewEnabled = false
-                core.provisioningUri = url
 
-                coreContext.postOnCoreThread { core ->
-                    Log.i("$TAG Stopping Core")
-                    core.stop()
-                    Log.i("$TAG Core has been stopped, restarting it")
-                    core.start()
-                    Log.i("$TAG Core has been restarted")
+                coreContext.postOnCoreThread {
+                    if (!coreContext.applyRemoteProvisioning(url)) {
+                        // Core wasn't restarted so no configuring status will follow, restart video capture
+                        onErrorEvent.postValue(Event(true))
+                    }
                 }
             }
         }

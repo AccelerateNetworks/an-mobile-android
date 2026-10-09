@@ -47,6 +47,7 @@ import org.linphone.ui.main.settings.model.CodecModel
 import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
 import org.linphone.utils.LinphoneUtils
+import org.linphone.utils.ProvisioningUrl
 
 class SettingsViewModel
     @UiThread
@@ -1061,31 +1062,56 @@ class SettingsViewModel
         }
     }
 
+    // Last input sent through Download & apply; it has already been fetched (and rolled back if it failed),
+    // so it mustn't be saved again when leaving the screen
+    private var downloadedRemoteProvisioningInput: String? = null
+
     @UiThread
     fun updateRemoteProvisioningUrl() {
         coreContext.postOnCoreThread { core ->
-            val newProvisioningUri = remoteProvisioningUrl.value.orEmpty().trim()
-            if (newProvisioningUri != core.provisioningUri) {
-                Log.i("$TAG Updating remote provisioning URI to [$newProvisioningUri]")
-                if (newProvisioningUri.isEmpty()) {
-                    core.provisioningUri = null
-                } else {
-                    core.provisioningUri = newProvisioningUri
+            val input = remoteProvisioningUrl.value.orEmpty()
+            if (input == downloadedRemoteProvisioningInput) {
+                return@postOnCoreThread
+            }
+            // The field moved on from the downloaded input, which no longer reflects what's configured
+            downloadedRemoteProvisioningInput = null
+
+            if (input.isBlank()) {
+                if (!core.provisioningUri.isNullOrEmpty()) {
+                    coreContext.disableRemoteProvisioning()
                 }
+                return@postOnCoreThread
+            }
+
+            val url = ProvisioningUrl.parse(input)
+            if (url == null) {
+                Log.e("$TAG [$input] isn't a valid remote provisioning URL, not saving it")
+                coreContext.showInvalidProvisioningUrlToast()
+                return@postOnCoreThread
+            }
+
+            if (url != core.provisioningUri) {
+                // Fetched on next Core start, with the same rollback as an immediate download
+                Log.i("$TAG Updating remote provisioning URI to [$url]")
+                coreContext.setRemoteProvisioningUri(url)
             }
         }
     }
 
     @UiThread
     fun downloadAndApplyRemoteProvisioning() {
-        Log.i("$TAG Updating remote provisioning URI now and then download/apply it")
-        updateRemoteProvisioningUrl()
         coreContext.postOnCoreThread {
-            Log.i("$TAG Restarting the Core to apply configuration changes")
-            coreContext.core.stop()
-            Log.i("$TAG Core has been stopped, restarting it")
-            coreContext.core.start()
-            Log.i("$TAG Core has been restarted")
+            val input = remoteProvisioningUrl.value.orEmpty()
+            val url = ProvisioningUrl.parse(input)
+            if (url == null) {
+                Log.e("$TAG [$input] isn't a valid remote provisioning URL, not downloading it")
+                coreContext.showInvalidProvisioningUrlToast()
+                return@postOnCoreThread
+            }
+
+            Log.i("$TAG Downloading and applying remote provisioning from [$url]")
+            downloadedRemoteProvisioningInput = input
+            coreContext.applyRemoteProvisioning(url)
         }
     }
 

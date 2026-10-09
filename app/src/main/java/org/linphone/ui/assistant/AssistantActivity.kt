@@ -80,6 +80,14 @@ class AssistantActivity : GenericActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
+        // Consume Core errors (e.g. remote provisioning failures from the QR code scanner) here,
+        // otherwise MainActivity would display them late, once it's back in the foreground
+        coreContext.showRedToastEvent.observe(this) {
+            it.consume { pair ->
+                showRedToast(getString(pair.first), pair.second)
+            }
+        }
+
         coreContext.postOnCoreThread { core ->
             if (core.accountList.isEmpty()) {
                 Log.i("$TAG No account configured, disabling back gesture")

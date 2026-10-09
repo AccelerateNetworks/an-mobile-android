@@ -74,6 +74,7 @@ import org.linphone.utils.DialogUtils
 import org.linphone.utils.Event
 import org.linphone.utils.FileUtils
 import org.linphone.utils.LinphoneUtils
+import org.linphone.utils.ProvisioningUrl
 import androidx.core.content.edit
 import org.linphone.ui.sso.SingleSignOnActivity
 
@@ -561,7 +562,8 @@ class MainActivity : GenericActivity() {
             }
             Intent.ACTION_VIEW -> {
                 val uri = intent.data?.toString() ?: ""
-                if (uri.startsWith("linphone-config:")) {
+                // Matched on the prefix alone so rejected config links still reach handleConfigIntent and get reported
+                if (uri.trim().startsWith(ProvisioningUrl.CONFIG_SCHEME_PREFIX, ignoreCase = true)) {
                     handleConfigIntent(uri)
                 } else {
                     handleCallIntent(intent)
@@ -789,19 +791,19 @@ class MainActivity : GenericActivity() {
 
     private fun handleConfigIntent(uri: String) {
         Log.i("$TAG Trying to parse config intent [$uri] as remote provisioning URL")
-        val url = LinphoneUtils.getRemoteProvisioningUrlFromUri(uri)
+        val url = ProvisioningUrl.parse(uri)
         if (url == null) {
             Log.e("$TAG Couldn't parse URI [$uri] into a valid remote provisioning URL, aborting")
+            showRedToast(
+                getString(R.string.remote_provisioning_failed_bad_uri_toast),
+                R.drawable.warning_circle
+            )
             return
         }
 
-        coreContext.postOnCoreThread { core ->
-            core.provisioningUri = url
-            Log.w("$TAG Remote provisioning URL set to [$url], restarting Core now")
-            core.stop()
-            Log.i("$TAG Core has been stopped, let's restart it")
-            core.start()
-            Log.i("$TAG Core has been restarted")
+        coreContext.postOnCoreThread {
+            Log.w("$TAG Applying remote provisioning URL [$url]")
+            coreContext.applyRemoteProvisioning(url)
         }
     }
 

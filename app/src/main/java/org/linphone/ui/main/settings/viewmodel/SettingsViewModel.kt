@@ -1062,10 +1062,18 @@ class SettingsViewModel
         }
     }
 
+    // Last input sent through Download & apply; it has already been fetched (and rolled back if it failed),
+    // so it mustn't be saved again when leaving the screen
+    private var downloadedRemoteProvisioningInput: String? = null
+
     @UiThread
     fun updateRemoteProvisioningUrl() {
         coreContext.postOnCoreThread { core ->
             val input = remoteProvisioningUrl.value.orEmpty()
+            if (input == downloadedRemoteProvisioningInput) {
+                return@postOnCoreThread
+            }
+
             if (input.isBlank()) {
                 if (!core.provisioningUri.isNullOrEmpty()) {
                     coreContext.disableRemoteProvisioning()
@@ -1100,6 +1108,7 @@ class SettingsViewModel
             }
 
             Log.i("$TAG Downloading and applying remote provisioning from [$url]")
+            downloadedRemoteProvisioningInput = input
             coreContext.applyRemoteProvisioning(url)
         }
     }

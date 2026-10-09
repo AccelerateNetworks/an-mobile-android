@@ -1073,6 +1073,8 @@ class SettingsViewModel
             if (input == downloadedRemoteProvisioningInput) {
                 return@postOnCoreThread
             }
+            // The field moved on from the downloaded input, which no longer reflects what's configured
+            downloadedRemoteProvisioningInput = null
 
             if (input.isBlank()) {
                 if (!core.provisioningUri.isNullOrEmpty()) {

@@ -72,6 +72,7 @@ object ProvisioningUrl {
     @StringRes
     fun getProvisioningFailureMessage(message: String?, uri: String?): Int {
         return when (message?.trim()?.lowercase(Locale.ROOT)) {
+            null, "" -> R.string.remote_provisioning_config_failed_toast
             "bad uri" -> if (uri?.startsWith("file://") == true) {
                 R.string.remote_provisioning_failed_file_unreadable_toast
             } else {
@@ -81,8 +82,8 @@ object ProvisioningUrl {
             "http timeout" -> R.string.remote_provisioning_failed_timeout_toast
             "http auth requested" -> R.string.remote_provisioning_failed_auth_toast
             "invalid request" -> R.string.remote_provisioning_failed_invalid_request_toast
-            // Anything else (no message, or the XML parser's error text) can't be pinned on a single cause
-            else -> R.string.remote_provisioning_config_failed_toast
+            // liblinphone only sends the strings above, so anything else is the XML parser's error text
+            else -> R.string.remote_provisioning_failed_invalid_config_toast
         }
     }
 }

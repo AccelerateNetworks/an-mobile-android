@@ -148,6 +148,7 @@
     <string name="remote_provisioning_failed_auth_toast">Remote configuration server requires authentication</string>
     <string name="remote_provisioning_failed_invalid_request_toast">Couldn\'t send remote configuration request</string>
     <string name="remote_provisioning_failed_file_unreadable_toast">Couldn\'t read remote configuration file</string>
+    <string name="remote_provisioning_failed_invalid_config_toast">Remote configuration file is invalid</string>
     <string name="media_player_generic_error_toast">Error trying to create media player</string>
 
     <!-- Assistant related string (account register / login / etc...) -->

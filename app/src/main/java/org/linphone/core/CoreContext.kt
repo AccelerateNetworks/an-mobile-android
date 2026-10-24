@@ -51,6 +51,7 @@ import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.compatibility.Compatibility
 import org.linphone.contacts.ContactsManager
 import org.linphone.core.tools.Log
+import org.linphone.logforwarding.LogForwarding
 import org.linphone.notifications.NotificationsManager
 import org.linphone.telecom.TelecomManager
 import org.linphone.ui.call.CallActivity
@@ -310,6 +311,8 @@ class CoreContext
             }
 
             if (status == ConfiguringState.Successful) {
+                LogForwarding.onProvisioningApplied()
+
                 val accounts = core.accountList
                 if (core.defaultAccount == null && accounts.isNotEmpty()) {
                     val firstAccount = accounts.firstOrNull()
@@ -932,6 +935,7 @@ class CoreContext
 
     @UiThread
     fun onForeground() {
+        LogForwarding.onForeground()
         postOnCoreThread {
             // We can't rely on defaultAccount?.params?.isPublishEnabled
             // as it will be modified by the SDK when changing the presence status
@@ -948,6 +952,7 @@ class CoreContext
 
     @UiThread
     fun onBackground() {
+        LogForwarding.onBackground()
         postOnCoreThread {
             // We can't rely on defaultAccount?.params?.isPublishEnabled
             // as it will be modified by the SDK when changing the presence status

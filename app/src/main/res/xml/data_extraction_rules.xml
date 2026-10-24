@@ -9,11 +9,10 @@
         <include .../>
         <exclude .../>
         -->
+        <!-- A restore would resurrect a stale offset against a different device's log file -->
+        <exclude domain="file" path="log-forwarding"/>
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="file" path="log-forwarding"/>
     </device-transfer>
-    -->
 </data-extraction-rules>

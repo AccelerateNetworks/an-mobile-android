@@ -11,4 +11,6 @@
    <exclude domain="sharedpref" path="device.xml"/>
     -->
     <exclude domain="sharedpref" path="encrypted.pref"/>
+    <!-- A restore would resurrect a stale offset against a different device's log file -->
+    <exclude domain="file" path="log-forwarding"/>
 </full-backup-content>

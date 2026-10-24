@@ -34,6 +34,7 @@ import org.linphone.core.CoreListenerStub
 import org.linphone.core.Factory
 import org.linphone.core.VersionUpdateCheckResult
 import org.linphone.core.tools.Log
+import org.linphone.logforwarding.LogForwarding
 import org.linphone.ui.GenericViewModel
 import org.linphone.utils.AppUtils
 import org.linphone.utils.Event
@@ -216,6 +217,9 @@ class HelpViewModel
     fun cleanLogs() {
         coreContext.postOnCoreThread { core ->
             core.resetLogCollection()
+            Log.w(
+                "[${LogForwarding.FORWARDER_TAG}] log collection was reset, the gap below this line is a manual clear"
+            )
             Log.i("$TAG Debug logs have been cleaned")
             debugLogsCleanedEvent.postValue(Event(true))
         }

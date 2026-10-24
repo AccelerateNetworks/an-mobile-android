@@ -43,6 +43,8 @@ import org.linphone.core.LogCollectionState
 import org.linphone.core.LogLevel
 import org.linphone.core.VFS
 import org.linphone.core.tools.Log
+import org.linphone.logforwarding.LogForwarding
+import org.linphone.logforwarding.LogForwarding.LOG_DOMAIN
 
 @MainThread
 class LinphoneApplication : Application(), SingletonImageLoader.Factory {
@@ -87,11 +89,14 @@ class LinphoneApplication : Application(), SingletonImageLoader.Factory {
 
         val appName = context.getString(R.string.app_name)
         Factory.instance().setLoggerDomain(appName)
-        Factory.instance().loggingService.setLogLevel(LogLevel.Message)
+        Factory.instance().loggingService.setLogLevel(LogLevel.Debug)
+        // setLogDomain copies the mask in force when it runs, so the level must be set first.
+        Log.setLogDomain(LOG_DOMAIN)
         Factory.instance().enableLogcatLogs(corePreferences.printLogsInLogcat)
 
         Log.i("$TAG Report Core preferences initialized")
         Compatibility.setupAppStartupListener(context)
+        LogForwarding.setup(context)
 
         coreContext = CoreContext(context)
         coreContext.start()

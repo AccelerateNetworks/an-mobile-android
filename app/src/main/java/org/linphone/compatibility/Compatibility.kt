@@ -90,7 +90,9 @@ class Compatibility {
         }
 
         fun getAllRequiredPermissionsArray(): Array<String> {
-            if (Version.sdkAboveOrEqual(Version.API33_ANDROID_13_TIRAMISU)) {
+            if (Version.sdkAboveOrEqual(Version.API37_ANDROID_17_CINNAMON_BUN)) {
+                return Api37Compatibility.getAllRequiredPermissionsArray()
+            } else if (Version.sdkAboveOrEqual(Version.API33_ANDROID_13_TIRAMISU)) {
                 return Api33Compatibility.getAllRequiredPermissionsArray()
             }
             return arrayOf(
@@ -127,6 +129,13 @@ class Compatibility {
         fun isPostNotificationsPermissionGranted(context: Context): Boolean {
             if (Version.sdkAboveOrEqual(Version.API33_ANDROID_13_TIRAMISU)) {
                 return Api33Compatibility.isPostNotificationsPermissionGranted(context)
+            }
+            return true
+        }
+
+        fun isAccessLocalNetworkPermissionGranted(context: Context): Boolean {
+            if (Version.sdkAboveOrEqual(Version.API37_ANDROID_17_CINNAMON_BUN)) {
+                return Api37Compatibility.isAccessLocalNetworkPermissionGranted(context)
             }
             return true
         }

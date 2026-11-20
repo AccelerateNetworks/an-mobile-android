@@ -33,7 +33,6 @@ import androidx.core.view.doOnPreDraw
 import androidx.navigation.NavDirections
 import androidx.navigation.fragment.findNavController
 import androidx.slidingpanelayout.widget.SlidingPaneLayout
-import androidx.slidingpanelayout.widget.SlidingPaneLayout.PanelSlideListener
 import com.google.android.material.textfield.TextInputLayout
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.LinphoneApplication.Companion.corePreferences
@@ -95,6 +94,8 @@ abstract class AbstractMainFragment : GenericMainFragment() {
     }
 
     abstract fun onDefaultAccountChanged()
+
+    abstract fun onSlidingPaneClosed()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         postponeEnterTransition()
@@ -235,7 +236,15 @@ abstract class AbstractMainFragment : GenericMainFragment() {
                 if (slidingPane.isSlideable) {
                     Log.d("$TAG Closing sliding pane")
                     ensureNavigationBarIsVisible()
-                    slidingPane.closePane()
+                    onSlidingPaneClosed()
+
+                    if (!slidingPane.closePane()) {
+                        Log.d("$TAG Failed to close sliding pane!")
+                        coreContext.postOnMainThreadDelayed( {
+                            Log.d("$TAG Trying once again to close sliding pane")
+                            slidingPane.close()
+                        }, 200)
+                    }
                 }
             }
         }
@@ -251,12 +260,7 @@ abstract class AbstractMainFragment : GenericMainFragment() {
                 if (!slidingPane.isOpen) {
                     Log.d("$TAG Opening sliding pane")
                     if (slidingPane.isSlideable && viewModel.searchBarVisible.value == true) {
-                        slidingPane.addPanelSlideListener(object : PanelSlideListener {
-                            override fun onPanelSlide(
-                                panel: View,
-                                slideOffset: Float
-                            ) { }
-
+                        slidingPane.addPanelSlideListener(object : SlidingPaneLayout.SimplePanelSlideListener() {
                             override fun onPanelOpened(panel: View) {
                                 Log.d("$TAG Closing search bar")
                                 viewModel.closeSearchBar()

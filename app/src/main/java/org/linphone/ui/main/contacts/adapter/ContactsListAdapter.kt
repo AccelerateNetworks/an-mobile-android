@@ -26,21 +26,23 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import org.linphone.R
 import org.linphone.databinding.ContactFavouriteListCellBinding
 import org.linphone.databinding.ContactListCellBinding
+import org.linphone.ui.GenericListAdapter
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
 import org.linphone.utils.Event
 
 class ContactsListAdapter(
     private val favourites: Boolean = false,
     private val disableLongClick: Boolean = false
-) : ListAdapter<ContactAvatarModel, RecyclerView.ViewHolder>(ContactDiffCallback()) {
-    var selectedAdapterPosition = -1
-
+) : GenericListAdapter<ContactAvatarModel, RecyclerView.ViewHolder>(ContactDiffCallback()) {
     val contactClickedEvent: MutableLiveData<Event<ContactAvatarModel>> by lazy {
+        MutableLiveData()
+    }
+
+    val favouriteContactClickedEvent: MutableLiveData<Event<ContactAvatarModel>> by lazy {
         MutableLiveData()
     }
 
@@ -61,12 +63,11 @@ class ContactsListAdapter(
                 lifecycleOwner = parent.findViewTreeLifecycleOwner()
 
                 setOnClickListener {
-                    contactClickedEvent.value = Event(model!!)
+                    favouriteContactClickedEvent.value = Event(model!!)
                 }
 
                 setOnLongClickListener {
-                    selectedAdapterPosition = viewHolder.bindingAdapterPosition
-                    root.isSelected = true
+                    activateBindingRoot(this, viewHolder.bindingAdapterPosition)
                     contactLongClickedEvent.value = Event(model!!)
                     true
                 }
@@ -84,13 +85,13 @@ class ContactsListAdapter(
                 lifecycleOwner = parent.findViewTreeLifecycleOwner()
 
                 setOnClickListener {
+                    selectBindingRoot(this, viewHolder.bindingAdapterPosition)
                     contactClickedEvent.value = Event(model!!)
                 }
 
                 if (!disableLongClick) {
                     setOnLongClickListener {
-                        selectedAdapterPosition = viewHolder.bindingAdapterPosition
-                        root.isSelected = true
+                        activateBindingRoot(this, viewHolder.bindingAdapterPosition)
                         contactLongClickedEvent.value = Event(model!!)
                         true
                     }
@@ -108,11 +109,6 @@ class ContactsListAdapter(
         }
     }
 
-    fun resetSelection() {
-        notifyItemChanged(selectedAdapterPosition)
-        selectedAdapterPosition = -1
-    }
-
     inner class ViewHolder(
         val binding: ContactListCellBinding
     ) : RecyclerView.ViewHolder(binding.root) {
@@ -121,16 +117,20 @@ class ContactsListAdapter(
             with(binding) {
                 model = contactModel
 
-                binding.root.isSelected = bindingAdapterPosition == selectedAdapterPosition
+                setBindingRootSelectedAndActivatedIfNeeded(binding, bindingAdapterPosition)
 
                 val previousItem = bindingAdapterPosition - 1
-                val previousLetter = if (previousItem >= 0) {
+                val previousLetter = if (previousItem >= 0 && !getItem(previousItem).sortingName.isNullOrEmpty()) {
                     getItem(previousItem).sortingName?.get(0).toString()
                 } else {
                     ""
                 }
 
-                val currentLetter = contactModel.sortingName?.get(0).toString()
+                val currentLetter = if (!contactModel.sortingName.isNullOrEmpty()) {
+                    contactModel.sortingName?.get(0).toString()
+                } else {
+                    ""
+                }
                 val displayLetter = previousLetter.isEmpty() || currentLetter != previousLetter
                 firstContactStartingByThatLetter = displayLetter
 
@@ -147,7 +147,7 @@ class ContactsListAdapter(
             with(binding) {
                 model = contactModel
 
-                binding.root.isSelected = bindingAdapterPosition == selectedAdapterPosition
+                setBindingRootSelectedAndActivatedIfNeeded(binding, bindingAdapterPosition)
 
                 executePendingBindings()
             }

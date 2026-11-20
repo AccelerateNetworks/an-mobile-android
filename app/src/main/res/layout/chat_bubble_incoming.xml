@@ -62,7 +62,6 @@
             android:ellipsize="end"
             android:visibility="@{!model.isFromGroup ? View.GONE: model.groupedWithPreviousMessage ? View.GONE : View.VISIBLE}"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/reply_icon"
             app:layout_constraintStart_toStartOf="@id/bubble" />
 
         <androidx.constraintlayout.widget.Group

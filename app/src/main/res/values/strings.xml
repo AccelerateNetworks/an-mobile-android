@@ -133,6 +133,7 @@
     <string name="welcome_page_3_message">A <b>free</b> and open source application since <b>2014</b>.</string>
 
     <!-- Generic toasts -->
+    <string name="phone_number_copied_to_clipboard_toast">Phone number copied into clipboard</string>
     <string name="sip_address_copied_to_clipboard_toast">SIP address copied into clipboard</string>
     <string name="new_account_configured_toast">New account configured</string>
     <string name="file_successfully_exported_to_media_store_toast">File has been exported to native gallery</string>
@@ -197,6 +198,7 @@
     <string name="assistant_permissions_post_notifications_title"><b>Push notifications:</b> Allows you to receive a message or call.</string>
     <string name="assistant_permissions_record_audio_title"><b>Record audio:</b> So you can be heard when making and receiving calls.</string>
     <string name="assistant_permissions_access_camera_title"><b>Access camera:</b> So you can scan the QR Code to connect your app.</string>
+    <string name="assistant_permissions_access_local_network_title"><b>Access local network (optional):</b> Required since Android 17 to be able to connect to a server located on the local network.</string>
     <string name="assistant_forgotten_password_title">Account recovery</string>
     <string name="assistant_forgotten_password_subtitle">Choose how to recover your account.</string>
     <string name="assistant_forgotten_password_message">You created your account using:</string>
@@ -471,6 +473,9 @@
     <string name="history_group_call_start_dialog_set_subject">Set group call subject</string>
     <string name="history_group_call_start_dialog_subject_hint">Group call subject</string>
     <string name="history_list_empty_history">No call from/to this account was found…</string>
+    <string name="history_list_empty_missed_calls">No missed call…</string>
+    <string name="history_list_filter_all_calls">All calls</string>
+    <string name="history_list_filter_missed_calls">Missed</string>
     <string name="history_list_change_selected_account_label">Change account</string>
     <string name="history_group_call_go_to_conversation">Conversation</string>
 

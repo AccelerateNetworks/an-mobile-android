@@ -48,7 +48,6 @@ import org.linphone.core.CallStats
 import org.linphone.core.ChatMessage
 import org.linphone.core.ChatRoom
 import org.linphone.core.ChatRoomListenerStub
-import org.linphone.core.Conference
 import org.linphone.core.ConferenceParams
 import org.linphone.core.Core
 import org.linphone.core.CoreListenerStub
@@ -611,10 +610,10 @@ class CurrentCallViewModel
     }
 
     @UiThread
-    fun answer() {
+    fun answerCallFrom(caller: String) {
         coreContext.postOnCoreThread { core ->
             val call = core.calls.find {
-                LinphoneUtils.isCallIncoming(it.state)
+                LinphoneUtils.isCallIncoming(it.state) && (caller.isEmpty() || caller == it.remoteAddress.asStringUriOnly())
             }
             if (call != null) {
                 Log.i("$TAG Answering call [${call.remoteAddress.asStringUriOnly()}]")
@@ -624,6 +623,11 @@ class CurrentCallViewModel
                 finishActivityEvent.postValue(Event(true))
             }
         }
+    }
+
+    @UiThread
+    fun answer() {
+        answerCallFrom("")
     }
 
     @UiThread
@@ -1458,46 +1462,12 @@ class CurrentCallViewModel
 
     @WorkerThread
     private fun getChatRoomParams(call: Call): ConferenceParams? {
-        val localAddress = call.callLog.localAddress
         val remoteAddress = call.remoteAddress
-        val core = call.core
-        val account = LinphoneUtils.getAccountForAddress(localAddress) ?: LinphoneUtils.getDefaultAccount() ?: return null
-
-        val params = coreContext.core.createConferenceParams(call.conference)
-        params.isChatEnabled = true
-        params.isGroupEnabled = false
-        params.subject = AppUtils.getString(R.string.conversation_one_to_one_hidden_subject)
-        params.account = account
-
-        val chatParams = params.chatParams ?: return null
-        chatParams.ephemeralLifetime = 0 // Make sure ephemeral is disabled by default
-
-        val sameDomain = remoteAddress.domain == corePreferences.defaultDomain && remoteAddress.domain == account.params.domain
-        if (account.params.instantMessagingEncryptionMandatory && sameDomain) {
-            Log.i(
-                "$TAG Account is in secure mode & domain matches, requesting E2E encryption"
-            )
-            chatParams.backend = ChatRoom.Backend.FlexisipChat
-            params.securityLevel = Conference.SecurityLevel.EndToEnd
-        } else if (!account.params.instantMessagingEncryptionMandatory) {
-            if (LinphoneUtils.isEndToEndEncryptedChatAvailable(core)) {
-                Log.i(
-                    "$TAG Account is in interop mode but LIME is available, requesting E2E encryption"
-                )
-                chatParams.backend = ChatRoom.Backend.FlexisipChat
-                params.securityLevel = Conference.SecurityLevel.EndToEnd
-            } else {
-                Log.i(
-                    "$TAG Account is in interop mode but LIME isn't available, disabling E2E encryption"
-                )
-                chatParams.backend = ChatRoom.Backend.Basic
-                params.securityLevel = Conference.SecurityLevel.None
-            }
-        } else {
+        val params = LinphoneUtils.getChatRoomParamsForOneToOneConversationWithAddress(remoteAddress, call.conference)
+        if (params == null) {
             Log.e(
                 "$TAG Account is in secure mode, can't chat with SIP address of different domain [${remoteAddress.asStringUriOnly()}]"
             )
-            return null
         }
         return params
     }

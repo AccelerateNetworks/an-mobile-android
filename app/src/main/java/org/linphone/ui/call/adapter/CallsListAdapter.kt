@@ -26,16 +26,15 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import org.linphone.R
 import org.linphone.databinding.CallListCellBinding
+import org.linphone.ui.GenericListAdapter
 import org.linphone.ui.call.model.CallModel
 import org.linphone.utils.Event
 
 class CallsListAdapter(private val showTransferIconInsteadOfCallState: Boolean = false) :
-    ListAdapter<CallModel, RecyclerView.ViewHolder>(CallDiffCallback()) {
-    var selectedAdapterPosition = -1
+    GenericListAdapter<CallModel, RecyclerView.ViewHolder>(CallDiffCallback()) {
 
     val callClickedEvent: MutableLiveData<Event<CallModel>> by lazy {
         MutableLiveData()
@@ -62,8 +61,7 @@ class CallsListAdapter(private val showTransferIconInsteadOfCallState: Boolean =
             }
 
             setOnLongClickListener {
-                selectedAdapterPosition = viewHolder.bindingAdapterPosition
-                root.isSelected = true
+                activateBindingRoot(this, viewHolder.bindingAdapterPosition)
                 callLongClickedEvent.value = Event(model!!)
                 true
             }
@@ -75,11 +73,6 @@ class CallsListAdapter(private val showTransferIconInsteadOfCallState: Boolean =
         (holder as ViewHolder).bind(getItem(position))
     }
 
-    fun resetSelection() {
-        notifyItemChanged(selectedAdapterPosition)
-        selectedAdapterPosition = -1
-    }
-
     inner class ViewHolder(
         val binding: CallListCellBinding
     ) : RecyclerView.ViewHolder(binding.root) {
@@ -88,7 +81,7 @@ class CallsListAdapter(private val showTransferIconInsteadOfCallState: Boolean =
             with(binding) {
                 model = callModel
 
-                binding.root.isSelected = bindingAdapterPosition == selectedAdapterPosition
+                setBindingRootSelectedAndActivatedIfNeeded(binding, bindingAdapterPosition)
 
                 executePendingBindings()
             }

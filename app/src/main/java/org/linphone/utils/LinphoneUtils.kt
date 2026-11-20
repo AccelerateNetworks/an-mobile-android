@@ -19,15 +19,19 @@
  */
 package org.linphone.utils
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.StyleSpan
+import android.util.Base64
 import androidx.annotation.AnyThread
 import androidx.annotation.DrawableRes
 import androidx.annotation.IntegerRes
 import androidx.annotation.WorkerThread
 import androidx.core.text.toSpannable
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
 import org.linphone.LinphoneApplication.Companion.coreContext
@@ -53,6 +57,7 @@ import org.linphone.core.Friend
 import org.linphone.core.MediaDirection
 import org.linphone.core.Reason
 import org.linphone.core.tools.Log
+import org.linphone.ui.call.CallActivity
 import org.linphone.ui.main.contacts.model.ContactAvatarModel
 import org.linphone.ui.main.model.isEndToEndEncryptionMandatory
 
@@ -64,6 +69,14 @@ class LinphoneUtils {
         const val RECORDING_FILE_NAME_URI_TIMESTAMP_SEPARATOR = "_on_"
         const val RECORDING_MKV_FILE_EXTENSION = ".mkv"
         const val RECORDING_SMFF_FILE_EXTENSION = ".smff"
+
+        @AnyThread
+        fun getCallActivityIntent(context: Context): Intent {
+            return Intent(context, CallActivity::class.java).apply {
+                action = Intent.ACTION_MAIN // Needed as well
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            }
+        }
 
         @WorkerThread
         fun getDefaultAccount(): Account? {
@@ -388,16 +401,56 @@ class LinphoneUtils {
         }
 
         @WorkerThread
-        fun getChatRoomParamsToCancelMeeting(): ConferenceParams? {
-            val chatRoomParams = coreContext.core.createConferenceParams(null)
+        fun getChatRoomParamsForMeetingInvitationsAndUpdates(): ConferenceParams? {
+            val core = coreContext.core
+            val chatRoomParams = core.createConferenceParams(null)
             chatRoomParams.isChatEnabled = true
             chatRoomParams.isGroupEnabled = false
             chatRoomParams.subject = "Meeting invitation" // Won't be used
             val chatParams = chatRoomParams.chatParams ?: return null
-            chatParams.ephemeralLifetime = 0 // Make sure ephemeral is disabled by default
-            chatParams.backend = ChatRoom.Backend.FlexisipChat
-            chatRoomParams.securityLevel = Conference.SecurityLevel.EndToEnd
+
+            if (isEndToEndEncryptedChatAvailable(core)) {
+                Log.i("$TAG LIME is available, sending invitation through 1-1 E2E encrypted chat rooms with each participant")
+                chatParams.backend = ChatRoom.Backend.FlexisipChat
+                chatRoomParams.securityLevel = Conference.SecurityLevel.EndToEnd
+            } else {
+                Log.w("$TAG LIME is not available, sending invitation through 1-1 clear text chat rooms with each participant")
+                chatParams.backend = ChatRoom.Backend.Basic
+                chatRoomParams.securityLevel = Conference.SecurityLevel.None
+            }
             return chatRoomParams
+        }
+
+        @WorkerThread
+        fun getChatRoomParamsForOneToOneConversationWithAddress(address: Address, conference: Conference? = null): ConferenceParams? {
+            val account = getDefaultAccount() ?: return null
+
+            val params = coreContext.core.createConferenceParams(conference)
+            params.isChatEnabled = true
+            params.isGroupEnabled = false
+            params.account = account
+            params.subject = AppUtils.getString(R.string.conversation_one_to_one_hidden_subject)
+            val chatParams = params.chatParams ?: return null
+
+            val sameDomain = address.domain == corePreferences.defaultDomain && address.domain == account.params.domain
+            if (account.params.instantMessagingEncryptionMandatory && sameDomain) {
+                chatParams.backend = ChatRoom.Backend.FlexisipChat
+                params.securityLevel = Conference.SecurityLevel.EndToEnd
+            } else if (!account.params.instantMessagingEncryptionMandatory) {
+                if (isEndToEndEncryptedChatAvailable(coreContext.core)) {
+                    chatParams.backend = ChatRoom.Backend.FlexisipChat
+                    params.securityLevel = Conference.SecurityLevel.EndToEnd
+                } else if (isGroupChatAvailable(coreContext.core)) {
+                    chatParams.backend = ChatRoom.Backend.FlexisipChat
+                    params.securityLevel = Conference.SecurityLevel.None
+                } else {
+                    chatParams.backend = ChatRoom.Backend.Basic
+                    params.securityLevel = Conference.SecurityLevel.None
+                }
+            } else {
+                return null
+            }
+            return params
         }
 
         @WorkerThread
@@ -784,6 +837,33 @@ class LinphoneUtils {
                 }
                 else -> "${device.deviceName}(${device.type})"
             }
+        }
+
+        @AnyThread
+        fun jwtTokenToJson(token: String): JSONObject? {
+            val parts = token.split(".")
+            if (parts.size < 2) {
+                Log.e("$TAG Failed to parse JWT token, at least a '.' character was expected!")
+                return null
+            }
+
+            // base64url -> standard base64
+            var b64 = parts[1].replace("-", "+").replace("_", "/")
+            // Fix padding if needed
+            while (b64.length % 4 != 0) {
+                b64 = "$b64="
+            }
+            try {
+                val bytes = Base64.decode(b64, Base64.DEFAULT)
+                val decoded = String(bytes, charset("UTF-8"))
+                val json = JSONObject(decoded)
+                Log.i("$TAG Successfully decoded JWT token")
+                return json
+            } catch (exception: Exception) {
+                Log.e("$TAG Failed to parse base64: $exception")
+            }
+
+            return null
         }
     }
 }

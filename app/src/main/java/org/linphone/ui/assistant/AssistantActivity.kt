@@ -19,6 +19,7 @@
  */
 package org.linphone.ui.assistant
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.ViewGroup
@@ -40,6 +41,7 @@ import org.linphone.core.tools.Log
 import org.linphone.databinding.AssistantActivityBinding
 import org.linphone.ui.GenericActivity
 import org.linphone.ui.assistant.fragment.PermissionsFragmentDirections
+import org.linphone.ui.sso.SingleSignOnActivity
 
 @UiThread
 class AssistantActivity : GenericActivity() {
@@ -68,7 +70,7 @@ class AssistantActivity : GenericActivity() {
         binding.lifecycleOwner = this
         setUpToastsArea(binding.toastsArea)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, windowInsets ->
+        ViewCompat.setOnApplyWindowInsetsListener(binding.assistantNavContainer) { v, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             val keyboard = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
             v.updatePadding(
@@ -96,6 +98,20 @@ class AssistantActivity : GenericActivity() {
                     // not to leave the AssistantActivity
                     onBackPressedDispatcher.addCallback(backPressedCallback)
                 }
+            }
+        }
+
+        coreContext.bearerAuthenticationRequestedEvent.observe(this) {
+            it.consume { pair ->
+                val serverUrl = pair.first
+                val username = pair.second
+                Log.i(
+                    "$TAG Bearer auth request, navigating to Single Sign On Fragment with server URL [$serverUrl] and username [$username]"
+                )
+                val intent = Intent(this, SingleSignOnActivity::class.java)
+                intent.putExtra(SingleSignOnActivity.INTENT_EXTRA_USERNAME, username)
+                intent.putExtra(SingleSignOnActivity.INTENT_EXTRA_SERVER_URL, serverUrl)
+                startActivity(intent)
             }
         }
 

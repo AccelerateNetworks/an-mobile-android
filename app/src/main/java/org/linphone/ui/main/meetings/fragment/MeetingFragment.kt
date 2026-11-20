@@ -29,6 +29,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupWindow
 import androidx.annotation.UiThread
+import androidx.core.view.doOnPreDraw
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -90,7 +91,6 @@ class MeetingFragment : SlidingPaneChildFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        postponeEnterTransition()
         super.onViewCreated(view, savedInstanceState)
 
         binding.lifecycleOwner = viewLifecycleOwner
@@ -165,7 +165,9 @@ class MeetingFragment : SlidingPaneChildFragment() {
         viewModel.conferenceInfoFoundEvent.observe(viewLifecycleOwner) {
             it.consume { found ->
                 if (found) {
-                    startPostponedEnterTransition()
+                    (view.parent as? ViewGroup)?.doOnPreDraw {
+                        sharedViewModel.openSlidingPaneEvent.postValue(Event(true))
+                    }
                 } else {
                     Log.e("$TAG Failed to find meeting with URI [$uri], going back")
                     goBack()
@@ -207,6 +209,8 @@ class MeetingFragment : SlidingPaneChildFragment() {
     }
 
     private fun showPopupMenu() {
+        binding.menu.isSelected = true
+
         val popupView: MeetingPopupMenuBinding = DataBindingUtil.inflate(
             LayoutInflater.from(requireContext()),
             R.layout.meeting_popup_menu,
@@ -219,6 +223,10 @@ class MeetingFragment : SlidingPaneChildFragment() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
             true
         )
+
+        popupWindow.setOnDismissListener {
+            binding.menu.isSelected = false
+        }
 
         val isUserOrganizer = viewModel.isEditable.value == true && viewModel.isCancelled.value == false
         val hasNotStartedYet = viewModel.hasNotStartedYet.value == true

@@ -10,6 +10,92 @@ Group changes to describe their impact on the project, as follows:
     Fixed for any bug fixes.
     Security to invite users to upgrade in case of vulnerabilities.
 
+## [6.2.10] - 2026-11-05
+
+### Changed
+- Allow a 1-1 conversation to be created with a Flexisip backend if LIME isn't available instead of directly fallbacking to a BASIC chat room
+- Bumped dependencies to latest releases
+
+### Fixed
+- Extracting username from JWT token when using OIDC login if we didn't have it yet in the AuthInfo, preventing auth_info_X in config file that remains even after logging out from account
+
+## [6.2.9] - 2026-10-22
+
+### Added
+- Added filter in calls history to choose between showing all calls / only missed calls
+
+### Changed
+- Removed forced ephemeral lifetime when creating chat rooms, required for remote provisioning configuration
+- Only enable proximity sensor listener when we hold the proximity sensor wake lock
+- Updated translations from Weblate
+
+### Fixed
+- Fixed mentions in chat messages if the name following the '@' wasn't matching the username case
+
+## [6.2.8] - 2026-09-28
+
+### Changed
+
+- Never store CallActivity in device's recent tasks list
+- Keep menu icons highlighted while the popup menu is opened
+- Hide currently default account SIP address from participant pickers (contacts, suggestions and request results)
+
+### Fixed
+
+- Prevent app going into background after answering incoming call from notification
+- Fixed conversation info not updating UI to reflect changes if you were granted/removed administration rights while on this page
+- Fixed item in list still being highlighted after closing pane if list was reordered
+- Fixed conversation participants list popup broken display for cells close to the bottom of the screen
+
+## [6.2.7] - 2026-09-07
+
+### Added
+- Show selected item in list when sliding pane is in side by side mode (mostly in landscape configurations)
+
+### Changed
+- Improved sliding pane fragment behavior that should result in more smooth opening animation
+- Do not use orange as system bar background color when in "desktop mode" (sw600dp-land)
+
+### Fixed
+- Update active speaker as soon as first participant joins conference when we're alone
+- Fixed meeting invitations not sent by chat if LIME wasn't available
+- Keep media player position when rotating device
+- Chat bubble layout issue in a 1-1 conversation for received message if it's been forwarded
+- Conversation last message not updated if sent message is queued by SDK
+- Contacts list top clipping broken when no one was marked as favourite
+
+## [6.2.6] - 2026-08-20
+
+### Changed
+- Copy address to clipboard will now only copy username in case it's a phone number
+
+### Fixed
+- CallActivity is now displayed after answering an incoming call from the notification
+- Correctly display Linphone Web users display name instead of IP address while in conference
+- Outbound proxy field not working as expected if Registrar URI field was left empty
+
+## [6.2.5] - 2026-08-06
+
+### Added
+- Italian translation thanks to a contributor on Weblate
+
+### Fixed
+- Prevent picture taken from camera while in conversation to be lost if the device gets rotated during the capture
+- Prevent "delete for all" to be available for chat messages that haven't been sent yet
+
+## [6.2.4] - 2026-07-29
+
+### Added
+- Local network access permission is now requested for Android 17 devices. It's optional unless you want to connect to a SIP server located on your device local network.
+
+### Changed
+- Only set the privacy flag for the keyboard in end-to-end encrypted conversations instead of all of them
+- Improved contrast for registration status chips in drawer menu
+
+### Fixed
+- No sound issue when device is close to the ear for Samsung S23, S23+, S23 Ultra and S23 FE devices
+- Answered incoming early-media call on speaker instead of earpiece audio device
+
 ## [6.2.3] - 2026-07-07
 
 ### Added

@@ -19,8 +19,8 @@
  */
 package org.linphone.ui.assistant.fragment
 
+import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.view.LayoutInflater
@@ -28,6 +28,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.UiThread
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -36,12 +37,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
+import org.linphone.compatibility.Compatibility
 import org.linphone.core.tools.Log
 import org.linphone.databinding.AssistantThirdPartySipAccountLoginFragmentBinding
 import org.linphone.ui.GenericActivity
 import org.linphone.ui.GenericFragment
 import org.linphone.ui.assistant.viewmodel.ThirdPartySipAccountLoginViewModel
-import org.linphone.ui.sso.SingleSignOnActivity
 import org.linphone.utils.DialogUtils
 import org.linphone.utils.PhoneNumberUtils
 
@@ -69,6 +70,16 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
     }
 
     private lateinit var adapter: ArrayAdapter<String>
+
+    private val accessLocalNetworkPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.i("$TAG ACCESS_LOCAL_NETWORK permission has been granted")
+        } else {
+            Log.w("$TAG ACCESS_LOCAL_NETWORK permission has been denied!")
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -124,27 +135,16 @@ class ThirdPartySipAccountLoginFragment : GenericFragment() {
                     message,
                     R.drawable.warning_circle
                 )
+                if (!Compatibility.isAccessLocalNetworkPermissionGranted(requireContext())) {
+                    Log.w("$TAG Asking for ACCESS_LOCAL_NETWORK permission")
+                    accessLocalNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                }
             }
         }
 
         viewModel.defaultTransportIndexEvent.observe(viewLifecycleOwner) {
             it.consume { index ->
                 binding.transport.setSelection(index)
-            }
-        }
-
-        coreContext.bearerAuthenticationRequestedEvent.observe(viewLifecycleOwner) {
-            it.consume { pair ->
-                val serverUrl = pair.first
-                val username = pair.second
-
-                Log.i(
-                    "$TAG Bearer auth request, navigating to Single Sign On Fragment with server URL [$serverUrl] and username [$username]"
-                )
-                val intent = Intent(requireContext(), SingleSignOnActivity::class.java)
-                intent.putExtra(SingleSignOnActivity.INTENT_EXTRA_USERNAME, username)
-                intent.putExtra(SingleSignOnActivity.INTENT_EXTRA_SERVER_URL, serverUrl)
-                startActivity(intent)
             }
         }
 

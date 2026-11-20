@@ -86,6 +86,7 @@
     <string name="welcome_page_3_title">Open source</string>
     <string name="welcome_page_3_message">Une application open source et un <b>service gratuit</b> depuis <b>2001</b>.</string>
     <!-- Generic toasts -->
+    <string name="phone_number_copied_to_clipboard_toast">Numéro de téléphone copié</string>
     <string name="sip_address_copied_to_clipboard_toast">Adresse copiée</string>
     <string name="new_account_configured_toast">Nouveau compte ajouté</string>
     <string name="file_successfully_exported_to_media_store_toast">Média exporté</string>
@@ -142,6 +143,7 @@
     <string name="assistant_permissions_post_notifications_title"><b>Notifications :</b> Pour vous informer quand vous recevez un message ou un appel.</string>
     <string name="assistant_permissions_record_audio_title"><b>Microphone :</b> Pour permettre à vos correspondants de vous entendre.</string>
     <string name="assistant_permissions_access_camera_title"><b>Caméra :</b> Pour capturer votre vidéo lors des appels et des conférences.</string>
+    <string name="assistant_permissions_access_local_network_title"><b>Accès au réseau local (optionnel):</b> Requis depuis Android 17 pour pouvoir se connecter à un serveur situé sur le réseau local.</string>
     <string name="assistant_forgotten_password_title">Récupération de compte</string>
     <string name="assistant_forgotten_password_subtitle">Choisissez comment récupérer votre compte.</string>
     <string name="assistant_forgotten_password_message">Vous avez créé votre compte avec :</string>
@@ -405,6 +407,9 @@
     <string name="history_group_call_start_dialog_set_subject">Nommer l\'appel de groupe</string>
     <string name="history_group_call_start_dialog_subject_hint">Nom de l\'appel de groupe</string>
     <string name="history_list_empty_history">Aucun appel vers/depuis ce compte n\'a été trouvé…</string>
+    <string name="history_list_empty_missed_calls">Aucun appel manqué…</string>
+    <string name="history_list_filter_all_calls">Tous les appels</string>
+    <string name="history_list_filter_missed_calls">Manqués</string>
     <string name="history_list_change_selected_account_label">Changer de compte</string>
     <string name="history_group_call_go_to_conversation">Conversation</string>
     <string name="history_dialog_delete_all_call_logs_title">Supprimer l\'historique d\'appels ?</string>

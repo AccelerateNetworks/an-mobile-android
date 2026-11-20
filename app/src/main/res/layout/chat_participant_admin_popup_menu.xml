@@ -6,9 +6,6 @@
     <data>
         <import type="android.view.View" />
         <variable
-            name="removeParticipantClickListener"
-            type="View.OnClickListener" />
-        <variable
             name="seeContactProfileClickListener"
             type="View.OnClickListener" />
         <variable
@@ -24,13 +21,13 @@
             name="copySipUriClickListener"
             type="View.OnClickListener" />
         <variable
+            name="removeParticipantClickListener"
+            type="View.OnClickListener" />
+        <variable
             name="isParticipantContact"
             type="Boolean" />
         <variable
             name="isParticipantAdmin"
-            type="Boolean" />
-        <variable
-            name="isMeAdmin"
             type="Boolean" />
         <variable
             name="disableAddContact"
@@ -42,6 +39,7 @@
         android:layout_height="wrap_content"
         android:paddingEnd="@dimen/popup_menu_padding"
         android:paddingStart="@dimen/popup_menu_padding"
+        android:minHeight="200dp"
         android:background="@drawable/shape_round_popup_menu_background">
 
         <androidx.appcompat.widget.AppCompatTextView
@@ -80,7 +78,7 @@
             android:onClick="@{setAdminClickListener}"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:visibility="@{isParticipantAdmin || !isMeAdmin ? View.GONE : View.VISIBLE}"
+            android:visibility="@{isParticipantAdmin ? View.GONE : View.VISIBLE}"
             android:text="@string/conversation_info_admin_menu_set_participant_admin"
             android:drawableStart="@drawable/user_circle"
             app:layout_constraintHorizontal_bias="0"
@@ -95,7 +93,7 @@
             android:onClick="@{unsetAdminClickListener}"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:visibility="@{isParticipantAdmin &amp;&amp; isMeAdmin ? View.VISIBLE : View.GONE, default=gone}"
+            android:visibility="@{isParticipantAdmin ? View.VISIBLE : View.GONE, default=gone}"
             android:text="@string/conversation_info_admin_menu_unset_participant_admin"
             android:drawableStart="@drawable/user_circle"
             app:layout_constraintHorizontal_bias="0"
@@ -124,7 +122,6 @@
             android:layout_height="1dp"
             android:layout_marginTop="@dimen/popup_menu_padding"
             android:background="?attr/color_main2_400"
-            android:visibility="@{isMeAdmin ? View.VISIBLE : View.GONE}"
             android:importantForAccessibility="no"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -139,7 +136,6 @@
             android:layout_height="wrap_content"
             android:text="@string/conversation_info_admin_menu_remove_participant"
             android:textColor="?attr/color_danger_500"
-            android:visibility="@{isMeAdmin ? View.VISIBLE : View.GONE}"
             android:drawableStart="@drawable/trash_simple"
             app:drawableTint="?attr/color_danger_500"
             app:layout_constraintHorizontal_bias="0"

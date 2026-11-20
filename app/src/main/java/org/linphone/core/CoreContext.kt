@@ -53,7 +53,6 @@ import org.linphone.contacts.ContactsManager
 import org.linphone.core.tools.Log
 import org.linphone.notifications.NotificationsManager
 import org.linphone.telecom.TelecomManager
-import org.linphone.ui.call.CallActivity
 import org.linphone.utils.ActivityMonitor
 import org.linphone.utils.AppUtils
 import org.linphone.utils.AudioUtils
@@ -407,6 +406,20 @@ class CoreContext
                     postOnMainThread {
                         showCallActivity()
                     }
+
+                    if (previousCallState == Call.State.IncomingEarlyMedia && core.ringDuringIncomingEarlyMedia && !LinphoneUtils.isVideoEnabled(call)) {
+                        Log.i("$TAG Audio call is in Connected state and was in IncomingEarlyMedia before with ring during early media enabled")
+                        val earpiece = core.audioDevices.find {
+                            it.type == AudioDevice.Type.Earpiece
+                        }
+                        if (earpiece != null) {
+                            Log.i("$TAG Switching audio back to earpiece ([${earpiece.id}])")
+                            call.outputAudioDevice = earpiece
+                        } else {
+                            Log.w("$TAG No earpiece device found")
+                        }
+                    }
+
                     if (corePreferences.routeAudioToBluetoothWhenPossible) {
                         Log.i("$TAG Call is connected, trying to route audio to either bluetooth, hearing aid, headphones or headset if available")
                         AudioUtils.routeAudioToAnyConnectedAudioDeviceOtherThanEarpieceAndSpeaker(call)
@@ -827,21 +840,12 @@ class CoreContext
                 PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK,
                 "${context.packageName};proximity_sensor"
             )
-            val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
-            val proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
-            val added = sensorManager.registerListener(proximitySensorListener, proximity, SensorManager.SENSOR_DELAY_NORMAL)
-            if (!added) {
-                Log.e("$TAG Failed to add proximity sensor listener!")
-            }
         }
     }
 
     @WorkerThread
     private fun onCoreStopped() {
         Log.w("$TAG Core is being shut down, notifying managers so they can remove their listeners and do some cleanup if needed")
-        val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
-        sensorManager.unregisterListener(proximitySensorListener)
-
         contactsManager.onCoreStopped(core)
         telecomManager.onCoreStopped(core)
         notificationsManager.onCoreStopped(core)
@@ -928,6 +932,16 @@ class CoreContext
         mainThread.post {
             lambda.invoke()
         }
+    }
+
+    @AnyThread
+    fun postOnMainThreadDelayed(
+        @WorkerThread lambda: () -> Unit,
+        delay: Long
+    ) {
+        mainThread.postDelayed({
+            lambda.invoke()
+        }, delay)
     }
 
     @UiThread
@@ -1271,11 +1285,7 @@ class CoreContext
     @UiThread
     fun showCallActivity() {
         Log.i("$TAG Starting Call activity")
-        val intent = Intent(context, CallActivity::class.java)
-        // This flag is required to start an Activity from a Service context
-        intent.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-        )
+        val intent = LinphoneUtils.getCallActivityIntent(context)
         val options = Compatibility.getPendingIntentActivityOptions(true)
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -1465,8 +1475,18 @@ class CoreContext
             if (enable && !proximityWakeLock.isHeld) {
                 Log.i("$TAG Acquiring proximity sensor wake lock for 2 hours")
                 proximityWakeLock.acquire(7200 * 1000L) // 2 hours
+
+                val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
+                val proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+                val added = sensorManager.registerListener(proximitySensorListener, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+                if (!added) {
+                    Log.e("$TAG Failed to add proximity sensor listener!")
+                }
             } else if (!enable && proximityWakeLock.isHeld) {
                 Log.i("$TAG Releasing proximity sensor wake lock")
+                val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
+                sensorManager.unregisterListener(proximitySensorListener)
+
                 proximityWakeLock.release(PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY)
             }
         }

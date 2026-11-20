@@ -72,7 +72,6 @@ import org.linphone.core.Friend
 import org.linphone.core.MediaDirection
 import org.linphone.core.RegistrationState
 import org.linphone.core.tools.Log
-import org.linphone.ui.call.CallActivity
 import org.linphone.ui.main.MainActivity
 import org.linphone.ui.main.MainActivity.Companion.ARGUMENTS_CHAT
 import org.linphone.ui.main.MainActivity.Companion.ARGUMENTS_CONVERSATION_ID
@@ -88,7 +87,6 @@ class NotificationsManager
         private const val TAG = "[Notifications Manager]"
 
         const val INTENT_HANGUP_CALL_NOTIF_ACTION = "org.linphone.HANGUP_CALL_ACTION"
-        const val INTENT_ANSWER_CALL_NOTIF_ACTION = "org.linphone.ANSWER_CALL_ACTION"
         const val INTENT_TOGGLE_SPEAKER_CALL_NOTIF_ACTION = "org.linphone.TOGGLE_SPEAKER_CALL_ACTION"
         const val INTENT_REPLY_MESSAGE_NOTIF_ACTION = "org.linphone.REPLY_ACTION"
         const val INTENT_MARK_MESSAGE_AS_READ_NOTIF_ACTION = "org.linphone.MARK_AS_READ_ACTION"
@@ -317,7 +315,7 @@ class NotificationsManager
             chatRoom: ChatRoom,
             messages: Array<ChatMessage>
         ) {
-            Log.i("$TAG Received ${messages.size} aggregated messages")
+            Log.i("$TAG Received [${messages.size}] aggregated messages")
             if (corePreferences.disableChat) return
 
             val id = LinphoneUtils.getConversationId(chatRoom)
@@ -731,14 +729,12 @@ class NotificationsManager
     private fun showCallNotification(call: Call, isIncoming: Boolean, friend: Friend? = null) {
         val notifiable = getNotifiableForCall(call)
 
-        val callNotificationIntent = Intent(context, CallActivity::class.java)
-        callNotificationIntent.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-        )
-        if (isIncoming) {
-            callNotificationIntent.putExtra("IncomingCall", true)
-        } else {
-            callNotificationIntent.putExtra("ActiveCall", true)
+        val callNotificationIntent = LinphoneUtils.getCallActivityIntent(context).apply {
+            if (isIncoming) {
+                putExtra("IncomingCall", true)
+            } else {
+                putExtra("ActiveCall", true)
+            }
         }
         val options = Compatibility.getPendingIntentActivityOptions(true)
         val pendingIntent = PendingIntent.getActivity(
@@ -1284,10 +1280,7 @@ class NotificationsManager
         if (Compatibility.isPostNotificationsPermissionGranted(context)) {
             val pendingIntent = TaskStackBuilder.create(context).run {
                 addNextIntentWithParentStack(
-                    Intent(context, CallActivity::class.java).apply {
-                        action = Intent.ACTION_MAIN // Needed as well
-                        flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    }
+                    LinphoneUtils.getCallActivityIntent(context)
                 )
                 getPendingIntent(
                     IN_CALL_FOREGROUND_SERVICE_ERROR_ID,
@@ -1420,9 +1413,6 @@ class NotificationsManager
         isIncoming: Boolean,
         friend: Friend? = null
     ): Notification {
-        val declineIntent = getCallDeclinePendingIntent(notifiable)
-        val answerIntent = getCallAnswerPendingIntent(notifiable)
-
         val remoteAddress = call.callLog.remoteAddress
         val conference = call.conference
         val conferenceInfo = LinphoneUtils.getConferenceInfoIfAny(call)
@@ -1455,12 +1445,14 @@ class NotificationsManager
             R.drawable.phone
         }
 
+        val declineIntent = getCallDeclinePendingIntent(notifiable)
         val style = if (isIncoming) {
             if (!Compatibility.hasFullScreenIntentPermission(context)) {
                 Log.e(
                     "$TAG Android >= 14 & full screen intent permission wasn't granted, incoming call may not be visible!"
                 )
             }
+            val answerIntent = getCallAnswerPendingIntent(notifiable)
             NotificationCompat.CallStyle.forIncomingCall(
                 caller,
                 declineIntent,
@@ -1724,19 +1716,20 @@ class NotificationsManager
 
     @AnyThread
     fun getCallAnswerPendingIntent(notifiable: Notifiable): PendingIntent {
-        val answerIntent = Intent(context, NotificationBroadcastReceiver::class.java)
-        answerIntent.apply {
-            action = INTENT_ANSWER_CALL_NOTIF_ACTION
-            putExtra(INTENT_NOTIF_ID, notifiable.notificationId)
-            putExtra(INTENT_REMOTE_SIP_URI, notifiable.remoteAddress)
+        val pendingIntent = TaskStackBuilder.create(context).run {
+            addNextIntentWithParentStack(
+                LinphoneUtils.getCallActivityIntent(context).apply {
+                    putExtra("AnswerIncomingCall", true)
+                    putExtra("Caller", notifiable.remoteAddress)
+                }
+            )
+            getPendingIntent(
+                INTENT_ANSWER_CALL_NOTIF_CODE,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                Compatibility.getPendingIntentActivityOptions(creator = true).toBundle()
+            )!!
         }
-
-        return PendingIntent.getBroadcast(
-            context,
-            INTENT_ANSWER_CALL_NOTIF_CODE,
-            answerIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        return pendingIntent
     }
 
     @AnyThread

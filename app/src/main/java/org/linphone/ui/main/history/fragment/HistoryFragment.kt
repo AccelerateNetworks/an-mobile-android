@@ -26,6 +26,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupWindow
 import androidx.annotation.UiThread
+import androidx.core.text.isDigitsOnly
+import androidx.core.view.doOnPreDraw
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -33,6 +35,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import org.linphone.LinphoneApplication.Companion.corePreferences
 import org.linphone.R
+import org.linphone.core.Address
 import org.linphone.core.tools.Log
 import org.linphone.databinding.HistoryFragmentBinding
 import org.linphone.databinding.HistoryPopupMenuBinding
@@ -88,7 +91,6 @@ class HistoryFragment : SlidingPaneChildFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        postponeEnterTransition()
         super.onViewCreated(view, savedInstanceState)
 
         binding.lifecycleOwner = viewLifecycleOwner
@@ -110,8 +112,9 @@ class HistoryFragment : SlidingPaneChildFragment() {
                     Log.i(
                         "$TAG Found matching call log for call ID [$callId]"
                     )
-                    startPostponedEnterTransition()
-                    sharedViewModel.openSlidingPaneEvent.value = Event(true)
+                    (view.parent as? ViewGroup)?.doOnPreDraw {
+                        sharedViewModel.openSlidingPaneEvent.postValue(Event(true))
+                    }
                 } else {
                     Log.e("$TAG Failed to find call log, going back")
                     goBack()
@@ -183,20 +186,37 @@ class HistoryFragment : SlidingPaneChildFragment() {
         }
 
         binding.setCopyPeerSipUriClickListener {
-            copyNumberOrAddressToClipboard(viewModel.callLogModel.value?.sipUri.orEmpty())
+            copyNumberOrAddressToClipboard(viewModel.callLogModel.value?.address)
         }
     }
 
-    private fun copyNumberOrAddressToClipboard(value: String) {
-        if (AppUtils.copyToClipboard(requireContext(), "SIP address", value)) {
-            (requireActivity() as GenericActivity).showGreenToast(
-                getString(R.string.sip_address_copied_to_clipboard_toast),
-                R.drawable.check
-            )
+    private fun copyNumberOrAddressToClipboard(address: Address?) {
+        if (address != null) {
+            val username = address.username.orEmpty()
+            if (username.isNotEmpty() && (username.startsWith("+") || username.isDigitsOnly())) {
+                Log.i("$TAG Adding phone number [$username] into clipboard")
+                if (AppUtils.copyToClipboard(requireContext(), AppUtils.getString(R.string.phone_number), username)) {
+                    (requireActivity() as GenericActivity).showGreenToast(
+                        getString(R.string.phone_number_copied_to_clipboard_toast),
+                        R.drawable.check
+                    )
+                }
+            } else {
+                val sipUri = address.asStringUriOnly()
+                Log.i("$TAG Adding SIP address [$sipUri] into clipboard")
+                if (AppUtils.copyToClipboard(requireContext(), AppUtils.getString(R.string.sip_address), sipUri)) {
+                    (requireActivity() as GenericActivity).showGreenToast(
+                        getString(R.string.sip_address_copied_to_clipboard_toast),
+                        R.drawable.check
+                    )
+                }
+            }
         }
     }
 
     private fun showPopupMenu() {
+        binding.callDetailsMenu.isSelected = true
+
         val popupView: HistoryPopupMenuBinding = DataBindingUtil.inflate(
             LayoutInflater.from(requireContext()),
             R.layout.history_popup_menu,
@@ -210,6 +230,10 @@ class HistoryFragment : SlidingPaneChildFragment() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
             true
         )
+
+        popupWindow.setOnDismissListener {
+            binding.callDetailsMenu.isSelected = false
+        }
 
         popupView.contactExists = viewModel.callLogModel.value?.friendExists == true
         popupView.isConferenceCallLog = viewModel.isConferenceCallLog.value == true
@@ -238,12 +262,12 @@ class HistoryFragment : SlidingPaneChildFragment() {
 
         popupView.setCopyNumberClickListener {
             popupWindow.dismiss()
-            copyNumberOrAddressToClipboard(viewModel.callLogModel.value?.sipUri.orEmpty())
+            copyNumberOrAddressToClipboard(viewModel.callLogModel.value?.address)
         }
 
         // Elevation is for showing a shadow around the popup
         popupWindow.elevation = 20f
-        popupWindow.showAsDropDown(binding.menu, 0, 0, Gravity.BOTTOM)
+        popupWindow.showAsDropDown(binding.callDetailsMenu, 0, 0, Gravity.BOTTOM)
     }
 
     private fun showDeleteConfirmationDialog() {

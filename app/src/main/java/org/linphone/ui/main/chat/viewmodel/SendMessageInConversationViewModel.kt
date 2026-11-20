@@ -22,6 +22,7 @@ package org.linphone.ui.main.chat.viewmodel
 import android.Manifest
 import android.content.pm.PackageManager
 import android.text.Spannable
+import android.view.inputmethod.EditorInfo
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
 import androidx.core.app.ActivityCompat
@@ -112,6 +113,8 @@ class SendMessageInConversationViewModel
 
     val isComputingParticipantsList = MutableLiveData<Boolean>()
 
+    val imeFlags = MutableLiveData<Int>()
+
     private lateinit var voiceRecordPlayer: Player
 
     private val playerListener = PlayerListener {
@@ -150,6 +153,8 @@ class SendMessageInConversationViewModel
     private var voiceRecordAudioFocusRequest: AudioFocusRequestCompat? = null
 
     private var participantsListFilter = ""
+
+    private var capturedPicturedPath = ""
 
     private val chatRoomListener = object : ChatRoomListenerStub() {
         @WorkerThread
@@ -212,6 +217,14 @@ class SendMessageInConversationViewModel
         chatRoom = room
         coreContext.postOnCoreThread {
             chatRoom.addListener(chatRoomListener)
+
+            val ime = if (chatRoom.hasCapability(ChatRoom.Capabilities.Encrypted.toInt())) {
+                EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+            } else {
+                EditorInfo.IME_NULL
+            }
+            imeFlags.postValue(ime)
+
             computeParticipantsList()
         }
     }
@@ -609,6 +622,21 @@ class SendMessageInConversationViewModel
             participantsListFilter = filter
             computeParticipantsList(filter)
         }
+    }
+
+    @UiThread
+    fun setCapturedPicturePath(path: String) {
+        capturedPicturedPath = path
+    }
+
+    @UiThread
+    fun getCapturedPicturePath(): String {
+        return capturedPicturedPath
+    }
+
+    @UiThread
+    fun clearCapturedPicturePath() {
+        capturedPicturedPath = ""
     }
 
     @WorkerThread

@@ -26,6 +26,7 @@ import android.view.ViewGroup
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import androidx.annotation.UiThread
+import androidx.core.text.isDigitsOnly
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
@@ -34,6 +35,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.linphone.LinphoneApplication.Companion.coreContext
 import org.linphone.R
 import org.linphone.contacts.getListOfSipAddressesAndPhoneNumbers
+import org.linphone.core.Address
 import org.linphone.core.tools.Log
 import org.linphone.databinding.HistoryListFragmentBinding
 import org.linphone.ui.GenericActivity
@@ -87,6 +89,11 @@ class HistoryListFragment : AbstractMainFragment() {
         listViewModel.filter()
     }
 
+    override fun onSlidingPaneClosed() {
+        listViewModel.currentlyDisplayedItemId = ""
+        adapter.resetSelection()
+    }
+
     override fun onCreateAnimation(transit: Int, enter: Boolean, nextAnim: Int): Animation? {
         if (findNavController().currentDestination?.id == R.id.startCallFragment ||
             findNavController().currentDestination?.id == R.id.meetingWaitingRoomFragment
@@ -116,6 +123,10 @@ class HistoryListFragment : AbstractMainFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         listViewModel = ViewModelProvider(this)[HistoryListViewModel::class.java]
+        if (!listViewModel.keepCallsFilterOnViewRecreation) {
+            listViewModel.showAllCalls()
+        }
+        listViewModel.keepCallsFilterOnViewRecreation = false
 
         binding.lifecycleOwner = viewLifecycleOwner
         binding.viewModel = listViewModel
@@ -123,8 +134,6 @@ class HistoryListFragment : AbstractMainFragment() {
 
         binding.historyList.setHasFixedSize(true)
         binding.historyList.layoutManager = LinearLayoutManager(requireContext())
-        binding.historyList.outlineProvider = outlineProvider
-        binding.historyList.clipToOutline = true
 
         val headerItemDecoration = RecyclerViewHeaderDecoration(requireContext(), adapter)
         binding.historyList.addItemDecoration(headerItemDecoration)
@@ -134,7 +143,7 @@ class HistoryListFragment : AbstractMainFragment() {
                 val modalBottomSheet = HistoryMenuDialogFragment(
                     model.friendExists,
                     { // onDismiss
-                        adapter.resetSelection()
+                        adapter.resetActivated()
                     },
                     { // onAddToContact
                         val addressToAdd = model.displayedAddress
@@ -160,9 +169,7 @@ class HistoryListFragment : AbstractMainFragment() {
                         }
                     },
                     { // onCopyNumberOrAddressToClipboard
-                        val addressToCopy = model.sipUri
-                        Log.i("$TAG Copying number [$addressToCopy] to clipboard")
-                        copyNumberOrAddressToClipboard(addressToCopy)
+                        copyNumberOrAddressToClipboard(model.address)
                     },
                     { // onDeleteCallLog
                         showDeleteConfirmationDialog(model)
@@ -175,9 +182,11 @@ class HistoryListFragment : AbstractMainFragment() {
 
         adapter.callLogClickedEvent.observe(viewLifecycleOwner) {
             it.consume { model ->
-                val uri = model.id
+                val uri = model.id.orEmpty()
                 Log.i("$TAG Show details for call log with ID [$uri]")
-                if (!uri.isNullOrEmpty()) {
+                listViewModel.currentlyDisplayedItemId = uri
+
+                if (uri.isNotEmpty()) {
                     val navController = binding.historyNavContainer.findNavController()
                     val action =
                         HistoryFragmentDirections.actionGlobalHistoryFragment(uri)
@@ -235,13 +244,33 @@ class HistoryListFragment : AbstractMainFragment() {
         }
 
         listViewModel.callLogs.observe(viewLifecycleOwner) {
-            adapter.submitList(it)
+            if (listViewModel.scrollToTopOnNextUpdate) {
+                listViewModel.scrollToTopOnNextUpdate = false
+                adapter.submitList(it) {
+                    binding.historyList.scrollToPosition(0)
+                }
+            } else {
+                adapter.submitList(it)
+            }
 
             // Wait for adapter to have items before setting it in the RecyclerView,
             // otherwise scroll position isn't retained
             if (binding.historyList.adapter != adapter) {
                 binding.historyList.adapter = adapter
             }
+
+            coreContext.postOnMainThreadDelayed( {
+                // Delay update to give the adapter enough time to update the list first
+                if (listViewModel.currentlyDisplayedItemId.isNotEmpty()) {
+                    val index = it.orEmpty().indexOfFirst { callLog ->
+                        callLog.callLogModel?.id == listViewModel.currentlyDisplayedItemId
+                    }
+                    Log.i("$TAG Found call log with ID [${listViewModel.currentlyDisplayedItemId}] at index [$index]")
+                    adapter.notifyItemHasBeenSelected(index)
+                } else {
+                    Log.i("$TAG No currently selected item ID")
+                }
+            }, 200)
 
             Log.i("$TAG Call logs ready with [${it.size}] items")
             listViewModel.fetchInProgress.value = false
@@ -309,6 +338,14 @@ class HistoryListFragment : AbstractMainFragment() {
         )
     }
 
+    override fun onDestroyView() {
+        if (::listViewModel.isInitialized) {
+            listViewModel.keepCallsFilterOnViewRecreation = requireActivity().isChangingConfigurations
+        }
+
+        super.onDestroyView()
+    }
+
     override fun onPause() {
         super.onPause()
 
@@ -329,12 +366,27 @@ class HistoryListFragment : AbstractMainFragment() {
         }
     }
 
-    private fun copyNumberOrAddressToClipboard(value: String) {
-        if (AppUtils.copyToClipboard(requireContext(), "SIP address", value)) {
-            (requireActivity() as GenericActivity).showGreenToast(
-                getString(R.string.sip_address_copied_to_clipboard_toast),
-                R.drawable.check
-            )
+    private fun copyNumberOrAddressToClipboard(address: Address?) {
+        if (address != null) {
+            val username = address.username.orEmpty()
+            if (username.isNotEmpty() && (username.startsWith("+") || username.isDigitsOnly())) {
+                Log.i("$TAG Adding phone number [$username] into clipboard")
+                if (AppUtils.copyToClipboard(requireContext(), AppUtils.getString(R.string.phone_number), username)) {
+                    (requireActivity() as GenericActivity).showGreenToast(
+                        getString(R.string.phone_number_copied_to_clipboard_toast),
+                        R.drawable.check
+                    )
+                }
+            } else {
+                val sipUri = address.asStringUriOnly()
+                Log.i("$TAG Adding SIP address [$sipUri] into clipboard")
+                if (AppUtils.copyToClipboard(requireContext(), AppUtils.getString(R.string.sip_address), sipUri)) {
+                    (requireActivity() as GenericActivity).showGreenToast(
+                        getString(R.string.sip_address_copied_to_clipboard_toast),
+                        R.drawable.check
+                    )
+                }
+            }
         }
     }
 

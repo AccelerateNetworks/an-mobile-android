@@ -562,6 +562,7 @@ class CoreContext
             Log.i(
                 "$TAG New account configured: [${account.params.identityAddress?.asStringUriOnly()}]"
             )
+            applyUsDialPlan(account)
             if (!account.params.isPushNotificationAvailable) {
 //                if (!corePreferences.keepServiceAlive) {
 //                    Log.w(
@@ -803,6 +804,10 @@ class CoreContext
             )
         } else {
             Log.i("$TAG No configuration migration required")
+        }
+
+        for (account in core.accountList) {
+            applyUsDialPlan(account)
         }
 
         contactsManager.onCoreStarted(core)
@@ -1363,6 +1368,18 @@ class CoreContext
                 account.params = clone
             }
         }
+    }
+
+    @WorkerThread
+    private fun applyUsDialPlan(account: Account) {
+        val params = account.params
+        if (!params.internationalPrefix.isNullOrEmpty()) return
+
+        val clone = params.clone()
+        clone.internationalPrefix = "1"
+        clone.internationalPrefixIsoCountryCode = "US"
+        Log.i("$TAG Setting international prefix [1](US) on account [${params.identityAddress?.asStringUriOnly()}]")
+        account.params = clone
     }
 
     @WorkerThread

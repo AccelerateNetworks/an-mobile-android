@@ -138,7 +138,7 @@ class LogReader(
             val atFileEnd = window.end >= eof
             var position = offset
             while (softLimit < 0 || payload < softLimit) {
-                val record = extractor.next(window, position, false) ?: break
+                val record = extractor.next(window, position, atFileEnd && superseded) ?: break
                 record.declaredTimezone?.let { timezoneInForce = it }
                 record.timezone = timezoneInForce
                 if (firstRecord == null) firstRecord = record

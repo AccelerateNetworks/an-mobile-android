@@ -65,7 +65,7 @@ class LinphoneUtils {
         const val RECORDING_MKV_FILE_EXTENSION = ".mkv"
         const val RECORDING_SMFF_FILE_EXTENSION = ".smff"
 
-        private val NANP_E164_REGEX = Regex("^\\+1[0-9]{10}$")
+        private val PHONE_NUMBER_REGEX = Regex("^\\+?[0-9 ().-]+$")
 
         @WorkerThread
         fun getDefaultAccount(): Account? {
@@ -89,20 +89,29 @@ class LinphoneUtils {
          * AN's messaging service delivers inbound texts from, and keys server-side threads on, the
          * 11-digit no-plus form of a NANP number (14253338358). A 1-on-1 conversation must be both
          * searched for and created with the address returned here, or it splits from its inbound half.
+         * Only exact NANP numbers are rewritten, and only for accounts on the US dial plan or none.
          */
         @WorkerThread
         fun getChatPeerAddress(address: Address, account: Account? = null): Address {
             val chatAccount = account ?: getDefaultAccount() ?: return address
-            val username = address.username
-            if (username.isNullOrEmpty() || !address.domain.equals(chatAccount.params.domain, ignoreCase = true) || !chatAccount.isPhoneNumber(username)) {
+            val username = address.username ?: return address
+            val prefix = chatAccount.params.internationalPrefix
+            if ((!prefix.isNullOrEmpty() && prefix != "1") ||
+                !address.domain.equals(chatAccount.params.domain, ignoreCase = true) ||
+                !PHONE_NUMBER_REGEX.matches(username)
+            ) {
                 return address
             }
 
-            val normalized: String? = chatAccount.normalizePhoneNumber(username)
-            if (normalized == null || !NANP_E164_REGEX.matches(normalized)) return address
+            val digits = username.filter { it.isDigit() }
+            val national = when {
+                digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
+                digits.length == 10 && !username.startsWith("+") -> digits
+                else -> return address
+            }
 
             val peer = address.clone()
-            peer.username = normalized.substring(1)
+            peer.username = "1$national"
             Log.i("$TAG Using [${peer.asStringUriOnly()}] as chat peer for [${address.asStringUriOnly()}]")
             return peer
         }

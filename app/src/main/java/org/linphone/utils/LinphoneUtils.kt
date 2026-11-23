@@ -91,18 +91,19 @@ class LinphoneUtils {
          * searched for and created with the address returned here, or it splits from its inbound half.
          */
         @WorkerThread
-        fun getChatPeerAddress(address: Address): Address {
-            val account = getDefaultAccount() ?: return address
+        fun getChatPeerAddress(address: Address, account: Account? = null): Address {
+            val chatAccount = account ?: getDefaultAccount() ?: return address
             val username = address.username
-            if (username.isNullOrEmpty() || address.domain != account.params.domain || !account.isPhoneNumber(username)) {
+            if (username.isNullOrEmpty() || !address.domain.equals(chatAccount.params.domain, ignoreCase = true) || !chatAccount.isPhoneNumber(username)) {
                 return address
             }
 
-            val normalized: String? = account.normalizePhoneNumber(username)
+            val normalized: String? = chatAccount.normalizePhoneNumber(username)
             if (normalized == null || !NANP_E164_REGEX.matches(normalized)) return address
 
             val peer = address.clone()
             peer.username = normalized.substring(1)
+            Log.i("$TAG Using [${peer.asStringUriOnly()}] as chat peer for [${address.asStringUriOnly()}]")
             return peer
         }
 

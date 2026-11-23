@@ -65,8 +65,6 @@ class LinphoneUtils {
         const val RECORDING_MKV_FILE_EXTENSION = ".mkv"
         const val RECORDING_SMFF_FILE_EXTENSION = ".smff"
 
-        private val PHONE_NUMBER_REGEX = Regex("^\\+?[0-9 ().-]+$")
-
         @WorkerThread
         fun getDefaultAccount(): Account? {
             return coreContext.core.defaultAccount ?: coreContext.core.accountList.firstOrNull()
@@ -86,32 +84,40 @@ class LinphoneUtils {
         }
 
         /**
-         * AN's messaging service delivers inbound texts from, and keys server-side threads on, the
-         * 11-digit no-plus form of a NANP number (14253338358). A 1-on-1 conversation must be both
+         * Use instead of Core.interpretUrl for typed and contact input. When liblinphone applies the
+         * international prefix it keeps only the last national-length digits, so a mistyped
+         * 42533383589 would become +12533383589. Here a valid number becomes E.164 and anything else
+         * is kept as typed.
+         */
+        @WorkerThread
+        fun interpretUrl(input: String, account: Account? = getDefaultAccount()): Address? {
+            val core = coreContext.core
+            if (account == null || !applyInternationalPrefix(account) || !account.isPhoneNumber(input)) {
+                return core.interpretUrl(input, applyInternationalPrefix(account))
+            }
+            return core.interpretUrl(PhoneNumberUtils.getE164(input, account) ?: input, false)
+        }
+
+        /**
+         * AN's messaging service delivers inbound texts from, and keys server-side threads on, a
+         * number's E.164 form without the plus (14253338358). A 1-on-1 conversation must be both
          * searched for and created with the address returned here, or it splits from its inbound half.
-         * Only exact NANP numbers are rewritten, and only for accounts on the US dial plan or none.
          */
         @WorkerThread
         fun getChatPeerAddress(address: Address, account: Account? = null): Address {
             val chatAccount = account ?: getDefaultAccount() ?: return address
             val username = address.username ?: return address
-            val prefix = chatAccount.params.internationalPrefix
-            if ((!prefix.isNullOrEmpty() && prefix != "1") ||
+            if (!applyInternationalPrefix(chatAccount) ||
                 !address.domain.equals(chatAccount.params.domain, ignoreCase = true) ||
-                !PHONE_NUMBER_REGEX.matches(username)
+                !chatAccount.isPhoneNumber(username)
             ) {
                 return address
             }
 
-            val digits = username.filter { it.isDigit() }
-            val national = when {
-                digits.length == 11 && digits.startsWith("1") -> digits.substring(1)
-                digits.length == 10 && !username.startsWith("+") -> digits
-                else -> return address
-            }
+            val e164 = PhoneNumberUtils.getE164(username, chatAccount) ?: return address
 
             val peer = address.clone()
-            peer.username = "1$national"
+            peer.username = e164.removePrefix("+")
             Log.i("$TAG Using [${peer.asStringUriOnly()}] as chat peer for [${address.asStringUriOnly()}]")
             return peer
         }
@@ -178,7 +184,7 @@ class LinphoneUtils {
                 return address
             } else if (addressesCount == 0 && numbersCount == 1 && enablePhoneNumbers) {
                 val number = friend.phoneNumbers.first()
-                val address = friend.core.interpretUrl(number, applyInternationalPrefix())
+                val address = interpretUrl(number)
                 if (address != null) {
                     Log.i("$TAG Only 1 phone number found for contact [${friend.name}], using it")
                     return address

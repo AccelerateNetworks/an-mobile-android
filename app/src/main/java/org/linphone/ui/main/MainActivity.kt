@@ -777,10 +777,7 @@ class MainActivity : GenericActivity() {
         }
 
         coreContext.postOnCoreThread {
-            val address = coreContext.core.interpretUrl(
-                sipUriToCall,
-                LinphoneUtils.applyInternationalPrefix()
-            )
+            val address = LinphoneUtils.interpretUrl(sipUriToCall)
             Log.i("$TAG Interpreted SIP URI is [${address?.asStringUriOnly()}]")
             if (address != null) {
                 // Skip network reachability test, this code will be called too soon

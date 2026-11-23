@@ -888,10 +888,7 @@ fun Friend.getListOfSipAddressesAndPhoneNumbers(listener: ContactNumberOrAddress
         // phone numbers are disabled is secure mode unless linked to a SIP address
         val defaultAccount = LinphoneUtils.getDefaultAccount()
         val enablePhoneNumbers = hasPresenceInfo || !isEndToEndEncryptionMandatory()
-        val address = presenceAddress ?: core.interpretUrl(
-            phoneNumber,
-            LinphoneUtils.applyInternationalPrefix(defaultAccount)
-        )
+        val address = presenceAddress ?: LinphoneUtils.interpretUrl(phoneNumber, defaultAccount)
         address ?: continue
 
         val label = PhoneNumberUtils.vcardParamStringToAddressBookLabel(

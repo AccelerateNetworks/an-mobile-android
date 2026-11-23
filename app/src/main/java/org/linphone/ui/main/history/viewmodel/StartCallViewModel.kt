@@ -130,10 +130,7 @@ class StartCallViewModel
                 if (suggestion.isNotEmpty()) {
                     Log.i("$TAG Using numpad dial button to call [$suggestion]")
                     coreContext.postOnCoreThread { core ->
-                        val address = core.interpretUrl(
-                            suggestion,
-                            LinphoneUtils.applyInternationalPrefix()
-                        )
+                        val address = LinphoneUtils.interpretUrl(suggestion)
                         if (address != null) {
                             Log.i("$TAG Calling [${address.asStringUriOnly()}]")
                             coreContext.startAudioCall(address)
@@ -149,10 +146,7 @@ class StartCallViewModel
                 if (suggestion.isNotEmpty()) {
                     Log.i("$TAG Using numpad transfer button to blind forward call to [$suggestion]")
                     coreContext.postOnCoreThread { core ->
-                        val address = core.interpretUrl(
-                            suggestion,
-                            LinphoneUtils.applyInternationalPrefix()
-                        )
+                        val address = LinphoneUtils.interpretUrl(suggestion)
                         if (address != null) {
                             initiateBlindTransferEvent.postValue(Event(Pair(address, LinphoneUtils.getDisplayName(address))))
                             leaveFragmentEvent.postValue(Event(true))

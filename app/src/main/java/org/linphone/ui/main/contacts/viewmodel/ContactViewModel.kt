@@ -544,7 +544,7 @@ class ContactViewModel
                 return
             }
 
-            val participants = arrayOf(remote)
+            val participants = arrayOf(LinphoneUtils.getChatPeerAddress(remote))
             val localAddress = account.params.identityAddress
             val existingChatRoom = core.searchChatRoom(params, localAddress, null, participants)
             if (existingChatRoom != null) {
@@ -674,7 +674,7 @@ class ContactViewModel
                     }
                 }
 
-                val participants = arrayOf(address)
+                val participants = arrayOf(LinphoneUtils.getChatPeerAddress(address))
                 val existingChatRoom = coreContext.core.searchChatRoom(params, localAddress, null, participants)
                 if (existingChatRoom != null) {
                     val conversationId = LinphoneUtils.getConversationId(existingChatRoom)

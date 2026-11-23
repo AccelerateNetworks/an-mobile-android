@@ -65,6 +65,8 @@ class LinphoneUtils {
         const val RECORDING_MKV_FILE_EXTENSION = ".mkv"
         const val RECORDING_SMFF_FILE_EXTENSION = ".smff"
 
+        private val NANP_E164_REGEX = Regex("^\\+1[0-9]{10}$")
+
         @WorkerThread
         fun getDefaultAccount(): Account? {
             return coreContext.core.defaultAccount ?: coreContext.core.accountList.firstOrNull()
@@ -81,6 +83,27 @@ class LinphoneUtils {
         fun applyInternationalPrefix(account: Account? = null): Boolean {
             return account?.params?.useInternationalPrefixForCallsAndChats
                 ?: (getDefaultAccount()?.params?.useInternationalPrefixForCallsAndChats == true)
+        }
+
+        /**
+         * AN's messaging service delivers inbound texts from, and keys server-side threads on, the
+         * 11-digit no-plus form of a NANP number (14253338358). A 1-on-1 conversation must be both
+         * searched for and created with the address returned here, or it splits from its inbound half.
+         */
+        @WorkerThread
+        fun getChatPeerAddress(address: Address): Address {
+            val account = getDefaultAccount() ?: return address
+            val username = address.username
+            if (username.isNullOrEmpty() || address.domain != account.params.domain || !account.isPhoneNumber(username)) {
+                return address
+            }
+
+            val normalized: String? = account.normalizePhoneNumber(username)
+            if (normalized == null || !NANP_E164_REGEX.matches(normalized)) return address
+
+            val peer = address.clone()
+            peer.username = normalized.substring(1)
+            return peer
         }
 
         @WorkerThread

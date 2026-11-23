@@ -1404,7 +1404,7 @@ class CurrentCallViewModel
             call.conference?.chatRoom
         } else {
             val params = getChatRoomParams(call)
-            val participants = arrayOf(remoteAddress)
+            val participants = arrayOf(LinphoneUtils.getChatPeerAddress(remoteAddress))
             Log.i("$TAG Looking for conversation with local address [${localAddress.asStringUriOnly()}] and participant [${remoteAddress.asStringUriOnly()}]")
             call.core.searchChatRoom(
                 params,
@@ -1424,7 +1424,7 @@ class CurrentCallViewModel
     @WorkerThread
     private fun createCurrentCallConversation(call: Call) {
         val remoteAddress = call.remoteAddress
-        val participants = arrayOf(remoteAddress)
+        val participants = arrayOf(LinphoneUtils.getChatPeerAddress(remoteAddress))
         val core = call.core
         operationInProgress.postValue(true)
 

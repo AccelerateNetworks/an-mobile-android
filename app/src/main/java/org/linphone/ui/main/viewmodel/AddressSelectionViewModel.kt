@@ -368,10 +368,11 @@ abstract class AddressSelectionViewModel
                 }
             } else if (address != null) {
                 if (result.sourceFlags == MagicSearch.Source.Request.toInt()) {
-                    val model = ConversationContactOrSuggestionModel(address) {
-                        coreContext.startAudioCall(address)
+                    val requestAddress = LinphoneUtils.interpretUrl(currentFilter) ?: address
+                    val model = ConversationContactOrSuggestionModel(requestAddress) {
+                        coreContext.startAudioCall(requestAddress)
                     }
-                    val avatarModel = getContactAvatarModelForAddress(address)
+                    val avatarModel = getContactAvatarModelForAddress(requestAddress)
                     model.avatarModel.postValue(avatarModel)
                     requestList.add(model)
                     continue

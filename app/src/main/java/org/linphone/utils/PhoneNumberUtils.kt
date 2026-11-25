@@ -23,6 +23,7 @@ import android.content.res.Resources
 import android.provider.ContactsContract
 import androidx.annotation.AnyThread
 import androidx.annotation.WorkerThread
+import org.linphone.core.Account
 import org.linphone.core.DialPlan
 import org.linphone.core.Factory
 import org.linphone.core.tools.Log
@@ -43,6 +44,26 @@ class PhoneNumberUtils {
                 }
             }
             return null
+        }
+
+        /**
+         * Parses [number] in the account's country with libphonenumber. Returns null when the number
+         * isn't valid there, instead of trimming it to fit as liblinphone's dial plan does.
+         */
+        @WorkerThread
+        fun getE164(number: String, account: Account): String? {
+            return android.telephony.PhoneNumberUtils.formatNumberToE164(number, getCountryIso(account))
+        }
+
+        @WorkerThread
+        private fun getCountryIso(account: Account): String {
+            val params = account.params
+            val iso = params.internationalPrefixIsoCountryCode
+            if (iso?.length == 2) return iso
+
+            val prefix = params.internationalPrefix
+            if (prefix.isNullOrEmpty() || prefix == "1") return "US"
+            return Factory.instance().dialPlans.find { it.countryCallingCode == prefix }?.isoCountryCode ?: "US"
         }
 
         @AnyThread

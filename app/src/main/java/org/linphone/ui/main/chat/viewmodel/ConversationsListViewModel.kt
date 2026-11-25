@@ -360,10 +360,11 @@ class ConversationsListViewModel
                 }
             } else if (address != null) {
                 if (result.sourceFlags == MagicSearch.Source.Request.toInt()) {
-                    val model = ConversationContactOrSuggestionModel(address) {
-                        coreContext.startAudioCall(address)
+                    val requestAddress = LinphoneUtils.interpretUrl(currentFilter) ?: address
+                    val model = ConversationContactOrSuggestionModel(requestAddress) {
+                        coreContext.startAudioCall(requestAddress)
                     }
-                    val avatarModel = getContactAvatarModelForAddress(address)
+                    val avatarModel = getContactAvatarModelForAddress(requestAddress)
                     model.avatarModel.postValue(avatarModel)
                     requestList.add(ConversationModelWrapper(null, model))
                     continue
@@ -461,7 +462,7 @@ class ConversationsListViewModel
             return
         }
 
-        val participants = arrayOf(remote)
+        val participants = arrayOf(LinphoneUtils.getChatPeerAddress(remote))
         val localAddress = account.params.identityAddress
         val existingChatRoom = core.searchChatRoom(params, localAddress, null, participants)
         if (existingChatRoom == null) {

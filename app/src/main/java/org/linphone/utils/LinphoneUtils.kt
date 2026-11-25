@@ -100,8 +100,9 @@ class LinphoneUtils {
 
         /**
          * AN's messaging service delivers inbound texts from, and keys server-side threads on, a
-         * number's E.164 form without the plus (14253338358). A 1-on-1 conversation must be both
-         * searched for and created with the address returned here, or it splits from its inbound half.
+         * +1 number's E.164 form without the plus (14253338358). Other countries' numbers are
+         * returned unchanged. A 1-on-1 conversation must be both searched for and created with the
+         * address returned here, or it splits from its inbound half.
          */
         @WorkerThread
         fun getChatPeerAddress(address: Address, account: Account? = null): Address {
@@ -114,7 +115,12 @@ class LinphoneUtils {
                 return address
             }
 
-            val e164 = PhoneNumberUtils.getE164(username, chatAccount) ?: return address
+            val e164 = PhoneNumberUtils.getE164(username, chatAccount)
+            if (e164 == null) {
+                Log.i("$TAG [$username] isn't a valid number for the account's country, using it as typed for chat peer [${address.asStringUriOnly()}]")
+                return address
+            }
+            if (!e164.startsWith("+1")) return address
 
             val peer = address.clone()
             peer.username = e164.removePrefix("+")
